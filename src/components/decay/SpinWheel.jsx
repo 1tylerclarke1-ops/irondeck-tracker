@@ -16,7 +16,7 @@ const COLORS = [
 const rarityLabel = (r) => (r === "mythic" ? "Mythic" : "Rare");
 const downgradeLabel = (r) => (r === "mythic" ? "Rare" : "Uncommon");
 
-export default function SpinWheel({ cards, rarity }) {
+export default function SpinWheel({ cards, rarity, onDecayed }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -50,6 +50,7 @@ export default function SpinWheel({ cards, rarity }) {
     setTimeout(() => {
       setSpinning(false);
       setResult(cards[target]);
+      onDecayed?.(cards[target]);
     }, 4000);
   };
 

@@ -4,6 +4,7 @@ import AppNav from "@/components/AppNav";
 import NoSeason from "@/components/run/NoSeason";
 import DecayStatus from "@/components/decay/DecayStatus";
 import SpinWheel from "@/components/decay/SpinWheel";
+import ReplacementPanel from "@/components/decay/ReplacementPanel";
 import { num } from "@/components/run/runHelpers";
 
 export default function Decay() {
@@ -12,6 +13,9 @@ export default function Decay() {
   const [runs, setRuns] = useState([]);
   const [decays, setDecays] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [decayedCard, setDecayedCard] = useState(null);
+  const [completed, setCompleted] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -58,6 +62,16 @@ export default function Decay() {
       <div className="max-w-3xl mx-auto p-6">
         <AppNav />
         <NoSeason />
+      </div>
+    );
+  }
+
+  if (completed) {
+    return (
+      <div className="max-w-3xl mx-auto p-6">
+        <AppNav />
+        <h1 className="text-2xl font-bold mb-6">Decay</h1>
+        <DecayStatus message="Decay complete" />
       </div>
     );
   }
@@ -110,6 +124,46 @@ export default function Decay() {
     }
   }
 
+  const applyDecay = async (howObtained, rolled) => {
+    const newRarity = targetRarity === "mythic" ? "rare" : "uncommon";
+    setApplying(true);
+    try {
+      const newCopies = num(decayedCard.copies) - 1;
+      if (newCopies <= 0) {
+        await base44.entities.Card.delete(decayedCard.id);
+      } else {
+        await base44.entities.Card.update(decayedCard.id, { copies: newCopies });
+      }
+      const existing = cards.find((c) => c.name === rolled.name);
+      if (existing) {
+        await base44.entities.Card.update(existing.id, {
+          copies: num(existing.copies) + 1,
+        });
+      } else {
+        await base44.entities.Card.create({
+          season_id: season.id,
+          name: rolled.name,
+          copies: 1,
+          rarity: newRarity,
+          card_type: decayedCard.card_type,
+        });
+      }
+      await base44.entities.Decay.create({
+        season_id: season.id,
+        attempt_number: dueRun.attempt_number,
+        card_removed: decayedCard.name,
+        rarity_from: targetRarity,
+        rarity_to: newRarity,
+        replacement_card: rolled.name,
+        how_obtained: howObtained,
+        date: new Date().toISOString(),
+      });
+      setCompleted(true);
+    } finally {
+      setApplying(false);
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto p-6">
       <AppNav />
@@ -117,7 +171,23 @@ export default function Decay() {
       <p className="text-muted-foreground mb-6">
         Decay due for Attempt #{dueRun.attempt_number}
       </p>
-      <SpinWheel cards={uniqueCards} rarity={targetRarity} />
+      <div className="space-y-6">
+        <SpinWheel
+          cards={uniqueCards}
+          rarity={targetRarity}
+          onDecayed={setDecayedCard}
+        />
+        {decayedCard && (
+          <ReplacementPanel
+            decayedCard={decayedCard}
+            rarity={targetRarity}
+            season={season}
+            deckCards={cards}
+            onApply={applyDecay}
+            applying={applying}
+          />
+        )}
+      </div>
     </div>
   );
 }
