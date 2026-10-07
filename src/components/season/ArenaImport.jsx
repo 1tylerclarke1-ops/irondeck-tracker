@@ -57,6 +57,7 @@ export default function ArenaImport({ seasonId, onImported }) {
           return {
             name: e.name,
             copies: e.copies,
+            zone: e.zone,
             rarity: card ? rarityFor(card) : "",
             card_type: card ? typeFor(card) : "",
             found: !!card,
@@ -82,6 +83,7 @@ export default function ArenaImport({ seasonId, onImported }) {
           copies: r.copies,
           rarity: r.rarity,
           card_type: r.card_type,
+          zone: r.zone,
         }));
       if (toCreate.length) await base44.entities.Card.bulkCreate(toCreate);
       setText("");
@@ -127,6 +129,7 @@ export default function ArenaImport({ seasonId, onImported }) {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Copies</TableHead>
+                    <TableHead>Zone</TableHead>
                     <TableHead>Rarity</TableHead>
                     <TableHead>Type</TableHead>
                   </TableRow>
@@ -136,6 +139,9 @@ export default function ArenaImport({ seasonId, onImported }) {
                     <TableRow key={i} className={!r.found ? "bg-destructive/10" : ""}>
                       <TableCell>{r.name}</TableCell>
                       <TableCell>{r.copies}</TableCell>
+                      <TableCell className="capitalize">
+                        {r.zone || "—"}
+                      </TableCell>
                       <TableCell className="capitalize">
                         {r.rarity || "—"}
                       </TableCell>

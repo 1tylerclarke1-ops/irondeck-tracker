@@ -13,21 +13,25 @@ const TYPE_PRIORITY = [
 
 export function parseArenaText(text) {
   const lines = text.split(/\r?\n/);
-  let inDeck = false;
+  let zone = null;
   const entries = [];
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) continue;
     const lower = line.toLowerCase();
     if (lower === "deck") {
-      inDeck = true;
+      zone = "main";
       continue;
     }
-    if (lower === "sideboard" || lower === "commandzone" || lower === "companion") {
-      inDeck = false;
+    if (lower === "sideboard") {
+      zone = "sideboard";
       continue;
     }
-    if (!inDeck) continue;
+    if (lower === "commandzone" || lower === "companion") {
+      zone = null;
+      continue;
+    }
+    if (!zone) continue;
     const m = line.match(/^(\d+)\s+(.+)\s+\(([A-Za-z0-9]+)\)\s*(\d+)\s*$/);
     if (m) {
       entries.push({
@@ -35,6 +39,7 @@ export function parseArenaText(text) {
         name: m[2].trim(),
         set: m[3],
         number: m[4],
+        zone,
       });
       continue;
     }
@@ -45,6 +50,7 @@ export function parseArenaText(text) {
         name: m2[2].trim(),
         set: null,
         number: null,
+        zone,
       });
     }
   }
