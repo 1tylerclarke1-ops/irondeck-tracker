@@ -12,6 +12,7 @@ import RunTracker from './pages/RunTracker';
 import Decay from './pages/Decay';
 import DecayLog from './pages/DecayLog';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import Overlay from './pages/Overlay';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -40,6 +41,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       {/* Add your page Route elements here */}
+      <Route path="/overlay" element={<Overlay />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<SeasonSetup />} />
         <Route path="/run-tracker" element={<RunTracker />} />
