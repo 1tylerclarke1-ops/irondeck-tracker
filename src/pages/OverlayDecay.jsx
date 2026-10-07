@@ -17,6 +17,65 @@ const preloadImages = (urls) =>
     )
   );
 
+// Resolve a card image: use the saved URL if present, else look it up by
+// scryfall id, then by fuzzy name. Returns { url, loading }.
+function useResolveCardImage(imageUrl, scryfallId, name) {
+  const [url, setUrl] = useState(imageUrl || null);
+  const [loading, setLoading] = useState(!imageUrl);
+
+  useEffect(() => {
+    let active = true;
+    if (imageUrl) {
+      setUrl(imageUrl);
+      setLoading(false);
+      return () => {};
+    }
+    setUrl(null);
+    if (!scryfallId && !name) {
+      setLoading(false);
+      return () => {};
+    }
+    setLoading(true);
+    (async () => {
+      let resolved = null;
+      if (scryfallId) {
+        try {
+          const res = await fetch(`https://api.scryfall.com/cards/${scryfallId}`);
+          if (res.ok) {
+            const data = await res.json();
+            resolved =
+              data.image_uris?.normal ||
+              data.card_faces?.[0]?.image_uris?.normal ||
+              null;
+          }
+        } catch {}
+      }
+      if (!resolved && name) {
+        try {
+          const res = await fetch(
+            `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            resolved =
+              data.image_uris?.normal ||
+              data.card_faces?.[0]?.image_uris?.normal ||
+              null;
+          }
+        } catch {}
+      }
+      if (!active) return;
+      setUrl(resolved);
+      setLoading(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [imageUrl, scryfallId, name]);
+
+  return { url, loading };
+}
+
 export default function OverlayDecay() {
   const [event, setEvent] = useState(null);
   const [phase, setPhase] = useState("done");
@@ -24,6 +83,8 @@ export default function OverlayDecay() {
   const [rollIndex, setRollIndex] = useState(0);
   const [rollGlow, setRollGlow] = useState(false);
   const [preloading, setPreloading] = useState(false);
+  const [revealReady, setRevealReady] = useState(false);
+  const [revealPreloading, setRevealPreloading] = useState(false);
 
   const wheelRef = useRef(null);
   const playedRef = useRef(null);
@@ -77,11 +138,17 @@ export default function OverlayDecay() {
   const chosenName = event?.chosen_card || event?.card_removed || null;
 
   const wheelArt = useCardImagesById(wheelIds);
-  const revealIds = [
-    event?.card_removed_id,
-    event?.replacement_card_id,
-  ].filter(Boolean);
-  const revealArt = useCardImagesById(revealIds);
+
+  const removed = useResolveCardImage(
+    event?.card_removed_image || null,
+    event?.card_removed_id || null,
+    event?.card_removed || null
+  );
+  const replacement = useResolveCardImage(
+    event?.replacement_card_image || null,
+    event?.replacement_card_id || null,
+    event?.replacement_card || null
+  );
 
   const startRarityFlip = () => {
     const target = (event?.rarity_roll || "uncommon").toUpperCase();
@@ -174,6 +241,34 @@ export default function OverlayDecay() {
     setPhase("done");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.id, step, chosenName]);
+
+  // Preload both reveal images so they appear together
+  useEffect(() => {
+    if (step !== "reveal") {
+      setRevealReady(false);
+      setRevealPreloading(false);
+      return;
+    }
+    if (removed.loading || replacement.loading) return;
+    if (revealReady) return;
+    let active = true;
+    setRevealPreloading(true);
+    preloadImages([removed.url, replacement.url]).then(() => {
+      if (!active) return;
+      setRevealReady(true);
+      setRevealPreloading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [
+    step,
+    removed.url,
+    removed.loading,
+    replacement.url,
+    replacement.loading,
+    revealReady,
+  ]);
 
   // Clean up timers on unmount
   useEffect(
@@ -278,12 +373,8 @@ export default function OverlayDecay() {
   }
 
   // reveal
-  const oldImg = event.card_removed_id
-    ? revealArt[event.card_removed_id]?.normal
-    : null;
-  const newImg = event.replacement_card_id
-    ? revealArt[event.replacement_card_id]?.normal
-    : null;
+  const oldImg = removed.url;
+  const newImg = replacement.url;
   const rarityRoll = event.rarity_roll || null;
 
   return (
@@ -295,121 +386,125 @@ export default function OverlayDecay() {
         @keyframes ovd-fadeout { from { opacity: 1; } to { opacity: 0; } }
         @keyframes ovd-slidein { from { transform: translateX(90px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
-      <div
-        style={{
-          display: "flex",
-          gap: "3rem",
-          alignItems: "center",
-          fontFamily: "sans-serif",
-        }}
-      >
+      {revealPreloading || !revealReady ? (
+        <div className="w-6 h-6 border-4 border-slate-300 border-t-amber-500 rounded-full animate-spin"></div>
+      ) : (
         <div
           style={{
             display: "flex",
-            flexDirection: "column",
+            gap: "3rem",
             alignItems: "center",
-            gap: "0.5rem",
-            animation: "ovd-fadeout 1.2s ease forwards",
+            fontFamily: "sans-serif",
           }}
         >
-          {oldImg ? (
-            <img
-              src={oldImg}
-              alt={event.card_removed}
-              style={{ width: 200, borderRadius: 10, border: "1px solid #fff" }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 200,
-                height: 280,
-                borderRadius: 10,
-                background: "#334155",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                textAlign: "center",
-                padding: "0 1rem",
-              }}
-            >
-              {event.card_removed}
-            </div>
-          )}
-          <span
-            style={{
-              color: "#fff",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textShadow: "0 1px 2px rgba(0,0,0,0.9)",
-            }}
-          >
-            REMOVED
-          </span>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            animation: "ovd-slidein 0.8s ease forwards",
-          }}
-        >
-          {newImg ? (
-            <img
-              src={newImg}
-              alt={event.replacement_card}
-              style={{
-                width: 200,
-                borderRadius: 10,
-                border: "1px solid #fbbf24",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 200,
-                height: 280,
-                borderRadius: 10,
-                background: "#0f766e",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                textAlign: "center",
-                padding: "0 1rem",
-              }}
-            >
-              {event.replacement_card}
-            </div>
-          )}
-          <span
-            style={{
-              color: "#fbbf24",
-              fontWeight: 700,
-              letterSpacing: "0.1em",
-              textShadow: "0 1px 2px rgba(0,0,0,0.9)",
-            }}
-          >
-            ADDED
-          </span>
-        </div>
-        {rarityRoll && (
           <div
             style={{
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: "0.95rem",
-              letterSpacing: "0.08em",
-              textTransform: "capitalize",
-              textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "0.5rem",
+              animation: "ovd-fadeout 1.2s ease forwards",
             }}
           >
-            Rarity roll: {rarityRoll}
+            {oldImg ? (
+              <img
+                src={oldImg}
+                alt={event.card_removed}
+                style={{ width: 200, borderRadius: 10, border: "1px solid #fff" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 200,
+                  height: 280,
+                  borderRadius: 10,
+                  background: "#334155",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  textAlign: "center",
+                  padding: "0 1rem",
+                }}
+              >
+                {event.card_removed}
+              </div>
+            )}
+            <span
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+              }}
+            >
+              REMOVED
+            </span>
           </div>
-        )}
-      </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "0.5rem",
+              animation: "ovd-slidein 0.8s ease forwards",
+            }}
+          >
+            {newImg ? (
+              <img
+                src={newImg}
+                alt={event.replacement_card}
+                style={{
+                  width: 200,
+                  borderRadius: 10,
+                  border: "1px solid #fbbf24",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 200,
+                  height: 280,
+                  borderRadius: 10,
+                  background: "#0f766e",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  textAlign: "center",
+                  padding: "0 1rem",
+                }}
+              >
+                {event.replacement_card}
+              </div>
+            )}
+            <span
+              style={{
+                color: "#fbbf24",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+              }}
+            >
+              ADDED
+            </span>
+          </div>
+          {rarityRoll && (
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "0.95rem",
+                letterSpacing: "0.08em",
+                textTransform: "capitalize",
+                textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+              }}
+            >
+              Rarity roll: {rarityRoll}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

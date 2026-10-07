@@ -229,6 +229,7 @@ export default function Decay() {
           roll_cards: rollCards,
           replacement_card: replacement.name,
           replacement_card_id: replacement.scryfall_id || null,
+          replacement_card_image: replacement.imageUrl || null,
           updated_at: new Date().toISOString(),
         });
       }
@@ -243,6 +244,21 @@ export default function Decay() {
     if (uniqueCards.length === 0) return;
     const chosen =
       uniqueCards[Math.floor(Math.random() * uniqueCards.length)];
+    let removedImage = null;
+    if (chosen.scryfall_id) {
+      try {
+        const res = await fetch(
+          `https://api.scryfall.com/cards/${chosen.scryfall_id}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          removedImage =
+            data.image_uris?.normal ||
+            data.card_faces?.[0]?.image_uris?.normal ||
+            null;
+        }
+      } catch {}
+    }
     const ev = await base44.entities.DecayEvent.create({
       step: "spinning",
       wheel_card_names: uniqueCards.map((c) => c.name),
@@ -250,6 +266,7 @@ export default function Decay() {
       chosen_card: chosen.name,
       card_removed: chosen.name,
       card_removed_id: chosen.scryfall_id || null,
+      card_removed_image: removedImage,
       updated_at: new Date().toISOString(),
     });
     eventRef.current = { id: ev.id, done: false };

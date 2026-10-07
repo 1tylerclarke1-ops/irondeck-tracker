@@ -40,6 +40,10 @@
       "type": "string",
       "description": "Scryfall id of the card removed from the deck"
     },
+    "card_removed_image": {
+      "type": "string",
+      "description": "Image URL (image_uris.normal) of the removed card"
+    },
     "replacement_card": {
       "type": "string",
       "description": "Card added as the decay replacement"
@@ -47,6 +51,10 @@
     "replacement_card_id": {
       "type": "string",
       "description": "Scryfall id of the replacement card"
+    },
+    "replacement_card_image": {
+      "type": "string",
+      "description": "Image URL (image_uris.normal) of the replacement card"
     },
     "rarity_roll": {
       "type": "string",
