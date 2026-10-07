@@ -131,18 +131,47 @@ export default function OverlayDeck() {
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [decays]);
 
+  const todayRustedNames = useMemo(
+    () => new Set(todayDecays.map((d) => d.card_removed)),
+    [todayDecays]
+  );
+
   const title = `Season ${seasonNumber ?? "—"} · Day ${day ?? "—"}`;
 
-  const hasSide = sideCards.length > 0;
-  const total = cards.length + sideCards.length;
-  const childCount = total + (hasSide ? 1 : 0);
+  const mainCards = cards.filter((c) => (Number(c.copies) || 0) > 0);
+  const sideMain = sideCards.filter((c) => (Number(c.copies) || 0) > 0);
+  const rustedCards = [...cards, ...sideCards]
+    .filter((c) => {
+      const o = Number(c.original_copies) || 0;
+      const cp = Number(c.copies) || 0;
+      return o > 0 && o - cp > 0;
+    })
+    .sort((a, b) => {
+      const ra = (Number(a.original_copies) || 0) - (Number(a.copies) || 0);
+      const rb = (Number(b.original_copies) || 0) - (Number(b.copies) || 0);
+      return rb - ra;
+    });
+  const totalRusted = rustedCards.reduce((sum, c) => {
+    const o = Number(c.original_copies) || 0;
+    const cp = Number(c.copies) || 0;
+    return sum + (o - cp);
+  }, 0);
+  const hasSide = sideMain.length > 0;
+  const hasRusted = rustedCards.length > 0;
+
+  const totalRows = mainCards.length + sideMain.length + rustedCards.length;
+  const headings = (hasSide ? 1 : 0) + (hasRusted ? 1 : 0);
+  const childCount = totalRows + headings;
   const gaps = childCount > 1 ? (childCount - 1) * ROW_GAP : 0;
   const avail = TOTAL_HEIGHT - PAD_VERTICAL - TITLE_BLOCK;
   const rowH =
-    total > 0
+    totalRows > 0
       ? Math.max(
           MIN_ROW,
-          Math.min(MAX_ROW, (avail - (hasSide ? HEADING_HEIGHT : 0) - gaps) / total)
+          Math.min(
+            MAX_ROW,
+            (avail - headings * HEADING_HEIGHT - gaps) / totalRows
+          )
         )
       : MAX_ROW;
 
@@ -178,10 +207,11 @@ export default function OverlayDeck() {
             gap: ROW_GAP,
           }}
         >
-          {cards.map((c) => (
+          {mainCards.map((c) => (
             <DeckRow
               key={c.id}
               card={c}
+              variant="current"
               imageUrl={images[c.scryfall_id]?.normal}
               loading={
                 Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined
@@ -205,10 +235,42 @@ export default function OverlayDeck() {
               >
                 SIDEBOARD
               </div>
-              {sideCards.map((c) => (
+              {sideMain.map((c) => (
                 <DeckRow
                   key={c.id}
                   card={c}
+                  variant="current"
+                  imageUrl={images[c.scryfall_id]?.normal}
+                  loading={
+                    Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined
+                  }
+                  height={rowH}
+                />
+              ))}
+            </>
+          )}
+          {hasRusted && (
+            <>
+              <div
+                style={{
+                  height: HEADING_HEIGHT,
+                  display: "flex",
+                  alignItems: "center",
+                  paddingLeft: "2px",
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.18em",
+                  color: RUST,
+                }}
+              >
+                RUSTED ({totalRusted})
+              </div>
+              {rustedCards.map((c) => (
+                <DeckRow
+                  key={c.id}
+                  card={c}
+                  variant="rusted"
+                  glow={isOutro && todayRustedNames.has(c.name)}
                   imageUrl={images[c.scryfall_id]?.normal}
                   loading={
                     Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined

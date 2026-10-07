@@ -5,21 +5,25 @@ const RUST_TEXTURE =
   "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3c387b3a0_image.png";
 const SALVAGED_GREEN = "#2d8a4e";
 
-export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
+export default function DeckRow({
+  card,
+  imageUrl,
+  loading,
+  height = 44,
+  variant = "current",
+  glow = false,
+}) {
   const copies = Number(card.copies) || 0;
   const original = Number(card.original_copies) || 0;
   const isReplacement = Boolean(card.is_decay_replacement);
   const rustedCount = original > 0 ? original - copies : 0;
-  const isRusted = rustedCount > 0;
-  const fullyRusted = isRusted && copies === 0;
-  const rustedRatio = original > 0 ? rustedCount / original : 0;
-  const leftCutPct = (1 - rustedRatio) * 100;
-  const boxCount = isRusted ? original : copies;
+
+  const isRusted = variant === "rusted";
+  const boxCount = isRusted ? rustedCount : copies;
 
   const scale = height / 44;
   const boxSize = height;
   const countFont = Math.max(0.58, 0.95 * scale);
-  const rustFont = Math.max(0.42, 0.5 * scale);
   const salvagedFont = Math.max(0.4, 0.48 * scale);
 
   const barImgStyle = {
@@ -30,7 +34,16 @@ export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "stretch", gap: "6px", height }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        gap: "6px",
+        height,
+        borderRadius: "5px",
+        boxShadow: glow ? "0 0 10px 2px rgba(251,191,36,0.55)" : "none",
+      }}
+    >
       {/* Copies box */}
       <div
         style={{
@@ -38,10 +51,9 @@ export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
           height: boxSize,
           flexShrink: 0,
           borderRadius: "5px",
-          border: `1px solid ${fullyRusted ? RUST : "rgba(255,255,255,0.7)"}`,
-          background: fullyRusted ? RUST : "rgba(0,0,0,0.35)",
+          border: `1px solid ${isRusted ? RUST : "rgba(255,255,255,0.7)"}`,
+          background: isRusted ? RUST : "rgba(0,0,0,0.35)",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           color: "#fff",
@@ -51,18 +63,6 @@ export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
         }}
       >
         <span style={{ fontSize: `${countFont}rem` }}>×{boxCount}</span>
-        {isRusted && !fullyRusted && height >= 34 && (
-          <span
-            style={{
-              fontSize: `${rustFont}rem`,
-              fontWeight: 700,
-              color: RUST,
-              marginTop: "2px",
-            }}
-          >
-            {rustedCount} rust
-          </span>
-        )}
       </div>
 
       {/* Card bar */}
@@ -89,51 +89,13 @@ export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
             draggable={false}
             style={{
               ...barImgStyle,
-              filter: fullyRusted ? "grayscale(1) brightness(0.7)" : "none",
+              filter: isRusted ? "grayscale(1) brightness(0.7)" : "none",
             }}
           />
         ) : null}
 
-        {/* Partial rust: greyscale the rusted portion + texture overlay */}
-        {isRusted && !fullyRusted && imageUrl && (
-          <>
-            <img
-              src={imageUrl}
-              alt=""
-              draggable={false}
-              style={{
-                ...barImgStyle,
-                position: "absolute",
-                top: 0,
-                left: 0,
-                filter: "grayscale(1) brightness(0.7)",
-                maskImage: `linear-gradient(to right, transparent ${leftCutPct}%, #000 ${
-                  leftCutPct + 8
-                }%)`,
-                WebkitMaskImage: `linear-gradient(to right, transparent ${leftCutPct}%, #000 ${
-                  leftCutPct + 8
-                }%)`,
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: `${rustedRatio * 100}%`,
-                backgroundImage: `url(${RUST_TEXTURE})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                maskImage: "linear-gradient(to right, transparent, #000 8%)",
-                WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%)",
-              }}
-            />
-          </>
-        )}
-
-        {/* Fully rusted: texture over the whole bar */}
-        {fullyRusted && imageUrl && (
+        {/* Rusted variant: texture over the whole bar */}
+        {isRusted && imageUrl && (
           <div
             style={{
               position: "absolute",
@@ -146,8 +108,8 @@ export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
           />
         )}
 
-        {/* SALVAGED tag */}
-        {isReplacement && (
+        {/* SALVAGED tag (current variant only) */}
+        {isReplacement && !isRusted && (
           <div
             style={{
               position: "absolute",
