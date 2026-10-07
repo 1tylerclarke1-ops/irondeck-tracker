@@ -13,7 +13,7 @@ const SUBPANEL_BG =
   "linear-gradient(180deg, rgba(15,18,24,0.92) 0%, rgba(8,10,14,0.92) 100%)";
 const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
 const SMOKE =
-  "0 0 8px rgba(0,0,0,0.85), 0 0 3px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.95)";
+  "0 0 2px rgba(0,0,0,0.6), 0 1px 1px rgba(0,0,0,0.7)";
 
 const MEDALS = {
   hot: [
