@@ -1,4 +1,4 @@
-const COLLECTION_URL = "https://api.scryfall.com/cards/collection";
+import { postCollection } from "@/lib/scryfall";
 const RARITY_ENUM = ["mythic", "rare", "uncommon", "common", "basic"];
 const TYPE_PRIORITY = [
   "creature",
@@ -72,23 +72,6 @@ export function typeFor(card) {
     if (t.includes(type)) return type;
   }
   return "creature";
-}
-
-async function postCollection(identifiers) {
-  const out = [];
-  for (let i = 0; i < identifiers.length; i += 75) {
-    const chunk = identifiers.slice(i, i + 75);
-    if (chunk.length === 0) continue;
-    const res = await fetch(COLLECTION_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifiers: chunk }),
-    });
-    if (!res.ok) throw new Error("Scryfall request failed");
-    const json = await res.json();
-    (json.data || []).forEach((c) => out.push(c));
-  }
-  return out;
 }
 
 export async function lookupCards(entries) {

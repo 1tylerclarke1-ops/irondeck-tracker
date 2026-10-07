@@ -6,11 +6,13 @@ import DeckCounters from "@/components/season/DeckCounters";
 import DecklistTable from "@/components/season/DecklistTable";
 import CardForm from "@/components/season/CardForm";
 import ArenaImport from "@/components/season/ArenaImport";
+import RulesChecklist from "@/components/season/RulesChecklist";
 import AppNav from "@/components/AppNav";
 
 export default function SeasonSetup() {
   const [season, setSeason] = useState(null);
   const [cards, setCards] = useState([]);
+  const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
 
@@ -26,16 +28,26 @@ export default function SeasonSetup() {
     setCards(cardList);
   }, []);
 
+  const loadRuns = useCallback(async (seasonId) => {
+    const list = await base44.entities.Run.filter({ season_id: seasonId });
+    setRuns(list);
+  }, []);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const found = await loadSeason();
-      if (found) await loadCards(found.id);
-      else setCards([]);
+      if (found) {
+        await loadCards(found.id);
+        await loadRuns(found.id);
+      } else {
+        setCards([]);
+        setRuns([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [loadSeason, loadCards]);
+  }, [loadSeason, loadCards, loadRuns]);
 
   useEffect(() => {
     loadAll();
@@ -59,6 +71,8 @@ export default function SeasonSetup() {
     );
   }
 
+  const locked = runs.length > 0;
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <AppNav />
@@ -69,9 +83,23 @@ export default function SeasonSetup() {
         <>
           <ActiveSeasonPanel season={season} onEnd={handleEnd} ending={ending} />
           <DeckCounters cards={cards} />
-          <CardForm seasonId={season.id} onAdded={() => loadCards(season.id)} />
-          <ArenaImport seasonId={season.id} onImported={() => loadCards(season.id)} />
-          <DecklistTable cards={cards} onChange={() => loadCards(season.id)} />
+          <RulesChecklist cards={cards} />
+          {locked && (
+            <div className="rounded-md border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm text-blue-700 dark:text-blue-300">
+              Decklist locked: this season has runs. Use the Decay page to change cards.
+            </div>
+          )}
+          {!locked && (
+            <>
+              <CardForm seasonId={season.id} onAdded={() => loadCards(season.id)} />
+              <ArenaImport seasonId={season.id} onImported={() => loadCards(season.id)} />
+            </>
+          )}
+          <DecklistTable
+            cards={cards}
+            onChange={() => loadCards(season.id)}
+            locked={locked}
+          />
         </>
       )}
     </div>

@@ -5,11 +5,13 @@ import NoSeason from "@/components/run/NoSeason";
 import RunPanel from "@/components/run/RunPanel";
 import RunResult from "@/components/run/RunResult";
 import BestRun from "@/components/run/BestRun";
+import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 
 export default function RunTracker() {
   const [season, setSeason] = useState(null);
   const [runs, setRuns] = useState([]);
+  const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
@@ -27,16 +29,26 @@ export default function RunTracker() {
     setRuns(list);
   }, []);
 
+  const loadCards = useCallback(async (seasonId) => {
+    const list = await base44.entities.Card.filter({ season_id: seasonId });
+    setCards(list);
+  }, []);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const found = await loadSeason();
-      if (found) await loadRuns(found.id);
-      else setRuns([]);
+      if (found) {
+        await loadRuns(found.id);
+        await loadCards(found.id);
+      } else {
+        setRuns([]);
+        setCards([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [loadSeason, loadRuns]);
+  }, [loadSeason, loadRuns, loadCards]);
 
   useEffect(() => {
     loadAll();
@@ -45,6 +57,10 @@ export default function RunTracker() {
   const sorted = [...runs].sort((a, b) => b.attempt_number - a.attempt_number);
   const inProgress = runs.find((r) => r.result === "in_progress");
   const latest = sorted[0];
+
+  const { rules, allPass } = useDeckRules(cards);
+  const rulesLoading = rules.some((r) => r.pass === null || r.loading);
+  const failingRules = rules.filter((r) => r.pass === false).map((r) => r.label);
 
   const snapshot = (r) => ({
     stage_wins: num(r.stage_wins),
@@ -181,7 +197,14 @@ export default function RunTracker() {
               busy={busy}
             />
           ) : (
-            <RunResult run={latest} onStart={startRun} starting={busy} />
+            <RunResult
+              run={latest}
+              onStart={startRun}
+              starting={busy}
+              canStart={allPass}
+              failingRules={failingRules}
+              rulesLoading={rulesLoading}
+            />
           )}
         </div>
       )}

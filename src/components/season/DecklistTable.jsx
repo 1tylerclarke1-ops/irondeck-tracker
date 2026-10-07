@@ -14,7 +14,7 @@ import { Trash2 } from "lucide-react";
 
 const zoneOf = (c) => c.zone || "main";
 
-export default function DecklistTable({ cards, onChange }) {
+export default function DecklistTable({ cards, onChange, locked }) {
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -84,24 +84,20 @@ export default function DecklistTable({ cards, onChange }) {
         <TableCell className="capitalize">{card.rarity}</TableCell>
         <TableCell className="capitalize">{card.card_type}</TableCell>
         <TableCell className="text-right">
-          <div className="flex justify-end gap-2">
-            {editingId !== card.id && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => startEdit(card)}
-              >
-                Edit
+          {locked ? (
+            <span className="text-xs text-muted-foreground">Locked</span>
+          ) : (
+            <div className="flex justify-end gap-2">
+              {editingId !== card.id && (
+                <Button size="sm" variant="outline" onClick={() => startEdit(card)}>
+                  Edit
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => handleDelete(card)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
-            )}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => handleDelete(card)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
+            </div>
+          )}
         </TableCell>
       </TableRow>
     ));
