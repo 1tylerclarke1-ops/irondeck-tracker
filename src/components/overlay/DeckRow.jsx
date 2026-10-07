@@ -1,176 +1,186 @@
 import React from "react";
-import ManaSymbols from "./ManaSymbols";
 
-const RUST = "#cc5a3a";
+const RUST = "#a35a3d";
+const RUST_TEXTURE =
+  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3c387b3a0_image.png";
+const NEW_GREEN = "#2d8a4e";
 
-const COLOR_TINTS = {
-  W: "rgba(232,216,176,0.20)",
-  U: "rgba(40,110,180,0.28)",
-  B: "rgba(50,48,46,0.55)",
-  R: "rgba(200,60,50,0.28)",
-  G: "rgba(40,140,70,0.28)",
-};
-
-const COLOR_ACCENTS = {
-  W: "#e8d8b0",
-  U: "#3a8ad9",
-  B: "#7a7a7a",
-  R: "#e0533a",
-  G: "#4caf50",
-};
-
-function tintFor(colours) {
-  if (!colours) return { bg: "rgba(140,140,145,0.15)", accent: "#9ba3a8" };
-  const list = colours.split("").filter((c) => COLOR_TINTS[c]);
-  if (!list.length) return { bg: "rgba(140,140,145,0.15)", accent: "#9ba3a8" };
-  const bg =
-    list.length === 1
-      ? COLOR_TINTS[list[0]]
-      : `linear-gradient(90deg, ${list.map((c) => COLOR_TINTS[c]).join(", ")})`;
-  return { bg, accent: COLOR_ACCENTS[list[0]] };
-}
-
-export default function DeckRow({ card }) {
+export default function DeckRow({ card, imageUrl, loading }) {
   const copies = Number(card.copies) || 0;
   const original = Number(card.original_copies) || 0;
   const isReplacement = Boolean(card.is_decay_replacement);
-  const isLand = card.card_type === "land";
-  const rusted = original > 0 && copies < original;
-  const fullyRusted = original > 0 && copies === 0;
-  const rustedCount = rusted ? original - copies : 0;
-  const displayCopies = rusted ? original : copies;
-  const { bg, accent } = tintFor(card.colours);
+  const rustedCount = original > 0 ? original - copies : 0;
+  const isRusted = rustedCount > 0;
+  const fullyRusted = isRusted && copies === 0;
+  const rustedRatio = original > 0 ? rustedCount / original : 0;
+  const leftCutPct = (1 - rustedRatio) * 100;
+  const boxCount = isRusted ? original : copies;
 
-  const rowBg = fullyRusted
-    ? `linear-gradient(rgba(204,90,58,0.30), rgba(204,90,58,0.30)), ${bg}`
-    : bg;
+  const imgStyle = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "auto",
+    marginTop: "-4%",
+  };
 
   return (
     <div
       style={{
-        position: "relative",
+        breakInside: "avoid",
         display: "flex",
-        alignItems: "center",
-        gap: "0.5rem",
-        padding: "0.24rem 0.5rem 0.24rem 0.6rem",
-        borderRadius: "6px",
-        background: rowBg,
-        border: `1px solid ${
-          fullyRusted ? "rgba(204,90,58,0.55)" : "rgba(255,255,255,0.10)"
-        }`,
-        opacity: fullyRusted ? 0.9 : 1,
-        boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+        alignItems: "stretch",
+        gap: "6px",
+        marginBottom: "4px",
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 3,
-          background: fullyRusted ? RUST : accent,
-          borderRadius: "6px 0 0 6px",
-        }}
-      />
-
       {/* Copies box */}
       <div
         style={{
-          position: "relative",
+          width: 44,
+          height: 44,
+          flexShrink: 0,
+          borderRadius: "5px",
+          border: `1px solid ${fullyRusted ? RUST : "rgba(255,255,255,0.7)"}`,
+          background: fullyRusted ? RUST : "rgba(0,0,0,0.35)",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          width: 30,
-          height: 26,
-          borderRadius: "4px",
-          background: "rgba(0,0,0,0.4)",
-          border: "1px solid rgba(255,255,255,0.14)",
+          color: "#fff",
           fontWeight: 800,
-          fontSize: "0.9rem",
-          color: "#fff",
-          flexShrink: 0,
+          lineHeight: 1,
         }}
       >
-        {displayCopies}
-        {rusted && !fullyRusted && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: "4px",
-              background: `linear-gradient(135deg, transparent 52%, ${RUST} 52%)`,
-              opacity: 0.85,
-              pointerEvents: "none",
-            }}
-          />
-        )}
-        {fullyRusted && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: "4px",
-              background: "rgba(204,90,58,0.5)",
-              pointerEvents: "none",
-            }}
-          />
-        )}
-      </div>
-
-      {/* Name */}
-      <div
-        style={{
-          flex: 1,
-          fontSize: "0.82rem",
-          fontWeight: 600,
-          color: "#fff",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          textDecoration: fullyRusted ? "line-through" : "none",
-          opacity: fullyRusted ? 0.85 : 1,
-        }}
-      >
-        {card.name}
-        {isReplacement && (
+        <span style={{ fontSize: "0.95rem" }}>×{boxCount}</span>
+        {isRusted && !fullyRusted && (
           <span
             style={{
-              marginLeft: "0.4rem",
-              fontSize: "0.52rem",
-              fontWeight: 800,
-              letterSpacing: "0.08em",
+              fontSize: "0.5rem",
+              fontWeight: 700,
               color: RUST,
-              border: `1px solid ${RUST}`,
-              borderRadius: "3px",
-              padding: "0.05rem 0.22rem",
-              verticalAlign: "middle",
+              marginTop: "2px",
             }}
           >
-            NEW
+            {rustedCount} rust
           </span>
         )}
       </div>
 
-      {/* Mana symbols */}
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
-        {!isLand && <ManaSymbols cost={card.mana_cost} />}
-      </div>
+      {/* Card bar */}
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          height: 44,
+          borderRadius: "5px",
+          overflow: "hidden",
+          background: "#1a1d24",
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        {loading ? (
+          <div
+            className="animate-pulse"
+            style={{ position: "absolute", inset: 0, background: "#2a2e36" }}
+          />
+        ) : imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={card.name}
+            draggable={false}
+            style={{
+              ...imgStyle,
+              filter: fullyRusted ? "grayscale(1) brightness(0.7)" : "none",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: "8px",
+              fontSize: "0.8rem",
+              color: "#fff",
+            }}
+          >
+            {card.name}
+          </div>
+        )}
 
-      {/* Rusted label */}
-      {rusted && (
-        <span
-          style={{
-            flexShrink: 0,
-            fontSize: "0.6rem",
-            fontWeight: 700,
-            color: RUST,
-            whiteSpace: "nowrap",
-          }}
-        >
-          x{rustedCount} rusted
-        </span>
-      )}
+        {/* Partial rust: greyscale the rusted portion + texture overlay */}
+        {isRusted && !fullyRusted && imageUrl && (
+          <>
+            <img
+              src={imageUrl}
+              alt=""
+              draggable={false}
+              style={{
+                ...imgStyle,
+                filter: "grayscale(1) brightness(0.7)",
+                maskImage: `linear-gradient(to right, transparent ${leftCutPct}%, #000 ${
+                  leftCutPct + 8
+                }%)`,
+                WebkitMaskImage: `linear-gradient(to right, transparent ${leftCutPct}%, #000 ${
+                  leftCutPct + 8
+                }%)`,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: `${rustedRatio * 100}%`,
+                backgroundImage: `url(${RUST_TEXTURE})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                maskImage: "linear-gradient(to right, transparent, #000 8%)",
+                WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%)",
+              }}
+            />
+          </>
+        )}
+
+        {/* Fully rusted: texture over the whole bar */}
+        {fullyRusted && imageUrl && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: `url(${RUST_TEXTURE})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: 0.85,
+            }}
+          />
+        )}
+
+        {/* NEW tag */}
+        {isReplacement && (
+          <div
+            style={{
+              position: "absolute",
+              top: "-1px",
+              right: "6px",
+              padding: "1px 6px",
+              borderRadius: "8px",
+              background: NEW_GREEN,
+              color: "#fff",
+              fontSize: "0.5rem",
+              fontWeight: 800,
+              letterSpacing: "0.05em",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+            }}
+          >
+            NEW
+          </div>
+        )}
+      </div>
     </div>
   );
 }
