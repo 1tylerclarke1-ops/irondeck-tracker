@@ -16,7 +16,7 @@ const COLORS = [
 const rarityLabel = (r) => (r === "mythic" ? "Mythic" : "Rare");
 const downgradeLabel = (r) => (r === "mythic" ? "Rare" : "Uncommon");
 
-export default function SpinWheel({ cards, rarity, onDecayed }) {
+export default function SpinWheel({ cards, onDecayed }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -94,7 +94,7 @@ export default function SpinWheel({ cards, rarity, onDecayed }) {
         </Button>
         {result && (
           <div className="text-center text-lg font-semibold">
-            {result.name} loses one copy: {rarityLabel(rarity)} → {downgradeLabel(rarity)}
+            {result.name} loses one copy: {rarityLabel(result.rarity)} → {downgradeLabel(result.rarity)}
           </div>
         )}
       </CardContent>

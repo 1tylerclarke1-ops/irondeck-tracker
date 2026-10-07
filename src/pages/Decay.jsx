@@ -91,21 +91,11 @@ export default function Decay() {
     );
   }
 
-  const eligible = cards.filter((c) => num(c.copies) > 0 && c.rarity !== "basic");
-  const mythics = eligible.filter((c) => c.rarity === "mythic");
-  const rares = eligible.filter((c) => c.rarity === "rare");
+  const eligible = cards.filter(
+    (c) => num(c.copies) > 0 && (c.rarity === "mythic" || c.rarity === "rare")
+  );
 
-  let targetRarity = null;
-  let pool = [];
-  if (mythics.length > 0) {
-    targetRarity = "mythic";
-    pool = mythics;
-  } else if (rares.length > 0) {
-    targetRarity = "rare";
-    pool = rares;
-  }
-
-  if (!targetRarity) {
+  if (eligible.length === 0) {
     return (
       <div className="max-w-3xl mx-auto p-6">
         <AppNav />
@@ -117,7 +107,7 @@ export default function Decay() {
 
   const seen = new Set();
   const uniqueCards = [];
-  for (const c of pool) {
+  for (const c of eligible) {
     if (!seen.has(c.name)) {
       seen.add(c.name);
       uniqueCards.push(c);
@@ -151,7 +141,7 @@ export default function Decay() {
         season_id: season.id,
         attempt_number: dueRun.attempt_number,
         card_removed: decayedCard.name,
-        rarity_from: targetRarity,
+        rarity_from: decayedCard.rarity,
         rarity_to: rolled.rarity,
         replacement_card: rolled.name,
         how_obtained: howObtained,
@@ -171,15 +161,11 @@ export default function Decay() {
         Decay due for Attempt #{dueRun.attempt_number}
       </p>
       <div className="space-y-6">
-        <SpinWheel
-          cards={uniqueCards}
-          rarity={targetRarity}
-          onDecayed={setDecayedCard}
-        />
+        <SpinWheel cards={uniqueCards} onDecayed={setDecayedCard} />
         {decayedCard && (
           <ReplacementPanel
             decayedCard={decayedCard}
-            rarity={targetRarity}
+            rarity={decayedCard.rarity}
             season={season}
             deckCards={cards}
             onApply={applyDecay}
