@@ -12,6 +12,7 @@ export default function RunTracker() {
   const [season, setSeason] = useState(null);
   const [runs, setRuns] = useState([]);
   const [cards, setCards] = useState([]);
+  const [decays, setDecays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
@@ -34,6 +35,11 @@ export default function RunTracker() {
     setCards(list);
   }, []);
 
+  const loadDecays = useCallback(async (seasonId) => {
+    const list = await base44.entities.Decay.filter({ season_id: seasonId });
+    setDecays(list);
+  }, []);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -41,14 +47,16 @@ export default function RunTracker() {
       if (found) {
         await loadRuns(found.id);
         await loadCards(found.id);
+        await loadDecays(found.id);
       } else {
         setRuns([]);
         setCards([]);
+        setDecays([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [loadSeason, loadRuns, loadCards]);
+  }, [loadSeason, loadRuns, loadCards, loadDecays]);
 
   useEffect(() => {
     loadAll();
@@ -61,6 +69,12 @@ export default function RunTracker() {
   const { rules, allPass } = useDeckRules(cards);
   const rulesLoading = rules.some((r) => r.pass === null || r.loading);
   const failingRules = rules.filter((r) => r.pass === false).map((r) => r.label);
+
+  const decayDue = runs.some(
+    (r) =>
+      r.result === "died" &&
+      !decays.some((d) => d.attempt_number === r.attempt_number)
+  );
 
   const snapshot = (r) => ({
     stage_wins: num(r.stage_wins),
@@ -204,6 +218,7 @@ export default function RunTracker() {
               canStart={allPass}
               failingRules={failingRules}
               rulesLoading={rulesLoading}
+              decayDue={decayDue}
             />
           )}
         </div>

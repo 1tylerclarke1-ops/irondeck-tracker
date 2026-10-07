@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { num } from "@/components/run/runHelpers";
@@ -10,9 +11,10 @@ export default function RunResult({
   canStart,
   failingRules,
   rulesLoading,
+  decayDue,
 }) {
   const died = run?.result === "died";
-  const disabled = starting || rulesLoading || !canStart;
+  const disabled = starting || rulesLoading || !canStart || decayDue;
 
   return (
     <Card>
@@ -26,6 +28,14 @@ export default function RunResult({
               Attempt #{run.attempt_number}: {num(run.total_wins)} wins (final)
             </div>
           </>
+        )}
+        {decayDue && (
+          <div className="text-sm text-destructive space-y-1">
+            <div className="font-medium">Complete the decay first.</div>
+            <Link to="/decay" className="underline">
+              Go to Decay
+            </Link>
+          </div>
         )}
         {!canStart && !rulesLoading && failingRules.length > 0 && (
           <div className="text-sm text-destructive space-y-1 text-left">
