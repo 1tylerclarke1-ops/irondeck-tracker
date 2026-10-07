@@ -117,10 +117,13 @@ export default function Decay() {
   const applyDecay = async (howObtained, rolled) => {
     setApplying(true);
     try {
+      const targetZone = decayedCard.zone || "main";
       const newCopies = Math.max(num(decayedCard.copies) - 1, 0);
       await base44.entities.Card.update(decayedCard.id, { copies: newCopies });
       const now = new Date().toISOString();
-      const existing = cards.find((c) => c.name === rolled.name);
+      const existing = cards.find(
+        (c) => c.name === rolled.name && (c.zone || "main") === targetZone
+      );
       if (existing) {
         await base44.entities.Card.update(existing.id, {
           copies: num(existing.copies) + 1,
@@ -134,6 +137,7 @@ export default function Decay() {
           copies: 1,
           rarity: rolled.rarity,
           card_type: rolled.card_type,
+          zone: targetZone,
           mana_cost: rolled.mana_cost || "",
           colours: rolled.colours || "",
           mana_value: rolled.mana_value ?? null,
@@ -149,6 +153,7 @@ export default function Decay() {
         rarity_to: rolled.rarity,
         replacement_card: rolled.name,
         how_obtained: howObtained,
+        zone: targetZone,
         date: new Date().toISOString(),
       });
       setCompleted(true);

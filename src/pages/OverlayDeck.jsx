@@ -6,6 +6,14 @@ import DeckRow from "@/components/overlay/DeckRow";
 
 const RUST = "#a35a3d";
 
+const TOTAL_HEIGHT = 1080;
+const PAD_VERTICAL = 32;
+const TITLE_BLOCK = 46;
+const HEADING_HEIGHT = 24;
+const ROW_GAP = 4;
+const MAX_ROW = 44;
+const MIN_ROW = 16;
+
 function sortDeck(cards) {
   const enriched = cards.map((c) => ({
     ...c,
@@ -23,6 +31,7 @@ function sortDeck(cards) {
 export default function OverlayDeck() {
   const [season, setSeason] = useState(null);
   const [cards, setCards] = useState([]);
+  const [sideCards, setSideCards] = useState([]);
   const [climb, setClimb] = useState(null);
   const [run, setRun] = useState(null);
   const [decays, setDecays] = useState([]);
@@ -54,6 +63,7 @@ export default function OverlayDeck() {
         if (!s) {
           setSeason(null);
           setCards([]);
+          setSideCards([]);
           setClimb(null);
           setRun(null);
           setDecays([]);
@@ -79,6 +89,9 @@ export default function OverlayDeck() {
         );
         setDecays(decs);
         setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main")));
+        setSideCards(
+          sortDeck(list.filter((c) => (c.zone || "main") === "sideboard"))
+        );
       } catch (e) {
         // keep last data on error
       }
@@ -102,10 +115,14 @@ export default function OverlayDeck() {
   const seasonNumber = season?.season_number ?? null;
 
   const uniqueNames = useMemo(() => {
-    const names = Array.from(new Set(cards.map((c) => c.name).filter(Boolean)));
+    const names = Array.from(
+      new Set(
+        [...cards, ...sideCards].map((c) => c.name).filter(Boolean)
+      )
+    );
     names.sort();
     return names;
-  }, [cards]);
+  }, [cards, sideCards]);
   const namesKey = uniqueNames.join("|");
 
   useEffect(() => {
@@ -150,6 +167,19 @@ export default function OverlayDeck() {
 
   const title = `Season ${seasonNumber ?? "—"} · Day ${day ?? "—"}`;
 
+  const hasSide = sideCards.length > 0;
+  const total = cards.length + sideCards.length;
+  const childCount = total + (hasSide ? 1 : 0);
+  const gaps = childCount > 1 ? (childCount - 1) * ROW_GAP : 0;
+  const avail = TOTAL_HEIGHT - PAD_VERTICAL - TITLE_BLOCK;
+  const rowH =
+    total > 0
+      ? Math.max(
+          MIN_ROW,
+          Math.min(MAX_ROW, (avail - (hasSide ? HEADING_HEIGHT : 0) - gaps) / total)
+        )
+      : MAX_ROW;
+
   return (
     <div
       style={{
@@ -179,7 +209,7 @@ export default function OverlayDeck() {
             width: 460,
             display: "flex",
             flexDirection: "column",
-            gap: 4,
+            gap: ROW_GAP,
           }}
         >
           {cards.map((c) => (
@@ -188,8 +218,36 @@ export default function OverlayDeck() {
               card={c}
               imageUrl={images[c.name]}
               loading={images[c.name] === undefined}
+              height={rowH}
             />
           ))}
+          {hasSide && (
+            <>
+              <div
+                style={{
+                  height: HEADING_HEIGHT,
+                  display: "flex",
+                  alignItems: "center",
+                  paddingLeft: "2px",
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.18em",
+                  color: RUST,
+                }}
+              >
+                SIDEBOARD
+              </div>
+              {sideCards.map((c) => (
+                <DeckRow
+                  key={c.id}
+                  card={c}
+                  imageUrl={images[c.name]}
+                  loading={images[c.name] === undefined}
+                  height={rowH}
+                />
+              ))}
+            </>
+          )}
         </div>
       </div>
       {isOutro && <OutroPanel run={run} decays={todayDecays} />}

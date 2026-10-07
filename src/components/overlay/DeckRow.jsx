@@ -5,7 +5,7 @@ const RUST_TEXTURE =
   "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3c387b3a0_image.png";
 const SALVAGED_GREEN = "#2d8a4e";
 
-export default function DeckRow({ card, imageUrl, loading }) {
+export default function DeckRow({ card, imageUrl, loading, height = 44 }) {
   const copies = Number(card.copies) || 0;
   const original = Number(card.original_copies) || 0;
   const isReplacement = Boolean(card.is_decay_replacement);
@@ -16,6 +16,12 @@ export default function DeckRow({ card, imageUrl, loading }) {
   const leftCutPct = (1 - rustedRatio) * 100;
   const boxCount = isRusted ? original : copies;
 
+  const scale = height / 44;
+  const boxSize = height;
+  const countFont = Math.max(0.58, 0.95 * scale);
+  const rustFont = Math.max(0.42, 0.5 * scale);
+  const salvagedFont = Math.max(0.4, 0.48 * scale);
+
   const barImgStyle = {
     display: "block",
     width: "100%",
@@ -24,12 +30,12 @@ export default function DeckRow({ card, imageUrl, loading }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "stretch", gap: "6px" }}>
+    <div style={{ display: "flex", alignItems: "stretch", gap: "6px", height }}>
       {/* Copies box */}
       <div
         style={{
-          width: 44,
-          height: 44,
+          width: boxSize,
+          height: boxSize,
           flexShrink: 0,
           borderRadius: "5px",
           border: `1px solid ${fullyRusted ? RUST : "rgba(255,255,255,0.7)"}`,
@@ -41,13 +47,14 @@ export default function DeckRow({ card, imageUrl, loading }) {
           color: "#fff",
           fontWeight: 800,
           lineHeight: 1,
+          overflow: "hidden",
         }}
       >
-        <span style={{ fontSize: "0.95rem" }}>×{boxCount}</span>
-        {isRusted && !fullyRusted && (
+        <span style={{ fontSize: `${countFont}rem` }}>×{boxCount}</span>
+        {isRusted && !fullyRusted && height >= 34 && (
           <span
             style={{
-              fontSize: "0.5rem",
+              fontSize: `${rustFont}rem`,
               fontWeight: 700,
               color: RUST,
               marginTop: "2px",
@@ -63,7 +70,7 @@ export default function DeckRow({ card, imageUrl, loading }) {
         style={{
           position: "relative",
           flex: 1,
-          aspectRatio: "1 / 0.105",
+          height,
           borderRadius: "5px",
           overflow: "hidden",
           background: "#1a1d24",
@@ -150,7 +157,7 @@ export default function DeckRow({ card, imageUrl, loading }) {
               borderRadius: "8px",
               background: SALVAGED_GREEN,
               color: "#fff",
-              fontSize: "0.48rem",
+              fontSize: `${salvagedFont}rem`,
               fontWeight: 800,
               letterSpacing: "0.05em",
               boxShadow: "0 1px 3px rgba(0,0,0,0.5)",

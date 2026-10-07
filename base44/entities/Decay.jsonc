@@ -49,6 +49,15 @@
       ],
       "description": "How the replacement was obtained"
     },
+    "zone": {
+      "type": "string",
+      "enum": [
+        "main",
+        "sideboard"
+      ],
+      "default": "main",
+      "description": "Deck zone the replacement card went into"
+    },
     "date": {
       "type": "string",
       "format": "date-time",
