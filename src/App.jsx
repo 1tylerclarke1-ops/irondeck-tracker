@@ -10,6 +10,7 @@ import ScrollToTop from './components/ScrollToTop';
 import SeasonSetup from './pages/SeasonSetup';
 import RunTracker from './pages/RunTracker';
 import Decay from './pages/Decay';
+import DecayLog from './pages/DecayLog';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -43,6 +44,7 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<SeasonSetup />} />
         <Route path="/run-tracker" element={<RunTracker />} />
         <Route path="/decay" element={<Decay />} />
+        <Route path="/decay-log" element={<DecayLog />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

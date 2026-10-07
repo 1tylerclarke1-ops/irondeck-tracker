@@ -5,6 +5,7 @@ const links = [
   { to: "/", label: "Season Setup" },
   { to: "/run-tracker", label: "Run Tracker" },
   { to: "/decay", label: "Decay" },
+  { to: "/decay-log", label: "Decay Log" },
 ];
 
 export default function AppNav() {
