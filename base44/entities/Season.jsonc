@@ -1,0 +1,31 @@
+{
+  "name": "Season",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Season name"
+    },
+    "colours": {
+      "type": "string",
+      "description": "Deck colour identity, e.g. WB, UBR"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "ended"
+      ],
+      "default": "active"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Season start date"
+    }
+  },
+  "required": [
+    "name",
+    "colours"
+  ]
+}

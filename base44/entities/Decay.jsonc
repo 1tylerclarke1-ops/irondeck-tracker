@@ -1,0 +1,67 @@
+{
+  "name": "Decay",
+  "type": "object",
+  "properties": {
+    "season_id": {
+      "type": "string",
+      "description": "Season this decay belongs to"
+    },
+    "attempt_number": {
+      "type": "integer",
+      "description": "Attempt number that triggered this decay"
+    },
+    "card_removed": {
+      "type": "string",
+      "description": "Name of the card removed"
+    },
+    "rarity_from": {
+      "type": "string",
+      "enum": [
+        "mythic",
+        "rare",
+        "uncommon",
+        "common",
+        "basic"
+      ],
+      "description": "Rarity of the removed card"
+    },
+    "rarity_to": {
+      "type": "string",
+      "enum": [
+        "mythic",
+        "rare",
+        "uncommon",
+        "common",
+        "basic"
+      ],
+      "description": "Rarity of the replacement card"
+    },
+    "replacement_card": {
+      "type": "string",
+      "description": "Name of the replacement card"
+    },
+    "how_obtained": {
+      "type": "string",
+      "enum": [
+        "owned",
+        "wildcard",
+        "reroll"
+      ],
+      "description": "How the replacement was obtained"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the decay occurred"
+    }
+  },
+  "required": [
+    "season_id",
+    "attempt_number",
+    "card_removed",
+    "rarity_from",
+    "rarity_to",
+    "replacement_card",
+    "how_obtained"
+  ]
+}

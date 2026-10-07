@@ -1,0 +1,49 @@
+{
+  "name": "Card",
+  "type": "object",
+  "properties": {
+    "season_id": {
+      "type": "string",
+      "description": "Season this card belongs to"
+    },
+    "name": {
+      "type": "string",
+      "description": "Card name"
+    },
+    "copies": {
+      "type": "integer",
+      "description": "Number of copies in the deck"
+    },
+    "rarity": {
+      "type": "string",
+      "enum": [
+        "mythic",
+        "rare",
+        "uncommon",
+        "common",
+        "basic"
+      ],
+      "description": "Card rarity"
+    },
+    "card_type": {
+      "type": "string",
+      "enum": [
+        "creature",
+        "instant",
+        "sorcery",
+        "enchantment",
+        "artifact",
+        "planeswalker",
+        "land"
+      ],
+      "description": "Card type"
+    }
+  },
+  "required": [
+    "season_id",
+    "name",
+    "copies",
+    "rarity",
+    "card_type"
+  ]
+}

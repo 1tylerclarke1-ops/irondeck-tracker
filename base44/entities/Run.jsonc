@@ -1,0 +1,38 @@
+{
+  "name": "Run",
+  "type": "object",
+  "properties": {
+    "season_id": {
+      "type": "string",
+      "description": "Season this run belongs to"
+    },
+    "attempt_number": {
+      "type": "integer",
+      "description": "Attempt number within the season"
+    },
+    "wins": {
+      "type": "integer",
+      "default": 0,
+      "description": "Wins in this run"
+    },
+    "losses": {
+      "type": "integer",
+      "default": 0,
+      "description": "Losses in this run"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "in_progress",
+        "cleared",
+        "died"
+      ],
+      "default": "in_progress",
+      "description": "Run outcome"
+    }
+  },
+  "required": [
+    "season_id",
+    "attempt_number"
+  ]
+}
