@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
 
 const RUST = "#cc5a3a";
 const RUST_GLOW = "rgba(204,90,58,0.9)";
 const RED = "#c0392b";
 const RED_GLOW = "rgba(192,57,43,0.9)";
-const MYTHIC = "#e0533a";
-const RARE = "#d4af37";
 const PANEL_BG =
   "linear-gradient(180deg, rgba(43,47,55,0.82) 0%, rgba(20,23,29,0.82) 100%)";
 const PANEL_BORDER = "rgba(204,90,58,0.4)";
@@ -94,9 +93,9 @@ export default function Overlay() {
           setData({ season: null });
           return;
         }
-        const [runs, cards] = await Promise.all([
+        const [runs, climbs] = await Promise.all([
           base44.entities.Run.filter({ season_id: season.id }),
-          base44.entities.Card.filter({ season_id: season.id }),
+          base44.entities.Climb.list(),
         ]);
         if (!active) return;
         const sortedRuns = [...runs].sort(
@@ -104,17 +103,32 @@ export default function Overlay() {
         );
         const currentRun =
           runs.find((r) => r.result === "in_progress") || sortedRuns[0] || null;
-        const bestRun = runs.reduce(
-          (m, r) => Math.max(m, r.total_wins || 0),
-          0
+        const bestRun = runs.reduce((m, r) => Math.max(m, r.total_wins || 0), 0);
+
+        const sortedClimbs = [...climbs].sort(
+          (a, b) => (b.number || 0) - (a.number || 0)
         );
-        const mythics = cards
-          .filter((c) => c.rarity === "mythic")
-          .reduce((s, c) => s + (c.copies || 0), 0);
-        const rares = cards
-          .filter((c) => c.rarity === "rare")
-          .reduce((s, c) => s + (c.copies || 0), 0);
-        setData({ season, currentRun, bestRun, mythics, rares });
+        const latestClimb = sortedClimbs[0];
+        let day = null;
+        if (latestClimb) {
+          if (latestClimb.status === "active" && latestClimb.start_date) {
+            day =
+              differenceInCalendarDays(
+                new Date(),
+                new Date(latestClimb.start_date)
+              ) + 1;
+          } else if (latestClimb.status === "complete") {
+            day = latestClimb.days_taken || null;
+          }
+        }
+        const completed = climbs.filter(
+          (c) => c.status === "complete" && c.days_taken != null
+        );
+        const record = completed.length
+          ? Math.min(...completed.map((c) => c.days_taken))
+          : null;
+
+        setData({ season, currentRun, bestRun, day, record });
       } catch (e) {
         // keep last data on error
       }
@@ -129,16 +143,16 @@ export default function Overlay() {
 
   // Animate only on value changes, not on every refresh.
   useEffect(() => {
-    const wins = data?.currentRun ? Number(data.currentRun.stage_wins || 0) : 0;
+    const wins = data?.currentRun ? Number(data.currentRun.round_wins || 0) : 0;
     const losses = data?.currentRun
-      ? Number(data.currentRun.stage_losses || 0)
+      ? Number(data.currentRun.round_losses || 0)
       : 0;
-    const pending = data?.currentRun
-      ? Boolean(data.currentRun.stage_cleared_pending)
+    const survived = data?.currentRun
+      ? data.currentRun.round_status === "survived"
       : false;
 
     const newActive = Array.from({ length: 8 }, (_, i) =>
-      pending ? "hot" : activeKey(i, wins)
+      survived ? "hot" : activeKey(i, wins)
     );
 
     if (prevActive.current === null) {
@@ -182,9 +196,12 @@ export default function Overlay() {
   );
 
   const s = data;
-  const wins = s?.currentRun ? Number(s.currentRun.stage_wins || 0) : 0;
-  const losses = s?.currentRun ? Number(s.currentRun.stage_losses || 0) : 0;
-  const pending = Boolean(s?.currentRun?.stage_cleared_pending);
+  const wins = s?.currentRun ? Number(s.currentRun.round_wins || 0) : 0;
+  const losses = s?.currentRun ? Number(s.currentRun.round_losses || 0) : 0;
+  const survived = Boolean(s?.currentRun?.round_status === "survived");
+  const seasonNumber = s?.season?.season_number ?? null;
+  const day = s?.day ?? null;
+  const record = s?.record ?? null;
 
   return (
     <div
@@ -212,15 +229,15 @@ export default function Overlay() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* LEFT: IRONDECK + Attempt + Stage */}
+        {/* LEFT: Season / Day / Record */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: "0.3rem",
-            minWidth: "84px",
+            gap: "0.45rem",
+            minWidth: "92px",
           }}
         >
           <span
@@ -229,20 +246,21 @@ export default function Overlay() {
               letterSpacing: "0.24em",
               fontWeight: 800,
               color: RUST,
+              marginBottom: "0.2rem",
             }}
           >
             IRONDECK
           </span>
-          <SideStat
-            label="Attempt"
-            value={s?.currentRun ? `#${s.currentRun.attempt_number}` : "—"}
-          />
-          <SideStat label="Stage" value={s?.currentRun?.stage ?? "—"} />
+          <SideStat label="Season" value={seasonNumber ?? "—"} />
+          <SideStat label="Day" value={day ?? "—"} />
+          {record != null && (
+            <SideStat label="Record" value={`${record} days`} />
+          )}
         </div>
 
         <Divider />
 
-        {/* CENTER: 8 medallions + timeline + labels */}
+        {/* CENTER: 8 medallions + timeline + labels + losses */}
         <div
           style={{
             display: "flex",
@@ -265,7 +283,7 @@ export default function Overlay() {
                 key={i}
                 index={i}
                 wins={wins}
-                pending={pending}
+                survived={survived}
                 pop={popSlots.includes(i)}
               />
             ))}
@@ -324,27 +342,15 @@ export default function Overlay() {
               );
             })}
           </div>
-        </div>
 
-        <Divider />
-
-        {/* RIGHT: losses (top) + run-wins panel (bottom) */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            gap: "0.55rem",
-            alignSelf: "stretch",
-          }}
-        >
+          {/* Loss diamonds + label */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              alignItems: "flex-end",
-              gap: "0.18rem",
+              alignItems: "center",
+              gap: "0.15rem",
+              marginTop: "0.3rem",
             }}
           >
             <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
@@ -375,28 +381,40 @@ export default function Overlay() {
             </div>
             <span
               style={{
-                fontSize: "0.5rem",
-                letterSpacing: "0.02em",
-                fontWeight: 600,
-                color: "rgba(255,255,255,0.45)",
+                fontSize: "0.55rem",
+                letterSpacing: "0.14em",
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.5)",
               }}
             >
-              Run ends at 2 losses
+              LOSSES
             </span>
           </div>
+        </div>
 
+        <Divider />
+
+        {/* RIGHT: Run wins + Best */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            alignSelf: "stretch",
+          }}
+        >
           <div
             style={{
               background: SUBPANEL_BG,
               border: `1px solid ${RUST}`,
               borderRadius: "10px",
-              padding: "0.45rem 0.7rem",
+              padding: "0.6rem 0.9rem",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "0.05rem",
+              gap: "0.1rem",
               boxShadow: "0 0 12px rgba(204,90,58,0.22)",
-              minWidth: "96px",
+              minWidth: "110px",
             }}
           >
             <span
@@ -411,7 +429,7 @@ export default function Overlay() {
             </span>
             <span
               style={{
-                fontSize: "2.2rem",
+                fontSize: "2.6rem",
                 fontWeight: 800,
                 lineHeight: 1,
                 color: "#fff",
@@ -428,21 +446,10 @@ export default function Overlay() {
             >
               Best {s?.bestRun ?? "—"}
             </span>
-            <div
-              style={{
-                display: "flex",
-                gap: "0.6rem",
-                alignItems: "center",
-                marginTop: "0.15rem",
-              }}
-            >
-              <Gem color={MYTHIC} count={s?.mythics ?? 0} label="M" />
-              <Gem color={RARE} count={s?.rares ?? 0} label="R" />
-            </div>
           </div>
         </div>
 
-        {pending && (
+        {survived && (
           <div
             style={{
               position: "absolute",
@@ -458,10 +465,10 @@ export default function Overlay() {
               whiteSpace: "nowrap",
             }}
           >
-            STAGE {s?.currentRun?.stage ?? "—"} CLEARED
+            DAY SURVIVED
           </div>
         )}
-        {died && !pending && (
+        {died && !survived && (
           <div
             style={{
               position: "absolute",
@@ -518,8 +525,8 @@ function Divider() {
   );
 }
 
-function Medallion({ index, wins, pending, pop }) {
-  const active = pending ? "hot" : activeKey(index, wins);
+function Medallion({ index, wins, survived, pop }) {
+  const active = survived ? "hot" : activeKey(index, wins);
   const anim = pop ? "ov-crosspop 0.5s ease-out" : "none";
   return (
     <div
@@ -548,28 +555,6 @@ function Medallion({ index, wins, pending, pop }) {
           }}
         />
       ))}
-    </div>
-  );
-}
-
-function Gem({ color, count, label }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-      <div
-        style={{
-          width: 11,
-          height: 11,
-          borderRadius: "999px",
-          background: color,
-          boxShadow: `0 0 8px ${color}`,
-        }}
-      />
-      <span style={{ fontSize: "0.68rem", fontWeight: 800, color: color }}>
-        {label}
-      </span>
-      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#fff" }}>
-        {count}
-      </span>
     </div>
   );
 }
