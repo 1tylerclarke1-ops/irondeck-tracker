@@ -11,6 +11,29 @@ const PANEL_BG =
   "linear-gradient(180deg, rgba(43,47,55,0.82) 0%, rgba(20,23,29,0.82) 100%)";
 const PANEL_BORDER = "rgba(204,90,58,0.4)";
 
+const INGOTS = {
+  hot: [
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/98ce32099_ingot-hot-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2949c0d23_ingot-hot-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/9cc6798df_ingot-hot-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/df17cf01c_ingot-hot-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/fe24bbb13_ingot-hot-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/cbd4a3ec9_ingot-hot-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/32c0d296b_ingot-hot-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/a47113b5f_ingot-hot-7.png",
+  ],
+  cold: [
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/dfba089ae_ingot-cold-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/09f49bc04_ingot-cold-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/8a68977ec_ingot-cold-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6fa391509_ingot-cold-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/047310e12_ingot-cold-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6534a00a3_ingot-cold-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/fd09f87a6_ingot-cold-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/554e37c78_ingot-cold-7.png",
+  ],
+};
+
 export default function Overlay() {
   const [data, setData] = useState(null);
 
@@ -149,6 +172,7 @@ export default function Overlay() {
         @keyframes ov-flash { 0%,100% { filter: brightness(1); box-shadow: 0 0 0 rgba(204,90,58,0); } 50% { filter: brightness(1.7); box-shadow: 0 0 22px rgba(204,90,58,0.95); } }
         @keyframes ov-pulse { 0%,100% { box-shadow: 0 0 6px rgba(204,90,58,0.5); } 50% { box-shadow: 0 0 18px rgba(204,90,58,0.95); } }
         @keyframes ov-msg { 0% { opacity: 0; transform: translateY(6px) scale(0.92); } 15% { opacity: 1; transform: translateY(0) scale(1); } 85% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-4px) scale(0.96); } }
+        @keyframes ov-crosspop { 0% { transform: scale(0.8); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
       `}</style>
       <div
         style={{
@@ -232,8 +256,6 @@ export default function Overlay() {
             const isPop = popSlot === i;
             const isFlash = flashAll;
             const lit = won || isCurrent;
-            const heat = i / 7;
-            const scale = 0.4 + heat * 0.45;
             return (
               <div
                 key={i}
@@ -279,17 +301,7 @@ export default function Overlay() {
                       : "none",
                   }}
                 >
-                  <div
-                    style={{
-                      width: `${Math.round(scale * 100)}%`,
-                      aspectRatio: "26 / 18",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Ingot heat={heat} lit={lit} />
-                  </div>
+                  <IngotImage index={i} won={won} pop={isPop} />
                   {isCurrent && (
                     <div
                       style={{
@@ -478,56 +490,49 @@ function Divider() {
   );
 }
 
-function mix(h1, h2, t) {
-  const a = parseInt(h1.slice(1), 16);
-  const b = parseInt(h2.slice(1), 16);
-  const r = Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
-  const g = Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
-  const bl = Math.round((a & 255) * (1 - t) + (b & 255) * t);
-  return `#${((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1)}`;
-}
-
-function Ingot({ heat, lit }) {
-  const gid = `ingot-${Math.round(heat * 100)}-${lit ? 1 : 0}`;
-  const top = lit ? mix("#caa070", "#ffe6b0", heat) : "#9aa3b2";
-  const mid = lit ? mix("#9a5a3a", "#ff7a3a", heat) : "#525a68";
-  const bot = lit ? mix("#5a2a1a", "#a04020", heat) : "#222732";
-  const stroke = lit
-    ? `rgba(255,${Math.round(120 + 90 * heat)},80,0.85)`
-    : "rgba(255,255,255,0.16)";
-  const glow =
-    lit && heat > 0
-      ? `drop-shadow(0 0 ${2 + 5 * heat}px rgba(255,${Math.round(
-          100 + 80 * heat
-        )},60,${0.35 + 0.4 * heat}))`
-      : "none";
+function IngotImage({ index, won, pop }) {
   return (
-    <svg
-      width="100%"
-      height="100%"
-      viewBox="0 0 26 18"
-      preserveAspectRatio="xMidYMid meet"
-      style={{ display: "block", filter: glow }}
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        animation: pop ? "ov-crosspop 0.5s ease-out" : "none",
+      }}
     >
-      <defs>
-        <linearGradient id={`${gid}-g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={top} />
-          <stop offset="0.5" stopColor={mid} />
-          <stop offset="1" stopColor={bot} />
-        </linearGradient>
-      </defs>
-      <path
-        d="M3 16 L5 3 H21 L23 16 Z"
-        fill={`url(#${gid}-g)`}
-        stroke={stroke}
-        strokeWidth="0.8"
-        strokeLinejoin="round"
+      <img
+        src={INGOTS.cold[index]}
+        alt=""
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          objectPosition: "center bottom",
+          opacity: won ? 0 : 1,
+          transition: "opacity 0.3s ease",
+          pointerEvents: "none",
+        }}
       />
-      <path
-        d="M5 3 H21 L19 7 H7 Z"
-        fill={lit ? `rgba(255,255,255,${0.18 + 0.2 * heat})` : "rgba(255,255,255,0.07)"}
+      <img
+        src={INGOTS.hot[index]}
+        alt=""
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          objectPosition: "center bottom",
+          opacity: won ? 1 : 0,
+          transition: "opacity 0.3s ease",
+          pointerEvents: "none",
+        }}
       />
-    </svg>
+    </div>
   );
 }
 
