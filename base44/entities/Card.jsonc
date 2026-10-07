@@ -14,6 +14,11 @@
       "type": "integer",
       "description": "Number of copies in the deck"
     },
+    "original_copies": {
+      "type": "integer",
+      "default": 0,
+      "description": "Copies when the card was first added to the deck"
+    },
     "rarity": {
       "type": "string",
       "enum": [

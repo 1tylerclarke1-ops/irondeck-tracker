@@ -1,36 +1,37 @@
 {
-  "name": "Season",
+  "name": "Climb",
   "type": "object",
   "properties": {
-    "name": {
-      "type": "string",
-      "description": "Season name"
+    "number": {
+      "type": "integer",
+      "description": "Climb number"
     },
-    "colours": {
+    "start_date": {
       "type": "string",
-      "description": "Deck colour identity, e.g. WB, UBR"
+      "format": "date",
+      "description": "Climb start date"
+    },
+    "mythic_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date mythic rank was reached"
+    },
+    "days_taken": {
+      "type": "integer",
+      "description": "Days taken to reach mythic"
     },
     "status": {
       "type": "string",
       "enum": [
         "active",
-        "ended"
+        "complete"
       ],
-      "default": "active"
-    },
-    "start_date": {
-      "type": "string",
-      "format": "date",
-      "description": "Season start date"
-    },
-    "season_number": {
-      "type": "integer",
-      "description": "Season number"
+      "default": "active",
+      "description": "Climb status"
     }
   },
   "required": [
-    "name",
-    "colours"
+    "number"
   ],
   "rls": {
     "read": {},

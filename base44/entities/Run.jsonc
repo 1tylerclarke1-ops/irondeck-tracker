@@ -54,6 +54,26 @@
       "type": "boolean",
       "default": false,
       "description": "Stage hit 7 wins and is awaiting continue to the next stage"
+    },
+    "round_wins": {
+      "type": "integer",
+      "default": 0,
+      "description": "Wins in the current round"
+    },
+    "round_losses": {
+      "type": "integer",
+      "default": 0,
+      "description": "Losses in the current round"
+    },
+    "round_status": {
+      "type": "string",
+      "enum": [
+        "playing",
+        "survived",
+        "died"
+      ],
+      "default": "playing",
+      "description": "Status of the current round"
     }
   },
   "required": [
