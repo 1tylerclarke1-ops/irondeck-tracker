@@ -5,6 +5,7 @@ import ActiveSeasonPanel from "@/components/season/ActiveSeasonPanel";
 import DeckCounters from "@/components/season/DeckCounters";
 import DecklistTable from "@/components/season/DecklistTable";
 import CardForm from "@/components/season/CardForm";
+import AppNav from "@/components/AppNav";
 
 export default function SeasonSetup() {
   const [season, setSeason] = useState(null);
@@ -59,6 +60,7 @@ export default function SeasonSetup() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <AppNav />
       <h1 className="text-2xl font-bold">Season Setup</h1>
       {!season ? (
         <SeasonForm onCreated={loadAll} />

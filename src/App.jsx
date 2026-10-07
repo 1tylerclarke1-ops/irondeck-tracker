@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 // Add page imports here
 import SeasonSetup from './pages/SeasonSetup';
+import RunTracker from './pages/RunTracker';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -39,6 +40,7 @@ const AuthenticatedApp = () => {
       {/* Add your page Route elements here */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<SeasonSetup />} />
+        <Route path="/run-tracker" element={<RunTracker />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
