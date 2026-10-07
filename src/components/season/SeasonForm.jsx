@@ -39,12 +39,31 @@ export default function SeasonForm({ onCreated }) {
       const ordered = COLOURS.filter((c) => colours.includes(c.code))
         .map((c) => c.code)
         .join("");
+      const allSeasons = await base44.entities.Season.list();
+      const maxSeasonNum = allSeasons.reduce(
+        (m, s) => Math.max(m, s.season_number || 0),
+        0
+      );
       await base44.entities.Season.create({
         name: name.trim(),
         colours: ordered,
         status: "active",
         start_date: startDate || null,
+        season_number: maxSeasonNum + 1,
       });
+      const activeClimbs = await base44.entities.Climb.filter({ status: "active" });
+      if (activeClimbs.length === 0) {
+        const allClimbs = await base44.entities.Climb.list();
+        const maxClimbNum = allClimbs.reduce(
+          (m, c) => Math.max(m, c.number || 0),
+          0
+        );
+        await base44.entities.Climb.create({
+          number: maxClimbNum + 1,
+          start_date: new Date().toISOString().slice(0, 10),
+          status: "active",
+        });
+      }
       setName("");
       setColours([]);
       setStartDate("");

@@ -58,6 +58,18 @@ export default function SeasonSetup() {
     setEnding(true);
     try {
       await base44.entities.Season.update(season.id, { status: "ended" });
+      const allClimbs = await base44.entities.Climb.list();
+      const sorted = [...allClimbs].sort(
+        (a, b) => (b.number || 0) - (a.number || 0)
+      );
+      const latestClimb = sorted[0];
+      if (latestClimb && latestClimb.status === "complete") {
+        await base44.entities.Climb.create({
+          number: (latestClimb.number || 0) + 1,
+          start_date: new Date().toISOString().slice(0, 10),
+          status: "active",
+        });
+      }
       await loadAll();
     } finally {
       setEnding(false);

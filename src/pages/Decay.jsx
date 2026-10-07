@@ -166,7 +166,7 @@ export default function Decay() {
       <AppNav />
       <h1 className="text-2xl font-bold mb-2">Decay</h1>
       <p className="text-muted-foreground mb-6">
-        Decay due for run {num(dueRun.total_wins)}–{num(dueRun.losses)}
+        Decay due for run {num(dueRun.round_wins)}–{num(dueRun.round_losses)}
       </p>
       <div className="space-y-6">
         <SpinWheel cards={uniqueCards} onDecayed={setDecayedCard} />
