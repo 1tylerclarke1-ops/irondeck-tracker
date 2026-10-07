@@ -412,15 +412,10 @@ export default function Overlay() {
         >
           <div
             style={{
-              background: SUBPANEL_BG,
-              border: `1px solid ${RUST}`,
-              borderRadius: "10px",
-              padding: "0.6rem 0.9rem",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: "0.1rem",
-              boxShadow: "0 0 12px rgba(204,90,58,0.22)",
               minWidth: "110px",
             }}
           >
