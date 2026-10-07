@@ -10,6 +10,8 @@ const RARE = "#d4af37";
 const PANEL_BG =
   "linear-gradient(180deg, rgba(43,47,55,0.82) 0%, rgba(20,23,29,0.82) 100%)";
 const PANEL_BORDER = "rgba(204,90,58,0.4)";
+const SUBPANEL_BG =
+  "linear-gradient(180deg, rgba(15,18,24,0.92) 0%, rgba(8,10,14,0.92) 100%)";
 
 const INGOTS = {
   hot: [
@@ -33,6 +35,11 @@ const INGOTS = {
     "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/554e37c78_ingot-cold-7.png",
   ],
 };
+
+const LOSS_EMPTY =
+  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/25582b81c_generated_image.png";
+const LOSS_FILLED =
+  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/2d86cec4c_generated_image.png";
 
 export default function Overlay() {
   const [data, setData] = useState(null);
@@ -167,10 +174,9 @@ export default function Overlay() {
       style={{ background: "transparent" }}
     >
       <style>{`
-        @keyframes ov-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
         @keyframes ov-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
-        @keyframes ov-flash { 0%,100% { filter: brightness(1); box-shadow: 0 0 0 rgba(204,90,58,0); } 50% { filter: brightness(1.7); box-shadow: 0 0 22px rgba(204,90,58,0.95); } }
-        @keyframes ov-pulse { 0%,100% { box-shadow: 0 0 6px rgba(204,90,58,0.5); } 50% { box-shadow: 0 0 18px rgba(204,90,58,0.95); } }
+        @keyframes ov-flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.7) drop-shadow(0 0 10px rgba(204,90,58,0.95)); } }
+        @keyframes ov-pulse { 0%,100% { box-shadow: 0 0 6px rgba(204,90,58,0.45); } 50% { box-shadow: 0 0 16px rgba(204,90,58,0.9); } }
         @keyframes ov-msg { 0% { opacity: 0; transform: translateY(6px) scale(0.92); } 15% { opacity: 1; transform: translateY(0) scale(1); } 85% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-4px) scale(0.96); } }
         @keyframes ov-crosspop { 0% { transform: scale(0.8); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
       `}</style>
@@ -178,10 +184,10 @@ export default function Overlay() {
         style={{
           position: "relative",
           display: "flex",
-          alignItems: "center",
-          gap: "2rem",
-          padding: "0.7rem 1.6rem",
-          borderRadius: "12px",
+          alignItems: "stretch",
+          gap: "1.3rem",
+          padding: "0.7rem 1.4rem",
+          borderRadius: "14px",
           background: PANEL_BG,
           border: `1px solid ${PANEL_BORDER}`,
           boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
@@ -190,33 +196,27 @@ export default function Overlay() {
           fontFamily: "sans-serif",
         }}
       >
-        <span
-          style={{
-            position: "absolute",
-            top: "-9px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "0 8px",
-            fontSize: "0.55rem",
-            letterSpacing: "0.22em",
-            fontWeight: 700,
-            color: RUST,
-            background: "linear-gradient(180deg, rgba(43,47,55,0.95) 0%, rgba(26,29,35,0.95) 100%)",
-            borderRadius: "4px",
-          }}
-        >
-          IRONDECK
-        </span>
-
+        {/* LEFT: IRONDECK + Attempt + Stage */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: "0.1rem",
             alignItems: "center",
-            minWidth: "92px",
+            justifyContent: "center",
+            gap: "0.3rem",
+            minWidth: "84px",
           }}
         >
+          <span
+            style={{
+              fontSize: "0.62rem",
+              letterSpacing: "0.24em",
+              fontWeight: 800,
+              color: RUST,
+            }}
+          >
+            IRONDECK
+          </span>
           <SideStat
             label="Attempt"
             value={s?.currentRun ? `#${s.currentRun.attempt_number}` : "—"}
@@ -226,99 +226,71 @@ export default function Overlay() {
 
         <Divider />
 
+        {/* CENTER: 8 ingots on a shared baseline */}
         <div
           style={{
-            position: "relative",
             display: "flex",
-            gap: "0.4rem",
-            alignItems: "flex-start",
-            padding: "0.3rem 0 0.4rem",
+            gap: "0.5rem",
+            alignItems: "flex-end",
+            padding: "0.2rem 0",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              left: "0.4rem",
-              right: "0.4rem",
-              top: "calc(0.3rem + 32px)",
-              height: "2px",
-              transform: "translateY(-50%)",
-              background:
-                "linear-gradient(90deg, rgba(204,90,58,0.15) 0%, rgba(204,90,58,0.5) 50%, rgba(204,90,58,0.15) 100%)",
-              borderRadius: "2px",
-              zIndex: 0,
-              pointerEvents: "none",
-            }}
-          />
           {Array.from({ length: 8 }).map((_, i) => {
             const won = i < wins;
             const isCurrent = i === wins;
             const isPop = popSlot === i;
             const isFlash = flashAll;
-            const lit = won || isCurrent;
+            const dim = i > wins;
             return (
               <div
                 key={i}
                 style={{
                   position: "relative",
-                  zIndex: 1,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: "0.2rem",
+                  gap: "0.3rem",
+                  opacity: dim ? 0.45 : 1,
+                  transition: "opacity 0.3s ease",
                 }}
               >
                 <div
                   style={{
                     position: "relative",
-                    width: 36,
-                    height: 64,
-                    borderRadius: "7px",
+                    width: 46,
+                    height: 72,
+                    boxSizing: "border-box",
+                    padding: 3,
+                    borderRadius: "11px",
                     display: "flex",
-                    alignItems: "center",
+                    alignItems: "flex-end",
                     justifyContent: "center",
-                    background: won
-                      ? "linear-gradient(180deg, rgba(204,90,58,0.28) 0%, rgba(204,90,58,0.06) 100%)"
-                      : "rgba(255,255,255,0.04)",
-                    border: `1.5px solid ${
-                      isCurrent
-                        ? RUST
-                        : won
-                        ? "rgba(204,90,58,0.85)"
-                        : "rgba(255,255,255,0.14)"
-                    }`,
+                    border: `2px solid ${isCurrent ? RUST : "transparent"}`,
                     boxShadow: isCurrent
-                      ? `0 0 14px ${RUST_GLOW}, inset 0 0 8px rgba(204,90,58,0.3)`
-                      : won
-                      ? "inset 0 0 6px rgba(204,90,58,0.25)"
+                      ? `0 0 14px ${RUST_GLOW}, inset 0 0 8px rgba(204,90,58,0.25)`
                       : "none",
-                    animation: isFlash
-                      ? "ov-flash 0.6s ease-in-out infinite"
-                      : isPop
-                      ? "ov-pop 0.5s ease-out"
-                      : isCurrent
+                    animation: isCurrent
                       ? "ov-pulse 1.6s ease-in-out infinite"
                       : "none",
                   }}
                 >
-                  <IngotImage index={i} won={won} pop={isPop} />
+                  <IngotImage index={i} won={won} pop={isPop} flash={isFlash} />
                   {isCurrent && (
                     <div
                       style={{
                         position: "absolute",
-                        bottom: -10,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        width: 20,
-                        height: 20,
+                        bottom: -7,
+                        left: -7,
+                        width: 22,
+                        height: 22,
                         borderRadius: "999px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         background: RUST,
-                        border: "2px solid rgba(255,255,255,0.85)",
+                        border: "2px solid rgba(255,255,255,0.9)",
                         boxShadow: `0 0 10px ${RUST_GLOW}`,
-                        fontSize: "0.7rem",
+                        fontSize: "0.72rem",
                         fontWeight: 800,
                         color: "#fff",
                       }}
@@ -329,13 +301,12 @@ export default function Overlay() {
                 </div>
                 <span
                   style={{
-                    marginTop: "0.85rem",
                     fontSize: "0.5rem",
-                    letterSpacing: "0.04em",
+                    letterSpacing: "0.03em",
                     fontWeight: 700,
-                    color: lit
-                      ? "rgba(255,255,255,0.85)"
-                      : "rgba(255,255,255,0.4)",
+                    color: dim
+                      ? "rgba(255,255,255,0.4)"
+                      : "rgba(255,255,255,0.8)",
                   }}
                 >
                   {i} {i === 1 ? "Win" : "Wins"}
@@ -347,87 +318,117 @@ export default function Overlay() {
 
         <Divider />
 
+        {/* RIGHT: losses (top) + run-wins panel (bottom) */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            gap: "0.1rem",
-            minWidth: "92px",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            gap: "0.55rem",
+            alignSelf: "stretch",
           }}
         >
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-            {[0, 1].map((i) => {
-              const lost = i < losses;
-              const isShake = shakePip === i;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    transform: "rotate(45deg)",
-                    background: lost ? RED : "rgba(255,255,255,0.06)",
-                    border: `2px solid ${
-                      lost ? "rgba(192,57,43,0.95)" : "rgba(255,255,255,0.3)"
-                    }`,
-                    boxShadow: lost ? `0 0 12px ${RED_GLOW}` : "none",
-                    animation: isShake ? "ov-shake 0.5s ease-in-out" : "none",
-                  }}
-                />
-              );
-            })}
-          </div>
-          <span
-            style={{
-              fontSize: "0.5rem",
-              letterSpacing: "0.02em",
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.45)",
-              marginTop: "0.1rem",
-            }}
-          >
-            Run ends at 2 losses
-          </span>
-          <span
-            style={{
-              fontSize: "0.6rem",
-              letterSpacing: "0.16em",
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.5)",
-            }}
-          >
-            RUN WINS
-          </span>
-          <span
-            style={{
-              fontSize: "2.6rem",
-              fontWeight: 800,
-              lineHeight: 1,
-              color: "#fff",
-            }}
-          >
-            {s?.currentRun?.total_wins ?? "—"}
-          </span>
-          <span
-            style={{
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.7)",
-            }}
-          >
-            Best {s?.bestRun ?? "—"}
-          </span>
           <div
             style={{
               display: "flex",
-              gap: "0.7rem",
-              alignItems: "center",
-              marginTop: "0.2rem",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: "0.18rem",
             }}
           >
-            <Gem color={MYTHIC} count={s?.mythics ?? 0} label="M" />
-            <Gem color={RARE} count={s?.rares ?? 0} label="R" />
+            <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
+              {[0, 1].map((i) => {
+                const lost = i < losses;
+                const isShake = shakePip === i;
+                return (
+                  <img
+                    key={i}
+                    src={lost ? LOSS_FILLED : LOSS_EMPTY}
+                    alt=""
+                    draggable={false}
+                    style={{
+                      width: 26,
+                      height: 26,
+                      objectFit: "contain",
+                      filter: lost
+                        ? `drop-shadow(0 0 8px ${RED_GLOW})`
+                        : "none",
+                      animation: isShake
+                        ? "ov-shake 0.5s ease-in-out"
+                        : "none",
+                      pointerEvents: "none",
+                    }}
+                  />
+                );
+              })}
+            </div>
+            <span
+              style={{
+                fontSize: "0.5rem",
+                letterSpacing: "0.02em",
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              Run ends at 2 losses
+            </span>
+          </div>
+
+          <div
+            style={{
+              background: SUBPANEL_BG,
+              border: `1px solid ${RUST}`,
+              borderRadius: "10px",
+              padding: "0.45rem 0.7rem",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "0.05rem",
+              boxShadow: "0 0 12px rgba(204,90,58,0.22)",
+              minWidth: "96px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.55rem",
+                letterSpacing: "0.18em",
+                fontWeight: 700,
+                color: RUST,
+              }}
+            >
+              RUN WINS
+            </span>
+            <span
+              style={{
+                fontSize: "2.2rem",
+                fontWeight: 800,
+                lineHeight: 1,
+                color: "#fff",
+              }}
+            >
+              {s?.currentRun?.total_wins ?? "—"}
+            </span>
+            <span
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.7)",
+              }}
+            >
+              Best {s?.bestRun ?? "—"}
+            </span>
+            <div
+              style={{
+                display: "flex",
+                gap: "0.6rem",
+                alignItems: "center",
+                marginTop: "0.15rem",
+              }}
+            >
+              <Gem color={MYTHIC} count={s?.mythics ?? 0} label="M" />
+              <Gem color={RARE} count={s?.rares ?? 0} label="R" />
+            </div>
           </div>
         </div>
 
@@ -461,7 +462,7 @@ function SideStat({ label, value }) {
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <span
         style={{
-          fontSize: "0.6rem",
+          fontSize: "0.58rem",
           letterSpacing: "0.14em",
           fontWeight: 700,
           color: "rgba(255,255,255,0.5)",
@@ -469,9 +470,7 @@ function SideStat({ label, value }) {
       >
         {label}
       </span>
-      <span
-        style={{ fontSize: "1.3rem", fontWeight: 800, color: "#fff" }}
-      >
+      <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#fff" }}>
         {value}
       </span>
     </div>
@@ -490,14 +489,19 @@ function Divider() {
   );
 }
 
-function IngotImage({ index, won, pop }) {
+function IngotImage({ index, won, pop, flash }) {
+  const anim = pop
+    ? "ov-crosspop 0.5s ease-out"
+    : flash
+    ? "ov-flash 0.6s ease-in-out infinite"
+    : "none";
   return (
     <div
       style={{
         position: "relative",
         width: "100%",
         height: "100%",
-        animation: pop ? "ov-crosspop 0.5s ease-out" : "none",
+        animation: anim,
       }}
     >
       <img
@@ -541,17 +545,17 @@ function Gem({ color, count, label }) {
     <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
       <div
         style={{
-          width: 12,
-          height: 12,
+          width: 11,
+          height: 11,
           borderRadius: "999px",
           background: color,
           boxShadow: `0 0 8px ${color}`,
         }}
       />
-      <span style={{ fontSize: "0.7rem", fontWeight: 800, color: color }}>
+      <span style={{ fontSize: "0.68rem", fontWeight: 800, color: color }}>
         {label}
       </span>
-      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
+      <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#fff" }}>
         {count}
       </span>
     </div>
