@@ -12,14 +12,19 @@ export default function DeckRow({
   height = 44,
   variant = "current",
   glow = false,
+  corroding = false,
+  entering = false,
+  salvaged,
+  copies,
 }) {
-  const copies = Number(card.copies) || 0;
+  const cp = Number(copies ?? card.copies) || 0;
   const original = Number(card.original_copies) || 0;
-  const isReplacement = Boolean(card.is_decay_replacement);
-  const rustedCount = original > 0 ? original - copies : 0;
+  const showSalvaged =
+    salvaged !== undefined ? salvaged : Boolean(card.is_decay_replacement);
+  const rustedCount = original > 0 ? original - cp : 0;
 
   const isRusted = variant === "rusted";
-  const boxCount = isRusted ? rustedCount : copies;
+  const boxCount = isRusted ? rustedCount : cp;
 
   const scale = height / 44;
   const boxSize = height;
@@ -33,6 +38,13 @@ export default function DeckRow({
     marginTop: "-4%",
   };
 
+  let containerAnim = "none";
+  if (corroding) containerAnim = "ovd-shake 0.5s ease-in-out infinite";
+  else if (entering)
+    containerAnim = isRusted
+      ? "ovd-slidein 0.4s ease-out"
+      : "ovd-dropin 0.4s ease-out";
+
   return (
     <div
       style={{
@@ -42,6 +54,7 @@ export default function DeckRow({
         height,
         borderRadius: "5px",
         boxShadow: glow ? "0 0 10px 2px rgba(251,191,36,0.55)" : "none",
+        animation: containerAnim,
       }}
     >
       {/* Copies box */}
@@ -108,8 +121,24 @@ export default function DeckRow({
           />
         )}
 
+        {/* Corroding: rust texture spreads left to right over 2s */}
+        {corroding && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: `url(${RUST_TEXTURE})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              transformOrigin: "left center",
+              animation: "ovd-corrode 2s ease-out forwards",
+              opacity: 0.9,
+            }}
+          />
+        )}
+
         {/* SALVAGED tag (current variant only) */}
-        {isReplacement && !isRusted && (
+        {showSalvaged && !isRusted && (
           <div
             style={{
               position: "absolute",
