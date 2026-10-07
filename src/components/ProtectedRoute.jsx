@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
+import { base44 } from '@/api/base44Client';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 const DefaultFallback = () => (
@@ -9,7 +10,7 @@ const DefaultFallback = () => (
   </div>
 );
 
-export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
+export default function ProtectedRoute({ fallback = <DefaultFallback /> }) {
   const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
 
   useEffect(() => {
@@ -17,6 +18,15 @@ export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthe
       checkUserAuth();
     }
   }, [authChecked, isLoadingAuth, checkUserAuth]);
+
+  const shouldRedirectToLogin =
+    authChecked && !isLoadingAuth && (!authError || authError.type !== 'user_not_registered') && !isAuthenticated;
+
+  useEffect(() => {
+    if (shouldRedirectToLogin) {
+      base44.auth.redirectToLogin(window.location.href);
+    }
+  }, [shouldRedirectToLogin]);
 
   if (isLoadingAuth || !authChecked) {
     return fallback;
@@ -26,11 +36,11 @@ export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthe
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     }
-    return unauthenticatedElement;
+    return fallback;
   }
 
   if (!isAuthenticated) {
-    return unauthenticatedElement;
+    return fallback;
   }
 
   return <Outlet />;
