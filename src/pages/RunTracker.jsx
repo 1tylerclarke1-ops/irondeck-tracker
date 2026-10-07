@@ -16,7 +16,6 @@ export default function RunTracker() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
-  const [clearedStage, setClearedStage] = useState(null);
 
   const loadSeason = useCallback(async () => {
     const active = await base44.entities.Season.filter({ status: "active" });
@@ -82,6 +81,7 @@ export default function RunTracker() {
     stage: num(r.stage, 1),
     total_wins: num(r.total_wins),
     result: r.result,
+    stage_cleared_pending: Boolean(r.stage_cleared_pending),
   });
 
   const startRun = async () => {
@@ -100,10 +100,10 @@ export default function RunTracker() {
         stage_wins: 0,
         stage_losses: 0,
         total_wins: 0,
+        stage_cleared_pending: false,
         result: "in_progress",
       });
       setHistory([]);
-      setClearedStage(null);
       await loadRuns(season.id);
     } finally {
       setBusy(false);
@@ -115,30 +115,45 @@ export default function RunTracker() {
     try {
       const prev = snapshot(inProgress);
       const sw = num(inProgress.stage_wins);
-      const sl = num(inProgress.stage_losses);
-      const st = num(inProgress.stage, 1);
       const tw = num(inProgress.total_wins);
       const newStageWins = sw + 1;
       const newTotalWins = tw + 1;
       let update;
       if (newStageWins >= 7) {
         update = {
-          stage_wins: 0,
-          stage_losses: 0,
-          stage: st + 1,
+          stage_wins: 7,
           total_wins: newTotalWins,
+          stage_cleared_pending: true,
           result: "in_progress",
         };
-        setClearedStage({ stage: st, stage_wins: newStageWins, stage_losses: sl });
       } else {
         update = {
           stage_wins: newStageWins,
           total_wins: newTotalWins,
+          stage_cleared_pending: false,
           result: "in_progress",
         };
-        setClearedStage(null);
       }
       await base44.entities.Run.update(inProgress.id, update);
+      setHistory((h) => [...h, prev]);
+      await loadRuns(season.id);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const continueStage = async () => {
+    setBusy(true);
+    try {
+      const prev = snapshot(inProgress);
+      const st = num(inProgress.stage, 1);
+      await base44.entities.Run.update(inProgress.id, {
+        stage: st + 1,
+        stage_wins: 0,
+        stage_losses: 0,
+        stage_cleared_pending: false,
+        result: "in_progress",
+      });
       setHistory((h) => [...h, prev]);
       await loadRuns(season.id);
     } finally {
@@ -157,7 +172,6 @@ export default function RunTracker() {
         result: died ? "died" : "in_progress",
       });
       setHistory((h) => [...h, prev]);
-      setClearedStage(null);
       await loadRuns(season.id);
     } finally {
       setBusy(false);
@@ -173,7 +187,6 @@ export default function RunTracker() {
     try {
       await base44.entities.Run.update(target.id, prev);
       setHistory((h) => h.slice(0, -1));
-      setClearedStage(null);
       await loadRuns(season.id);
     } finally {
       setBusy(false);
@@ -203,9 +216,9 @@ export default function RunTracker() {
           {inProgress ? (
             <RunPanel
               run={inProgress}
-              clearedStage={clearedStage}
               onWin={recordWin}
               onLoss={recordLoss}
+              onContinue={continueStage}
               onUndo={undo}
               canUndo={history.length > 0}
               busy={busy}

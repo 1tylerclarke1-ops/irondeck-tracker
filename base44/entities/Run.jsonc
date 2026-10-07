@@ -49,6 +49,11 @@
       "type": "integer",
       "default": 0,
       "description": "Total wins across all stages"
+    },
+    "stage_cleared_pending": {
+      "type": "boolean",
+      "default": false,
+      "description": "Stage hit 7 wins and is awaiting continue to the next stage"
     }
   },
   "required": [

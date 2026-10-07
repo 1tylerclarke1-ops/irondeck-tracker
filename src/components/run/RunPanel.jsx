@@ -3,11 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { num } from "@/components/run/runHelpers";
 
-export default function RunPanel({ run, clearedStage, onWin, onLoss, onUndo, canUndo, busy }) {
-  const showCleared = Boolean(clearedStage);
-  const stage = showCleared ? clearedStage.stage : num(run.stage, 1);
-  const stageWins = showCleared ? clearedStage.stage_wins : num(run.stage_wins);
-  const stageLosses = showCleared ? clearedStage.stage_losses : num(run.stage_losses);
+export default function RunPanel({ run, onWin, onLoss, onContinue, onUndo, canUndo, busy }) {
+  const pending = Boolean(run.stage_cleared_pending);
+  const stage = num(run.stage, 1);
+  const stageWins = num(run.stage_wins);
+  const stageLosses = num(run.stage_losses);
   const totalWins = num(run.total_wins);
   return (
     <Card>
@@ -23,25 +23,36 @@ export default function RunPanel({ run, clearedStage, onWin, onLoss, onUndo, can
             Current run: {totalWins} wins
           </div>
         </div>
-        {showCleared && (
-          <div className="text-xl font-bold text-green-600">
-            Stage {stage} cleared!
+        {pending ? (
+          <div className="space-y-4">
+            <div className="text-xl font-bold text-green-600">
+              Stage {stage} cleared! 7–{stageLosses}
+            </div>
+            <Button
+              size="lg"
+              className="h-20 text-xl w-full"
+              onClick={onContinue}
+              disabled={busy}
+            >
+              Continue
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <Button size="lg" className="h-20 text-xl" onClick={onWin} disabled={busy}>
+              Win
+            </Button>
+            <Button
+              size="lg"
+              variant="destructive"
+              className="h-20 text-xl"
+              onClick={onLoss}
+              disabled={busy}
+            >
+              Loss
+            </Button>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4">
-          <Button size="lg" className="h-20 text-xl" onClick={onWin} disabled={busy}>
-            Win
-          </Button>
-          <Button
-            size="lg"
-            variant="destructive"
-            className="h-20 text-xl"
-            onClick={onLoss}
-            disabled={busy}
-          >
-            Loss
-          </Button>
-        </div>
         <Button variant="outline" onClick={onUndo} disabled={!canUndo || busy}>
           Undo last result
         </Button>

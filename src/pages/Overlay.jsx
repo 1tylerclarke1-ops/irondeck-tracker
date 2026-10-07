@@ -64,14 +64,12 @@ export default function Overlay() {
 
   const [popSlots, setPopSlots] = useState([]);
   const [shakePip, setShakePip] = useState(null);
-  const [cleared, setCleared] = useState(false);
   const [died, setDied] = useState(false);
 
   const prevActive = useRef(null);
   const prevLosses = useRef(null);
   const popTimer = useRef(null);
   const shakeTimer = useRef(null);
-  const clearedTimer = useRef(null);
   const diedTimer = useRef(null);
 
   useEffect(() => {
@@ -135,8 +133,13 @@ export default function Overlay() {
     const losses = data?.currentRun
       ? Number(data.currentRun.stage_losses || 0)
       : 0;
+    const pending = data?.currentRun
+      ? Boolean(data.currentRun.stage_cleared_pending)
+      : false;
 
-    const newActive = Array.from({ length: 8 }, (_, i) => activeKey(i, wins));
+    const newActive = Array.from({ length: 8 }, (_, i) =>
+      pending ? "hot" : activeKey(i, wins)
+    );
 
     if (prevActive.current === null) {
       prevActive.current = newActive;
@@ -165,11 +168,6 @@ export default function Overlay() {
         diedTimer.current = setTimeout(() => setDied(false), 3000);
       }
     }
-    if (wins >= 7 && changed.length) {
-      setCleared(true);
-      if (clearedTimer.current) clearTimeout(clearedTimer.current);
-      clearedTimer.current = setTimeout(() => setCleared(false), 3000);
-    }
 
     prevLosses.current = losses;
   }, [data]);
@@ -178,7 +176,6 @@ export default function Overlay() {
     () => () => {
       if (popTimer.current) clearTimeout(popTimer.current);
       if (shakeTimer.current) clearTimeout(shakeTimer.current);
-      if (clearedTimer.current) clearTimeout(clearedTimer.current);
       if (diedTimer.current) clearTimeout(diedTimer.current);
     },
     []
@@ -187,6 +184,7 @@ export default function Overlay() {
   const s = data;
   const wins = s?.currentRun ? Number(s.currentRun.stage_wins || 0) : 0;
   const losses = s?.currentRun ? Number(s.currentRun.stage_losses || 0) : 0;
+  const pending = Boolean(s?.currentRun?.stage_cleared_pending);
 
   return (
     <div
@@ -267,6 +265,7 @@ export default function Overlay() {
                 key={i}
                 index={i}
                 wins={wins}
+                pending={pending}
                 pop={popSlots.includes(i)}
               />
             ))}
@@ -443,7 +442,7 @@ export default function Overlay() {
           </div>
         </div>
 
-        {(cleared || died) && (
+        {pending && (
           <div
             style={{
               position: "absolute",
@@ -454,13 +453,32 @@ export default function Overlay() {
               fontSize: "1.3rem",
               fontWeight: 800,
               letterSpacing: "0.1em",
-              color: cleared ? RUST : RED,
-              textShadow: `0 0 16px ${cleared ? RUST_GLOW : RED_GLOW}`,
+              color: RUST,
+              textShadow: `0 0 16px ${RUST_GLOW}`,
+              whiteSpace: "nowrap",
+            }}
+          >
+            STAGE {s?.currentRun?.stage ?? "—"} CLEARED
+          </div>
+        )}
+        {died && !pending && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: "50%",
+              transform: "translateX(-50%)",
+              marginTop: "0.5rem",
+              fontSize: "1.3rem",
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              color: RED,
+              textShadow: `0 0 16px ${RED_GLOW}`,
               animation: "ov-msg 3s ease-in-out forwards",
               whiteSpace: "nowrap",
             }}
           >
-            {cleared ? "STAGE CLEARED" : "RUN DEATH"}
+            RUN DEATH
           </div>
         )}
       </div>
@@ -500,8 +518,8 @@ function Divider() {
   );
 }
 
-function Medallion({ index, wins, pop }) {
-  const active = activeKey(index, wins);
+function Medallion({ index, wins, pending, pop }) {
+  const active = pending ? "hot" : activeKey(index, wins);
   const anim = pop ? "ov-crosspop 0.5s ease-out" : "none";
   return (
     <div
