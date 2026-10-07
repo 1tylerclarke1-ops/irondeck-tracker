@@ -169,13 +169,16 @@ export default function Overlay() {
         <span
           style={{
             position: "absolute",
-            top: "4px",
-            left: "10px",
+            top: "-9px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "0 8px",
             fontSize: "0.55rem",
             letterSpacing: "0.22em",
             fontWeight: 700,
             color: RUST,
-            opacity: 0.8,
+            background: "linear-gradient(180deg, rgba(43,47,55,0.95) 0%, rgba(26,29,35,0.95) 100%)",
+            borderRadius: "4px",
           }}
         >
           IRONDECK
@@ -262,8 +265,8 @@ export default function Overlay() {
                 <div
                   key={i}
                   style={{
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     borderRadius: "999px",
                     background: lost ? RED : "transparent",
                     border: `2px solid ${
@@ -336,8 +339,8 @@ export default function Overlay() {
               marginTop: "0.2rem",
             }}
           >
-            <Gem color={MYTHIC} count={s?.mythics ?? 0} />
-            <Gem color={RARE} count={s?.rares ?? 0} />
+            <Gem color={MYTHIC} count={s?.mythics ?? 0} label="M" />
+            <Gem color={RARE} count={s?.rares ?? 0} label="R" />
           </div>
         </div>
 
@@ -400,7 +403,7 @@ function Divider() {
   );
 }
 
-function Gem({ color, count }) {
+function Gem({ color, count, label }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
       <div
@@ -412,6 +415,9 @@ function Gem({ color, count }) {
           boxShadow: `0 0 8px ${color}`,
         }}
       />
+      <span style={{ fontSize: "0.7rem", fontWeight: 800, color: color }}>
+        {label}
+      </span>
       <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#fff" }}>
         {count}
       </span>
