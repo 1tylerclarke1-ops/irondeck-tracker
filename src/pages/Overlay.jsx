@@ -15,31 +15,31 @@ const SUBPANEL_BG =
 
 const INGOTS = {
   hot: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/98ce32099_ingot-hot-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2949c0d23_ingot-hot-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/9cc6798df_ingot-hot-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/df17cf01c_ingot-hot-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/fe24bbb13_ingot-hot-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/cbd4a3ec9_ingot-hot-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/32c0d296b_ingot-hot-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/a47113b5f_ingot-hot-7.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/1cb79609f_ingot-hot-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/c8491aa42_ingot-hot-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/bad5b447f_ingot-hot-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/ff24b4ce1_ingot-hot-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/08fd2e925_ingot-hot-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/b65bf53f0_ingot-hot-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/752552ebc_ingot-hot-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2145e7e27_ingot-hot-7.png",
   ],
   cold: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/dfba089ae_ingot-cold-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/09f49bc04_ingot-cold-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/8a68977ec_ingot-cold-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6fa391509_ingot-cold-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/047310e12_ingot-cold-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6534a00a3_ingot-cold-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/fd09f87a6_ingot-cold-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/554e37c78_ingot-cold-7.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/7b34f6ef3_ingot-cold-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6e0ebc0a5_ingot-cold-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6df23d4e3_ingot-cold-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2b7df2c62_ingot-cold-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/34b449170_ingot-cold-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/c1cea5d19_ingot-cold-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/08f9269fb_ingot-cold-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/540e14ab1_ingot-cold-7.png",
   ],
 };
 
 const LOSS_EMPTY =
-  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/25582b81c_generated_image.png";
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/9339e87ba_loss-empty.png";
 const LOSS_FILLED =
-  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/2d86cec4c_generated_image.png";
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/4de5c31db_loss-filled.png";
 
 export default function Overlay() {
   const [data, setData] = useState(null);
@@ -257,10 +257,7 @@ export default function Overlay() {
                 <div
                   style={{
                     position: "relative",
-                    width: 46,
-                    height: 72,
-                    boxSizing: "border-box",
-                    padding: 3,
+                    padding: 4,
                     borderRadius: "11px",
                     display: "flex",
                     alignItems: "flex-end",
@@ -348,8 +345,8 @@ export default function Overlay() {
                     alt=""
                     draggable={false}
                     style={{
-                      width: 26,
-                      height: 26,
+                      width: 40,
+                      height: 40,
                       objectFit: "contain",
                       filter: lost
                         ? `drop-shadow(0 0 8px ${RED_GLOW})`
@@ -499,8 +496,7 @@ function IngotImage({ index, won, pop, flash }) {
     <div
       style={{
         position: "relative",
-        width: "100%",
-        height: "100%",
+        width: 96,
         animation: anim,
       }}
     >
@@ -509,12 +505,9 @@ function IngotImage({ index, won, pop, flash }) {
         alt=""
         draggable={false}
         style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          objectPosition: "center bottom",
+          display: "block",
+          width: 96,
+          height: "auto",
           opacity: won ? 0 : 1,
           transition: "opacity 0.3s ease",
           pointerEvents: "none",
@@ -526,11 +519,10 @@ function IngotImage({ index, won, pop, flash }) {
         draggable={false}
         style={{
           position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          objectPosition: "center bottom",
+          top: 0,
+          left: 0,
+          width: 96,
+          height: "auto",
           opacity: won ? 1 : 0,
           transition: "opacity 0.3s ease",
           pointerEvents: "none",
