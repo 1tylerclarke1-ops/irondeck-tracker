@@ -202,93 +202,89 @@ export default function Overlay() {
 
         <Divider />
 
-        <div style={{ display: "flex", gap: "0.45rem", alignItems: "flex-end" }}>
+        <div style={{ display: "flex", gap: "0.4rem", alignItems: "flex-end" }}>
           {Array.from({ length: 8 }).map((_, i) => {
             const won = i < wins;
             const isCurrent = i === wins;
             const isPop = popSlot === i;
             const isFlash = flashAll;
+            const lit = won || isCurrent;
+            const grow = 0.7 + (i / 7) * 0.5; // 0.7 -> 1.2
+            const bright = lit ? 1 : 0.3 + (i / 7) * 0.2;
             return (
               <div
                 key={i}
                 style={{
-                  width: 38,
-                  height: 46,
-                  borderRadius: "7px",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "1.15rem",
-                  fontWeight: 800,
-                  color: won ? "#15171c" : "rgba(255,255,255,0.5)",
-                  background: won ? RUST : "transparent",
-                  border: `1.5px solid ${
-                    isCurrent
-                      ? RUST
-                      : won
-                      ? "rgba(204,90,58,0.9)"
-                      : "rgba(255,255,255,0.16)"
-                  }`,
-                  boxShadow: isCurrent
-                    ? `inset 0 0 8px rgba(204,90,58,0.35)`
-                    : "none",
-                  animation: isFlash
-                    ? "ov-flash 0.6s ease-in-out infinite"
-                    : isPop
-                    ? "ov-pop 0.5s ease-out"
-                    : isCurrent
-                    ? "ov-pulse 1.6s ease-in-out infinite"
-                    : "none",
+                  gap: "0.18rem",
                 }}
               >
-                {i}
+                <div
+                  style={{
+                    position: "relative",
+                    width: 34,
+                    height: 50,
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: won
+                      ? "linear-gradient(180deg, rgba(204,90,58,0.22) 0%, rgba(204,90,58,0.06) 100%)"
+                      : "rgba(255,255,255,0.04)",
+                    border: `1.5px solid ${
+                      isCurrent
+                        ? RUST
+                        : won
+                        ? "rgba(204,90,58,0.85)"
+                        : "rgba(255,255,255,0.14)"
+                    }`,
+                    boxShadow: isCurrent
+                      ? `0 0 14px ${RUST_GLOW}, inset 0 0 8px rgba(204,90,58,0.3)`
+                      : won
+                      ? "inset 0 0 6px rgba(204,90,58,0.25)"
+                      : "none",
+                    animation: isFlash
+                      ? "ov-flash 0.6s ease-in-out infinite"
+                      : isPop
+                      ? "ov-pop 0.5s ease-out"
+                      : isCurrent
+                      ? "ov-pulse 1.6s ease-in-out infinite"
+                      : "none",
+                  }}
+                >
+                  <IronIcon size={grow} bright={bright} lit={lit} />
+                  {isCurrent && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        bottom: 2,
+                        fontSize: "0.7rem",
+                        fontWeight: 800,
+                        color: "#fff",
+                        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+                      }}
+                    >
+                      {wins}
+                    </span>
+                  )}
+                </div>
+                <span
+                  style={{
+                    fontSize: "0.5rem",
+                    letterSpacing: "0.04em",
+                    fontWeight: 700,
+                    color: lit
+                      ? "rgba(255,255,255,0.85)"
+                      : "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  {i} {i === 1 ? "Win" : "Wins"}
+                </span>
               </div>
             );
           })}
-        </div>
-
-        <Divider />
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.2rem",
-          }}
-        >
-          <div style={{ display: "flex", gap: "0.7rem", alignItems: "center" }}>
-            {[0, 1].map((i) => {
-              const lost = i < losses;
-              const isShake = shakePip === i;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: "999px",
-                    background: lost ? RED : "transparent",
-                    border: `2px solid ${
-                      lost ? "rgba(192,57,43,0.9)" : "rgba(255,255,255,0.18)"
-                    }`,
-                    boxShadow: lost ? `0 0 14px ${RED_GLOW}` : "none",
-                    animation: isShake ? "ov-shake 0.5s ease-in-out" : "none",
-                  }}
-                />
-              );
-            })}
-          </div>
-          <span
-            style={{
-              fontSize: "0.6rem",
-              letterSpacing: "0.18em",
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.5)",
-            }}
-          >
-            LOSSES
-          </span>
         </div>
 
         <Divider />
@@ -302,6 +298,28 @@ export default function Overlay() {
             minWidth: "92px",
           }}
         >
+          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+            {[0, 1].map((i) => {
+              const lost = i < losses;
+              const isShake = shakePip === i;
+              return (
+                <div
+                  key={i}
+                  style={{
+                    width: 12,
+                    height: 12,
+                    transform: "rotate(45deg)",
+                    background: lost ? RED : "transparent",
+                    border: `1.5px solid ${
+                      lost ? "rgba(192,57,43,0.9)" : "rgba(255,255,255,0.22)"
+                    }`,
+                    boxShadow: lost ? `0 0 8px ${RED_GLOW}` : "none",
+                    animation: isShake ? "ov-shake 0.5s ease-in-out" : "none",
+                  }}
+                />
+              );
+            })}
+          </div>
           <span
             style={{
               fontSize: "0.6rem",
@@ -400,6 +418,36 @@ function Divider() {
         background: "rgba(255,255,255,0.12)",
       }}
     />
+  );
+}
+
+function IronIcon({ size, bright, lit }) {
+  const w = 26 * size;
+  const h = 18 * size;
+  const id = `iron-${Math.round(size * 100)}-${lit ? 1 : 0}`;
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox="0 0 26 18"
+      style={{ opacity: bright, display: "block" }}
+    >
+      <defs>
+        <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={lit ? "#d7dde6" : "#8a93a3"} />
+          <stop offset="0.5" stopColor={lit ? "#737d8c" : "#4a525e"} />
+          <stop offset="1" stopColor={lit ? "#2b303a" : "#1c2029"} />
+        </linearGradient>
+      </defs>
+      <path
+        d="M4 15 L6 4 H20 L22 15 Z"
+        fill={`url(#${id}-g)`}
+        stroke={lit ? "rgba(204,90,58,0.7)" : "rgba(255,255,255,0.18)"}
+        strokeWidth="0.8"
+        strokeLinejoin="round"
+      />
+      <path d="M6 4 H20 L18.5 7.5 H7.5 Z" fill={lit ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.06)"} />
+    </svg>
   );
 }
 
