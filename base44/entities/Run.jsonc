@@ -29,6 +29,26 @@
       ],
       "default": "in_progress",
       "description": "Run outcome"
+    },
+    "stage": {
+      "type": "integer",
+      "default": 1,
+      "description": "Current stage number"
+    },
+    "stage_wins": {
+      "type": "integer",
+      "default": 0,
+      "description": "Wins in the current stage"
+    },
+    "stage_losses": {
+      "type": "integer",
+      "default": 0,
+      "description": "Losses in the current stage"
+    },
+    "total_wins": {
+      "type": "integer",
+      "default": 0,
+      "description": "Total wins across all stages"
     }
   },
   "required": [
