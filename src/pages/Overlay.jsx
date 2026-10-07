@@ -220,11 +220,6 @@ export default function Overlay() {
           alignItems: "stretch",
           gap: "1.3rem",
           padding: "0.7rem 1.4rem",
-          borderRadius: "14px",
-          background: PANEL_BG,
-          border: `1px solid ${PANEL_BORDER}`,
-          boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
-          backdropFilter: "blur(6px)",
           color: "#fff",
           fontFamily: "sans-serif",
         }}
