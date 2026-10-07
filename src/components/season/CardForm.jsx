@@ -21,6 +21,7 @@ const CARD_TYPES = [
   "artifact",
   "planeswalker",
   "land",
+  "battle",
 ];
 
 export default function CardForm({ seasonId, onAdded }) {

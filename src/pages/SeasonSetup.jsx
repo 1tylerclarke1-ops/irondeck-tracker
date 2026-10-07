@@ -5,6 +5,7 @@ import ActiveSeasonPanel from "@/components/season/ActiveSeasonPanel";
 import DeckCounters from "@/components/season/DeckCounters";
 import DecklistTable from "@/components/season/DecklistTable";
 import CardForm from "@/components/season/CardForm";
+import ArenaImport from "@/components/season/ArenaImport";
 import AppNav from "@/components/AppNav";
 
 export default function SeasonSetup() {
@@ -69,6 +70,7 @@ export default function SeasonSetup() {
           <ActiveSeasonPanel season={season} onEnd={handleEnd} ending={ending} />
           <DeckCounters cards={cards} />
           <CardForm seasonId={season.id} onAdded={() => loadCards(season.id)} />
+          <ArenaImport seasonId={season.id} onImported={() => loadCards(season.id)} />
           <DecklistTable cards={cards} onChange={() => loadCards(season.id)} />
         </>
       )}

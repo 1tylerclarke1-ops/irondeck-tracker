@@ -34,7 +34,8 @@
         "enchantment",
         "artifact",
         "planeswalker",
-        "land"
+        "land",
+        "battle"
       ],
       "description": "Card type"
     }
