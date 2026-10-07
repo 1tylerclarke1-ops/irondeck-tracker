@@ -202,36 +202,59 @@ export default function Overlay() {
 
         <Divider />
 
-        <div style={{ display: "flex", gap: "0.4rem", alignItems: "flex-end" }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            gap: "0.4rem",
+            alignItems: "flex-end",
+            padding: "0.3rem 0 1.5rem",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "0.4rem",
+              right: "0.4rem",
+              top: "50%",
+              height: "2px",
+              transform: "translateY(-50%)",
+              background:
+                "linear-gradient(90deg, rgba(204,90,58,0.15) 0%, rgba(204,90,58,0.5) 50%, rgba(204,90,58,0.15) 100%)",
+              borderRadius: "2px",
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          />
           {Array.from({ length: 8 }).map((_, i) => {
             const won = i < wins;
             const isCurrent = i === wins;
             const isPop = popSlot === i;
             const isFlash = flashAll;
             const lit = won || isCurrent;
-            const grow = 0.7 + (i / 7) * 0.5; // 0.7 -> 1.2
-            const bright = lit ? 1 : 0.3 + (i / 7) * 0.2;
             return (
               <div
                 key={i}
                 style={{
+                  position: "relative",
+                  zIndex: 1,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: "0.18rem",
+                  gap: "0.2rem",
                 }}
               >
                 <div
                   style={{
                     position: "relative",
-                    width: 34,
-                    height: 50,
-                    borderRadius: "6px",
+                    width: 36,
+                    height: 64,
+                    borderRadius: "7px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     background: won
-                      ? "linear-gradient(180deg, rgba(204,90,58,0.22) 0%, rgba(204,90,58,0.06) 100%)"
+                      ? "linear-gradient(180deg, rgba(204,90,58,0.28) 0%, rgba(204,90,58,0.06) 100%)"
                       : "rgba(255,255,255,0.04)",
                     border: `1.5px solid ${
                       isCurrent
@@ -254,20 +277,40 @@ export default function Overlay() {
                       : "none",
                   }}
                 >
-                  <IronIcon size={grow} bright={bright} lit={lit} />
+                  <div
+                    style={{
+                      width: "60%",
+                      height: "60%",
+                      display: "flex",
+                      alignItems: "flex-end",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <IngotPile count={i + 1} lit={lit} />
+                  </div>
                   {isCurrent && (
-                    <span
+                    <div
                       style={{
                         position: "absolute",
-                        bottom: 2,
+                        bottom: -10,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        width: 20,
+                        height: 20,
+                        borderRadius: "999px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: RUST,
+                        border: "2px solid rgba(255,255,255,0.85)",
+                        boxShadow: `0 0 10px ${RUST_GLOW}`,
                         fontSize: "0.7rem",
                         fontWeight: 800,
                         color: "#fff",
-                        textShadow: "0 1px 3px rgba(0,0,0,0.8)",
                       }}
                     >
                       {wins}
-                    </span>
+                    </div>
                   )}
                 </div>
                 <span
@@ -298,7 +341,7 @@ export default function Overlay() {
             minWidth: "92px",
           }}
         >
-          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             {[0, 1].map((i) => {
               const lost = i < losses;
               const isShake = shakePip === i;
@@ -306,20 +349,31 @@ export default function Overlay() {
                 <div
                   key={i}
                   style={{
-                    width: 12,
-                    height: 12,
+                    width: 24,
+                    height: 24,
                     transform: "rotate(45deg)",
-                    background: lost ? RED : "transparent",
-                    border: `1.5px solid ${
-                      lost ? "rgba(192,57,43,0.9)" : "rgba(255,255,255,0.22)"
+                    background: lost ? RED : "rgba(255,255,255,0.06)",
+                    border: `2px solid ${
+                      lost ? "rgba(192,57,43,0.95)" : "rgba(255,255,255,0.3)"
                     }`,
-                    boxShadow: lost ? `0 0 8px ${RED_GLOW}` : "none",
+                    boxShadow: lost ? `0 0 12px ${RED_GLOW}` : "none",
                     animation: isShake ? "ov-shake 0.5s ease-in-out" : "none",
                   }}
                 />
               );
             })}
           </div>
+          <span
+            style={{
+              fontSize: "0.5rem",
+              letterSpacing: "0.02em",
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.45)",
+              marginTop: "0.1rem",
+            }}
+          >
+            Run ends at 2 losses
+          </span>
           <span
             style={{
               fontSize: "0.6rem",
@@ -421,32 +475,68 @@ function Divider() {
   );
 }
 
-function IronIcon({ size, bright, lit }) {
-  const w = 26 * size;
-  const h = 18 * size;
-  const id = `iron-${Math.round(size * 100)}-${lit ? 1 : 0}`;
+function pileRows(n) {
+  const rows = [];
+  let remaining = n;
+  let size = Math.min(n, 4);
+  while (remaining > 0) {
+    const take = Math.min(size, remaining);
+    rows.push(take);
+    remaining -= take;
+    size = Math.max(1, take - 1);
+  }
+  return rows; // index 0 = bottom row
+}
+
+function IngotPile({ count, lit }) {
+  const ingotW = 12;
+  const ingotH = 7;
+  const rowH = 6;
+  const rows = pileRows(count);
+  const maxW = Math.max(...rows) * ingotW;
+  const totalH = (rows.length - 1) * rowH + ingotH;
+  const gid = `ingot-${count}-${lit ? 1 : 0}`;
+  const stroke = lit ? "rgba(255,140,90,0.85)" : "rgba(255,255,255,0.16)";
   return (
     <svg
-      width={w}
-      height={h}
-      viewBox="0 0 26 18"
-      style={{ opacity: bright, display: "block" }}
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${maxW} ${totalH}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{
+        display: "block",
+        filter: lit ? "drop-shadow(0 0 3px rgba(255,120,70,0.7))" : "none",
+      }}
     >
       <defs>
-        <linearGradient id={`${id}-g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={lit ? "#d7dde6" : "#8a93a3"} />
-          <stop offset="0.5" stopColor={lit ? "#737d8c" : "#4a525e"} />
-          <stop offset="1" stopColor={lit ? "#2b303a" : "#1c2029"} />
+        <linearGradient id={`${gid}-g`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={lit ? "#ffd9a0" : "#9aa3b2"} />
+          <stop offset="0.5" stopColor={lit ? "#e06a3a" : "#525a68"} />
+          <stop offset="1" stopColor={lit ? "#7a2a14" : "#222732"} />
         </linearGradient>
       </defs>
-      <path
-        d="M4 15 L6 4 H20 L22 15 Z"
-        fill={`url(#${id}-g)`}
-        stroke={lit ? "rgba(204,90,58,0.7)" : "rgba(255,255,255,0.18)"}
-        strokeWidth="0.8"
-        strokeLinejoin="round"
-      />
-      <path d="M6 4 H20 L18.5 7.5 H7.5 Z" fill={lit ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.06)"} />
+      {rows.map((k, r) => {
+        const y = totalH - ingotH - r * rowH;
+        const xStart = (maxW - k * ingotW) / 2;
+        return Array.from({ length: k }).map((_, j) => {
+          const x = xStart + j * ingotW;
+          return (
+            <g key={`${r}-${j}`}>
+              <path
+                d={`M${x + 1} ${y + ingotH} L${x + 2.6} ${y + 1} H${x + ingotW - 2.6} L${x + ingotW - 1} ${y + ingotH} Z`}
+                fill={`url(#${gid}-g)`}
+                stroke={stroke}
+                strokeWidth="0.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d={`M${x + 2.6} ${y + 1} H${x + ingotW - 2.6} L${x + ingotW - 3.6} ${y + 3.4} H${x + 3.6} Z`}
+                fill={lit ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.07)"}
+              />
+            </g>
+          );
+        });
+      })}
     </svg>
   );
 }
