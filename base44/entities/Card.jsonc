@@ -38,6 +38,15 @@
         "battle"
       ],
       "description": "Card type"
+    },
+    "zone": {
+      "type": "string",
+      "enum": [
+        "main",
+        "sideboard"
+      ],
+      "default": "main",
+      "description": "Deck zone"
     }
   },
   "required": [

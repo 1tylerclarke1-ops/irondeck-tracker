@@ -23,12 +23,14 @@ const CARD_TYPES = [
   "land",
   "battle",
 ];
+const ZONES = ["main", "sideboard"];
 
 export default function CardForm({ seasonId, onAdded }) {
   const [name, setName] = useState("");
   const [copies, setCopies] = useState(1);
   const [rarity, setRarity] = useState("common");
   const [cardType, setCardType] = useState("creature");
+  const [zone, setZone] = useState("main");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -47,11 +49,13 @@ export default function CardForm({ seasonId, onAdded }) {
         copies: Number(copies),
         rarity,
         card_type: cardType,
+        zone,
       });
       setName("");
       setCopies(1);
       setRarity("common");
       setCardType("creature");
+      setZone("main");
       onAdded();
     } catch (err) {
       setError(err.message || "Failed to add card");
@@ -66,7 +70,7 @@ export default function CardForm({ seasonId, onAdded }) {
         <CardTitle>Add card</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="card-name">Name</Label>
             <Input
@@ -116,10 +120,25 @@ export default function CardForm({ seasonId, onAdded }) {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-2">
+            <Label>Zone</Label>
+            <Select value={zone} onValueChange={setZone}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ZONES.map((z) => (
+                  <SelectItem key={z} value={z} className="capitalize">
+                    {z}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {error && (
-            <p className="text-sm text-destructive md:col-span-5">{error}</p>
+            <p className="text-sm text-destructive md:col-span-6">{error}</p>
           )}
-          <Button type="submit" disabled={saving} className="md:col-span-5">
+          <Button type="submit" disabled={saving} className="md:col-span-6">
             {saving ? "Adding..." : "Add card"}
           </Button>
         </form>
