@@ -14,6 +14,7 @@ import DecayLog from './pages/DecayLog';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Overlay from './pages/Overlay';
 import OverlayDeck from './pages/OverlayDeck';
+import OverlayDeckIntro from './pages/OverlayDeckIntro';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -44,6 +45,7 @@ const AuthenticatedApp = () => {
       {/* Add your page Route elements here */}
       <Route path="/overlay" element={<Overlay />} />
       <Route path="/overlay/deck" element={<OverlayDeck />} />
+      <Route path="/overlay/deck-intro" element={<OverlayDeckIntro />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<SeasonSetup />} />
         <Route path="/run-tracker" element={<RunTracker />} />
