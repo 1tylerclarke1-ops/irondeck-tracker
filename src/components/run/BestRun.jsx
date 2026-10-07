@@ -1,11 +1,9 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { num } from "@/components/run/runHelpers";
 
 export default function BestRun({ runs }) {
-  const best = runs.reduce(
-    (max, r) => (r.total_wins > max ? r.total_wins : max),
-    0
-  );
+  const best = runs.reduce((max, r) => Math.max(max, num(r.total_wins)), 0);
   return (
     <Card>
       <CardContent className="pt-6 text-center">

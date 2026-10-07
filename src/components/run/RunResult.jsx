@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { num } from "@/components/run/runHelpers";
 
 export default function RunResult({ run, onStart, starting }) {
   const died = run?.result === "died";
@@ -13,7 +14,7 @@ export default function RunResult({ run, onStart, starting }) {
               Run death - decay due
             </div>
             <div className="text-muted-foreground">
-              Attempt #{run.attempt_number}: {run.total_wins} wins (final)
+              Attempt #{run.attempt_number}: {num(run.total_wins)} wins (final)
             </div>
           </>
         )}

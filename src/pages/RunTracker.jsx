@@ -5,6 +5,7 @@ import NoSeason from "@/components/run/NoSeason";
 import RunPanel from "@/components/run/RunPanel";
 import RunResult from "@/components/run/RunResult";
 import BestRun from "@/components/run/BestRun";
+import { num } from "@/components/run/runHelpers";
 
 export default function RunTracker() {
   const [season, setSeason] = useState(null);
@@ -12,7 +13,7 @@ export default function RunTracker() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
-  const [stageCleared, setStageCleared] = useState(false);
+  const [clearedStage, setClearedStage] = useState(null);
 
   const loadSeason = useCallback(async () => {
     const active = await base44.entities.Season.filter({ status: "active" });
@@ -46,10 +47,10 @@ export default function RunTracker() {
   const latest = sorted[0];
 
   const snapshot = (r) => ({
-    stage_wins: r.stage_wins,
-    stage_losses: r.stage_losses,
-    stage: r.stage,
-    total_wins: r.total_wins,
+    stage_wins: num(r.stage_wins),
+    stage_losses: num(r.stage_losses),
+    stage: num(r.stage, 1),
+    total_wins: num(r.total_wins),
     result: r.result,
   });
 
@@ -72,7 +73,7 @@ export default function RunTracker() {
         result: "in_progress",
       });
       setHistory([]);
-      setStageCleared(false);
+      setClearedStage(null);
       await loadRuns(season.id);
     } finally {
       setBusy(false);
@@ -83,25 +84,29 @@ export default function RunTracker() {
     setBusy(true);
     try {
       const prev = snapshot(inProgress);
-      const newStageWins = inProgress.stage_wins + 1;
-      const newTotalWins = inProgress.total_wins + 1;
+      const sw = num(inProgress.stage_wins);
+      const sl = num(inProgress.stage_losses);
+      const st = num(inProgress.stage, 1);
+      const tw = num(inProgress.total_wins);
+      const newStageWins = sw + 1;
+      const newTotalWins = tw + 1;
       let update;
       if (newStageWins >= 7) {
         update = {
           stage_wins: 0,
           stage_losses: 0,
-          stage: inProgress.stage + 1,
+          stage: st + 1,
           total_wins: newTotalWins,
           result: "in_progress",
         };
-        setStageCleared(true);
+        setClearedStage({ stage: st, stage_wins: newStageWins, stage_losses: sl });
       } else {
         update = {
           stage_wins: newStageWins,
           total_wins: newTotalWins,
           result: "in_progress",
         };
-        setStageCleared(false);
+        setClearedStage(null);
       }
       await base44.entities.Run.update(inProgress.id, update);
       setHistory((h) => [...h, prev]);
@@ -115,14 +120,14 @@ export default function RunTracker() {
     setBusy(true);
     try {
       const prev = snapshot(inProgress);
-      const newStageLosses = inProgress.stage_losses + 1;
+      const newStageLosses = num(inProgress.stage_losses) + 1;
       const died = newStageLosses >= 2;
       await base44.entities.Run.update(inProgress.id, {
         stage_losses: newStageLosses,
         result: died ? "died" : "in_progress",
       });
       setHistory((h) => [...h, prev]);
-      setStageCleared(false);
+      setClearedStage(null);
       await loadRuns(season.id);
     } finally {
       setBusy(false);
@@ -138,7 +143,7 @@ export default function RunTracker() {
     try {
       await base44.entities.Run.update(target.id, prev);
       setHistory((h) => h.slice(0, -1));
-      setStageCleared(false);
+      setClearedStage(null);
       await loadRuns(season.id);
     } finally {
       setBusy(false);
@@ -168,7 +173,7 @@ export default function RunTracker() {
           {inProgress ? (
             <RunPanel
               run={inProgress}
-              stageCleared={stageCleared}
+              clearedStage={clearedStage}
               onWin={recordWin}
               onLoss={recordLoss}
               onUndo={undo}
