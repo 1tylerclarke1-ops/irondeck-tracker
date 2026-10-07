@@ -12,6 +12,8 @@ const PANEL_BORDER = "rgba(204,90,58,0.4)";
 const SUBPANEL_BG =
   "linear-gradient(180deg, rgba(15,18,24,0.92) 0%, rgba(8,10,14,0.92) 100%)";
 const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
+const SMOKE =
+  "0 0 8px rgba(0,0,0,0.85), 0 0 3px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.95)";
 
 const MEDALS = {
   hot: [
@@ -337,6 +339,7 @@ export default function Overlay() {
                       : isWon
                       ? RUST
                       : "rgba(255,255,255,0.4)",
+                    textShadow: isWon ? "none" : SMOKE,
                     transition: "color 0.3s ease",
                   }}
                 >
@@ -388,6 +391,7 @@ export default function Overlay() {
                 letterSpacing: "0.14em",
                 fontWeight: 700,
                 color: "rgba(255,255,255,0.5)",
+                textShadow: SMOKE,
               }}
             >
               LOSSES
@@ -436,6 +440,7 @@ export default function Overlay() {
                 fontWeight: 800,
                 lineHeight: 1,
                 color: "#fff",
+                textShadow: SMOKE,
               }}
             >
               {s?.currentRun?.total_wins ?? "—"}
@@ -445,6 +450,7 @@ export default function Overlay() {
                 fontSize: "0.8rem",
                 fontWeight: 700,
                 color: "rgba(255,255,255,0.7)",
+                textShadow: SMOKE,
               }}
             >
               Best {s?.bestRun ?? "—"}
@@ -506,11 +512,12 @@ function SideStat({ label, value }) {
           letterSpacing: "0.14em",
           fontWeight: 700,
           color: "rgba(255,255,255,0.5)",
+          textShadow: SMOKE,
         }}
       >
         {label}
       </span>
-      <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#fff" }}>
+      <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#fff", textShadow: SMOKE }}>
         {value}
       </span>
     </div>
