@@ -25,7 +25,7 @@ export default function RunResult({
               Run death - decay due
             </div>
             <div className="text-muted-foreground">
-              Attempt #{run.attempt_number}: {num(run.total_wins)} wins (final)
+              {num(run.total_wins)}–{num(run.losses)} (final)
             </div>
           </>
         )}

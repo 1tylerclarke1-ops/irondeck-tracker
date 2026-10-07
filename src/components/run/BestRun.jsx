@@ -7,7 +7,7 @@ export default function BestRun({ runs }) {
   return (
     <Card>
       <CardContent className="pt-6 text-center">
-        <div className="text-sm text-muted-foreground">Best-ever run</div>
+        <div className="text-sm text-muted-foreground">Best run</div>
         <div className="text-3xl font-bold">{best} wins</div>
       </CardContent>
     </Card>

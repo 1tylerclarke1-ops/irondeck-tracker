@@ -76,12 +76,9 @@ export default function RunTracker() {
   );
 
   const snapshot = (r) => ({
-    stage_wins: num(r.stage_wins),
-    stage_losses: num(r.stage_losses),
-    stage: num(r.stage, 1),
     total_wins: num(r.total_wins),
+    losses: num(r.losses),
     result: r.result,
-    stage_cleared_pending: Boolean(r.stage_cleared_pending),
   });
 
   const startRun = async () => {
@@ -96,11 +93,7 @@ export default function RunTracker() {
         attempt_number: maxAttempt + 1,
         wins: 0,
         losses: 0,
-        stage: 1,
-        stage_wins: 0,
-        stage_losses: 0,
         total_wins: 0,
-        stage_cleared_pending: false,
         result: "in_progress",
       });
       setHistory([]);
@@ -114,45 +107,8 @@ export default function RunTracker() {
     setBusy(true);
     try {
       const prev = snapshot(inProgress);
-      const sw = num(inProgress.stage_wins);
-      const tw = num(inProgress.total_wins);
-      const newStageWins = sw + 1;
-      const newTotalWins = tw + 1;
-      let update;
-      if (newStageWins >= 7) {
-        update = {
-          stage_wins: 7,
-          total_wins: newTotalWins,
-          stage_cleared_pending: true,
-          result: "in_progress",
-        };
-      } else {
-        update = {
-          stage_wins: newStageWins,
-          total_wins: newTotalWins,
-          stage_cleared_pending: false,
-          result: "in_progress",
-        };
-      }
-      await base44.entities.Run.update(inProgress.id, update);
-      setHistory((h) => [...h, prev]);
-      await loadRuns(season.id);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const continueStage = async () => {
-    setBusy(true);
-    try {
-      const prev = snapshot(inProgress);
-      const st = num(inProgress.stage, 1);
       await base44.entities.Run.update(inProgress.id, {
-        stage: st + 1,
-        stage_wins: 0,
-        stage_losses: 0,
-        stage_cleared_pending: false,
-        result: "in_progress",
+        total_wins: num(inProgress.total_wins) + 1,
       });
       setHistory((h) => [...h, prev]);
       await loadRuns(season.id);
@@ -165,10 +121,10 @@ export default function RunTracker() {
     setBusy(true);
     try {
       const prev = snapshot(inProgress);
-      const newStageLosses = num(inProgress.stage_losses) + 1;
-      const died = newStageLosses >= 2;
+      const newLosses = num(inProgress.losses) + 1;
+      const died = newLosses >= 2;
       await base44.entities.Run.update(inProgress.id, {
-        stage_losses: newStageLosses,
+        losses: newLosses,
         result: died ? "died" : "in_progress",
       });
       setHistory((h) => [...h, prev]);
@@ -207,7 +163,12 @@ export default function RunTracker() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <AppNav />
-      <h1 className="text-2xl font-bold mb-6">Run Tracker</h1>
+      <h1 className="text-2xl font-bold mb-2">Run Tracker</h1>
+      {season && (
+        <div className="text-lg font-medium text-muted-foreground mb-6">
+          {season.name}
+        </div>
+      )}
       {!season ? (
         <NoSeason />
       ) : (
@@ -218,7 +179,6 @@ export default function RunTracker() {
               run={inProgress}
               onWin={recordWin}
               onLoss={recordLoss}
-              onContinue={continueStage}
               onUndo={undo}
               canUndo={history.length > 0}
               busy={busy}
