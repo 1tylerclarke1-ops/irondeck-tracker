@@ -125,7 +125,6 @@ export default function Decay() {
   }
 
   const applyDecay = async (howObtained, rolled) => {
-    const newRarity = targetRarity === "mythic" ? "rare" : "uncommon";
     setApplying(true);
     try {
       const newCopies = num(decayedCard.copies) - 1;
@@ -144,8 +143,8 @@ export default function Decay() {
           season_id: season.id,
           name: rolled.name,
           copies: 1,
-          rarity: newRarity,
-          card_type: decayedCard.card_type,
+          rarity: rolled.rarity,
+          card_type: rolled.card_type,
         });
       }
       await base44.entities.Decay.create({
@@ -153,7 +152,7 @@ export default function Decay() {
         attempt_number: dueRun.attempt_number,
         card_removed: decayedCard.name,
         rarity_from: targetRarity,
-        rarity_to: newRarity,
+        rarity_to: rolled.rarity,
         replacement_card: rolled.name,
         how_obtained: howObtained,
         date: new Date().toISOString(),

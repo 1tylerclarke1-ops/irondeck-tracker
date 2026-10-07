@@ -2,8 +2,23 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { num } from "@/components/run/runHelpers";
+import { rarityFor, typeFor } from "@/components/season/arenaImport";
 
 const newRarityFor = (r) => (r === "mythic" ? "rare" : "uncommon");
+
+const RARITY_ORDER = ["mythic", "rare", "uncommon", "common", "basic"];
+const lowerRarity = (r) => {
+  const i = RARITY_ORDER.indexOf(r);
+  return i >= 0 && i < RARITY_ORDER.length - 1 ? RARITY_ORDER[i + 1] : null;
+};
+
+const COLOUR_LAND = {
+  w: "Plains",
+  u: "Island",
+  b: "Swamp",
+  r: "Mountain",
+  g: "Forest",
+};
 
 function CardFace({ name, rarity, imageUrl, loading }) {
   return (
@@ -73,56 +88,84 @@ export default function ReplacementPanel({
   }, [decayedCard?.name, rarity]);
 
   const newRarity = newRarityFor(rarity);
+  const isLand = decayedCard.card_type === "land";
 
-  const buildUrl = () => {
-    const q = `f:standard game:arena r:${newRarity} t:${decayedCard.card_type} id<=${season.colours.toLowerCase()}`;
-    return `https://api.scryfall.com/cards/random?q=${encodeURIComponent(q)}`;
+  const buildQuery = (rarityVal) => {
+    const typeFilter = isLand ? "t:land" : "-t:land";
+    return `f:standard game:arena r:${rarityVal} ${typeFilter} id<=${(
+      season.colours || ""
+    ).toLowerCase()}`;
+  };
+
+  const randomUrl = (q) =>
+    `https://api.scryfall.com/cards/random?q=${encodeURIComponent(q)}`;
+
+  const normalize = (data) => ({
+    name: data.name,
+    rarity: rarityFor(data),
+    card_type: typeFor(data),
+    imageUrl:
+      data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal || null,
+  });
+
+  const pickBasicLand = () => {
+    const colours = (season.colours || "")
+      .toLowerCase()
+      .split("")
+      .filter((c) => COLOUR_LAND[c]);
+    const pool = colours.length > 0 ? colours : ["w", "u", "b", "r", "g"];
+    const choice = pool[Math.floor(Math.random() * pool.length)];
+    return COLOUR_LAND[choice];
+  };
+
+  const tryRarity = async (q) => {
+    for (let i = 0; i < 10; i++) {
+      const res = await fetch(randomUrl(q));
+      if (res.status === 404) return { none: true, reason: "404" };
+      if (!res.ok) throw new Error("Couldn't reach Scryfall.");
+      const data = await res.json();
+      const existing = deckCards.find((c) => c.name === data.name);
+      if (existing && num(existing.copies) >= 4) continue;
+      return { card: normalize(data) };
+    }
+    return { none: true, reason: "copies" };
   };
 
   const roll = async () => {
     setRolling(true);
     setError(null);
     setRolled(null);
-    const url = buildUrl();
     try {
-      let attempts = 0;
-      let chosen = null;
-      while (attempts < 10) {
-        const res = await fetch(url);
-        if (res.status === 404) {
-          setError("Scryfall found no card matching the decay criteria.");
-          setRolling(false);
-          return;
+      if (isLand) {
+        const rarities = [newRarity, lowerRarity(newRarity)].filter(Boolean);
+        for (const rar of rarities) {
+          const result = await tryRarity(buildQuery(rar));
+          if (result.card) {
+            setRolled(result.card);
+            return;
+          }
         }
-        if (!res.ok) {
-          setError("Couldn't reach Scryfall.");
-          setRolling(false);
-          return;
-        }
-        const data = await res.json();
-        const existing = deckCards.find((c) => c.name === data.name);
-        if (existing && num(existing.copies) >= 4) {
-          attempts++;
-          continue;
-        }
-        chosen = data;
-        break;
-      }
-      if (!chosen) {
-        setError("Couldn't find a replacement not already at 4 copies.");
-        setRolling(false);
+        const name = pickBasicLand();
+        setRolled({ name, rarity: "basic", card_type: "land", imageUrl: null });
         return;
       }
-      setRolled(chosen);
+
+      const result = await tryRarity(buildQuery(newRarity));
+      if (result.none) {
+        setError(
+          result.reason === "404"
+            ? "Scryfall found no card matching the decay criteria."
+            : "Couldn't find a replacement not already at 4 copies."
+        );
+        return;
+      }
+      setRolled(result.card);
     } catch (e) {
       setError("Couldn't reach Scryfall.");
     } finally {
       setRolling(false);
     }
   };
-
-  const newImageUrl =
-    rolled?.image_uris?.normal || rolled?.card_faces?.[0]?.image_uris?.normal;
 
   return (
     <Card>
@@ -144,7 +187,7 @@ export default function ReplacementPanel({
               <CardFace
                 name={rolled.name}
                 rarity={rolled.rarity}
-                imageUrl={newImageUrl}
+                imageUrl={rolled.imageUrl}
                 loading={false}
               />
             ) : error ? (
