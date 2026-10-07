@@ -117,12 +117,8 @@ export default function Decay() {
   const applyDecay = async (howObtained, rolled) => {
     setApplying(true);
     try {
-      const newCopies = num(decayedCard.copies) - 1;
-      if (newCopies <= 0) {
-        await base44.entities.Card.delete(decayedCard.id);
-      } else {
-        await base44.entities.Card.update(decayedCard.id, { copies: newCopies });
-      }
+      const newCopies = Math.max(num(decayedCard.copies) - 1, 0);
+      await base44.entities.Card.update(decayedCard.id, { copies: newCopies });
       const now = new Date().toISOString();
       const existing = cards.find((c) => c.name === rolled.name);
       if (existing) {
