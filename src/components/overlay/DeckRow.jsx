@@ -3,7 +3,7 @@ import React from "react";
 const RUST = "#a35a3d";
 const RUST_TEXTURE =
   "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3c387b3a0_image.png";
-const NEW_GREEN = "#2d8a4e";
+const SALVAGED_GREEN = "#2d8a4e";
 
 export default function DeckRow({ card, imageUrl, loading }) {
   const copies = Number(card.copies) || 0;
@@ -16,25 +16,15 @@ export default function DeckRow({ card, imageUrl, loading }) {
   const leftCutPct = (1 - rustedRatio) * 100;
   const boxCount = isRusted ? original : copies;
 
-  const imgStyle = {
-    position: "absolute",
-    top: 0,
-    left: 0,
+  const barImgStyle = {
+    display: "block",
     width: "100%",
     height: "auto",
     marginTop: "-4%",
   };
 
   return (
-    <div
-      style={{
-        breakInside: "avoid",
-        display: "flex",
-        alignItems: "stretch",
-        gap: "6px",
-        marginBottom: "4px",
-      }}
-    >
+    <div style={{ display: "flex", alignItems: "stretch", gap: "6px" }}>
       {/* Copies box */}
       <div
         style={{
@@ -73,7 +63,7 @@ export default function DeckRow({ card, imageUrl, loading }) {
         style={{
           position: "relative",
           flex: 1,
-          height: 44,
+          aspectRatio: "1 / 0.105",
           borderRadius: "5px",
           overflow: "hidden",
           background: "#1a1d24",
@@ -91,25 +81,11 @@ export default function DeckRow({ card, imageUrl, loading }) {
             alt={card.name}
             draggable={false}
             style={{
-              ...imgStyle,
+              ...barImgStyle,
               filter: fullyRusted ? "grayscale(1) brightness(0.7)" : "none",
             }}
           />
-        ) : (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "center",
-              paddingLeft: "8px",
-              fontSize: "0.8rem",
-              color: "#fff",
-            }}
-          >
-            {card.name}
-          </div>
-        )}
+        ) : null}
 
         {/* Partial rust: greyscale the rusted portion + texture overlay */}
         {isRusted && !fullyRusted && imageUrl && (
@@ -119,7 +95,10 @@ export default function DeckRow({ card, imageUrl, loading }) {
               alt=""
               draggable={false}
               style={{
-                ...imgStyle,
+                ...barImgStyle,
+                position: "absolute",
+                top: 0,
+                left: 0,
                 filter: "grayscale(1) brightness(0.7)",
                 maskImage: `linear-gradient(to right, transparent ${leftCutPct}%, #000 ${
                   leftCutPct + 8
@@ -160,24 +139,24 @@ export default function DeckRow({ card, imageUrl, loading }) {
           />
         )}
 
-        {/* NEW tag */}
+        {/* SALVAGED tag */}
         {isReplacement && (
           <div
             style={{
               position: "absolute",
               top: "-1px",
               right: "6px",
-              padding: "1px 6px",
+              padding: "1px 5px",
               borderRadius: "8px",
-              background: NEW_GREEN,
+              background: SALVAGED_GREEN,
               color: "#fff",
-              fontSize: "0.5rem",
+              fontSize: "0.48rem",
               fontWeight: 800,
               letterSpacing: "0.05em",
               boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
             }}
           >
-            NEW
+            SALVAGED
           </div>
         )}
       </div>

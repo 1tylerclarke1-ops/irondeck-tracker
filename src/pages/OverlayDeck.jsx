@@ -173,20 +173,24 @@ export default function OverlayDeck() {
       >
         {title}
       </h1>
-      <div
-        style={{
-          columnWidth: "440px",
-          columnGap: "14px",
-        }}
-      >
-        {cards.map((c) => (
-          <DeckRow
-            key={c.id}
-            card={c}
-            imageUrl={images[c.name]}
-            loading={images[c.name] === undefined}
-          />
-        ))}
+      <div style={{ display: "flex", justifyContent: "flex-start" }}>
+        <div
+          style={{
+            width: 460,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          {cards.map((c) => (
+            <DeckRow
+              key={c.id}
+              card={c}
+              imageUrl={images[c.name]}
+              loading={images[c.name] === undefined}
+            />
+          ))}
+        </div>
       </div>
       {isOutro && <OutroPanel run={run} decays={todayDecays} />}
     </div>
