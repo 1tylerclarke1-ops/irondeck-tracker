@@ -4,13 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { num } from "@/components/run/runHelpers";
 import { rarityFor, typeFor, manaInfoFor } from "@/components/season/arenaImport";
 
-const newRarityFor = (r) => (r === "mythic" ? "rare" : "uncommon");
-
-const RARITY_ORDER = ["mythic", "rare", "uncommon", "common", "basic"];
-const lowerRarity = (r) => {
-  const i = RARITY_ORDER.indexOf(r);
-  return i >= 0 && i < RARITY_ORDER.length - 1 ? RARITY_ORDER[i + 1] : null;
-};
+const OTHER_RARITY = { uncommon: "common", common: "uncommon" };
 
 const COLOUR_LAND = {
   w: "Plains",
@@ -19,6 +13,8 @@ const COLOUR_LAND = {
   r: "Mountain",
   g: "Forest",
 };
+
+const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 function CardFace({ name, rarity, imageUrl, loading }) {
   return (
@@ -48,6 +44,7 @@ export default function ReplacementPanel({
 }) {
   const [rolling, setRolling] = useState(false);
   const [rolled, setRolled] = useState(null);
+  const [rollRarity, setRollRarity] = useState(null);
   const [error, setError] = useState(null);
   const [oldCard, setOldCard] = useState({
     name: decayedCard.name,
@@ -60,6 +57,7 @@ export default function ReplacementPanel({
     setRolled(null);
     setError(null);
     setRolling(false);
+    setRollRarity(null);
   }, [decayedCard?.name]);
 
   useEffect(() => {
@@ -87,7 +85,6 @@ export default function ReplacementPanel({
     };
   }, [decayedCard?.name, rarity]);
 
-  const newRarity = newRarityFor(rarity);
   const isLand = decayedCard.card_type === "land";
 
   const buildQuery = (rarityVal) => {
@@ -136,16 +133,18 @@ export default function ReplacementPanel({
     setRolling(true);
     setError(null);
     setRolled(null);
+    const first = Math.random() < 0.5 ? "uncommon" : "common";
+    setRollRarity(first);
+    const order = [first, OTHER_RARITY[first]];
     try {
-      if (isLand) {
-        const rarities = [newRarity, lowerRarity(newRarity)].filter(Boolean);
-        for (const rar of rarities) {
-          const result = await tryRarity(buildQuery(rar));
-          if (result.card) {
-            setRolled(result.card);
-            return;
-          }
+      for (const rar of order) {
+        const result = await tryRarity(buildQuery(rar));
+        if (result.card) {
+          setRolled(result.card);
+          return;
         }
+      }
+      if (isLand) {
         const name = pickBasicLand();
         setRolled({
           name,
@@ -158,17 +157,7 @@ export default function ReplacementPanel({
         });
         return;
       }
-
-      const result = await tryRarity(buildQuery(newRarity));
-      if (result.none) {
-        setError(
-          result.reason === "404"
-            ? "Scryfall found no card matching the decay criteria."
-            : "Couldn't find a replacement not already at 4 copies."
-        );
-        return;
-      }
-      setRolled(result.card);
+      setError("Scryfall found no card matching the decay criteria.");
     } catch (e) {
       setError("Couldn't reach Scryfall.");
     } finally {
@@ -188,6 +177,11 @@ export default function ReplacementPanel({
           />
           <div className="self-center text-2xl font-bold text-muted-foreground">→</div>
           <div className="w-36 flex flex-col items-center">
+            {rollRarity && (
+              <div className="text-xs text-muted-foreground mb-1">
+                Rarity roll: {cap(rollRarity)}
+              </div>
+            )}
             {rolling ? (
               <div className="w-36 h-52 rounded-lg border bg-muted flex items-center justify-center">
                 <div className="w-5 h-5 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
