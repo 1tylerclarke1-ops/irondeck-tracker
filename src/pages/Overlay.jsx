@@ -207,8 +207,8 @@ export default function Overlay() {
             position: "relative",
             display: "flex",
             gap: "0.4rem",
-            alignItems: "flex-end",
-            padding: "0.3rem 0 1.5rem",
+            alignItems: "flex-start",
+            padding: "0.3rem 0 0.4rem",
           }}
         >
           <div
@@ -216,7 +216,7 @@ export default function Overlay() {
               position: "absolute",
               left: "0.4rem",
               right: "0.4rem",
-              top: "50%",
+              top: "calc(0.3rem + 32px)",
               height: "2px",
               transform: "translateY(-50%)",
               background:
@@ -232,6 +232,8 @@ export default function Overlay() {
             const isPop = popSlot === i;
             const isFlash = flashAll;
             const lit = won || isCurrent;
+            const heat = i / 7;
+            const scale = 0.4 + heat * 0.45;
             return (
               <div
                 key={i}
@@ -279,14 +281,14 @@ export default function Overlay() {
                 >
                   <div
                     style={{
-                      width: "60%",
-                      height: "60%",
+                      width: `${Math.round(scale * 100)}%`,
+                      aspectRatio: "26 / 18",
                       display: "flex",
-                      alignItems: "flex-end",
+                      alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <IngotPile count={i + 1} lit={lit} />
+                    <Ingot heat={heat} lit={lit} />
                   </div>
                   {isCurrent && (
                     <div
@@ -315,6 +317,7 @@ export default function Overlay() {
                 </div>
                 <span
                   style={{
+                    marginTop: "0.85rem",
                     fontSize: "0.5rem",
                     letterSpacing: "0.04em",
                     fontWeight: 700,
@@ -475,68 +478,55 @@ function Divider() {
   );
 }
 
-function pileRows(n) {
-  const rows = [];
-  let remaining = n;
-  let size = Math.min(n, 4);
-  while (remaining > 0) {
-    const take = Math.min(size, remaining);
-    rows.push(take);
-    remaining -= take;
-    size = Math.max(1, take - 1);
-  }
-  return rows; // index 0 = bottom row
+function mix(h1, h2, t) {
+  const a = parseInt(h1.slice(1), 16);
+  const b = parseInt(h2.slice(1), 16);
+  const r = Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
+  const g = Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
+  const bl = Math.round((a & 255) * (1 - t) + (b & 255) * t);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + bl).toString(16).slice(1)}`;
 }
 
-function IngotPile({ count, lit }) {
-  const ingotW = 12;
-  const ingotH = 7;
-  const rowH = 6;
-  const rows = pileRows(count);
-  const maxW = Math.max(...rows) * ingotW;
-  const totalH = (rows.length - 1) * rowH + ingotH;
-  const gid = `ingot-${count}-${lit ? 1 : 0}`;
-  const stroke = lit ? "rgba(255,140,90,0.85)" : "rgba(255,255,255,0.16)";
+function Ingot({ heat, lit }) {
+  const gid = `ingot-${Math.round(heat * 100)}-${lit ? 1 : 0}`;
+  const top = lit ? mix("#caa070", "#ffe6b0", heat) : "#9aa3b2";
+  const mid = lit ? mix("#9a5a3a", "#ff7a3a", heat) : "#525a68";
+  const bot = lit ? mix("#5a2a1a", "#a04020", heat) : "#222732";
+  const stroke = lit
+    ? `rgba(255,${Math.round(120 + 90 * heat)},80,0.85)`
+    : "rgba(255,255,255,0.16)";
+  const glow =
+    lit && heat > 0
+      ? `drop-shadow(0 0 ${2 + 5 * heat}px rgba(255,${Math.round(
+          100 + 80 * heat
+        )},60,${0.35 + 0.4 * heat}))`
+      : "none";
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox={`0 0 ${maxW} ${totalH}`}
+      viewBox="0 0 26 18"
       preserveAspectRatio="xMidYMid meet"
-      style={{
-        display: "block",
-        filter: lit ? "drop-shadow(0 0 3px rgba(255,120,70,0.7))" : "none",
-      }}
+      style={{ display: "block", filter: glow }}
     >
       <defs>
         <linearGradient id={`${gid}-g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={lit ? "#ffd9a0" : "#9aa3b2"} />
-          <stop offset="0.5" stopColor={lit ? "#e06a3a" : "#525a68"} />
-          <stop offset="1" stopColor={lit ? "#7a2a14" : "#222732"} />
+          <stop offset="0" stopColor={top} />
+          <stop offset="0.5" stopColor={mid} />
+          <stop offset="1" stopColor={bot} />
         </linearGradient>
       </defs>
-      {rows.map((k, r) => {
-        const y = totalH - ingotH - r * rowH;
-        const xStart = (maxW - k * ingotW) / 2;
-        return Array.from({ length: k }).map((_, j) => {
-          const x = xStart + j * ingotW;
-          return (
-            <g key={`${r}-${j}`}>
-              <path
-                d={`M${x + 1} ${y + ingotH} L${x + 2.6} ${y + 1} H${x + ingotW - 2.6} L${x + ingotW - 1} ${y + ingotH} Z`}
-                fill={`url(#${gid}-g)`}
-                stroke={stroke}
-                strokeWidth="0.6"
-                strokeLinejoin="round"
-              />
-              <path
-                d={`M${x + 2.6} ${y + 1} H${x + ingotW - 2.6} L${x + ingotW - 3.6} ${y + 3.4} H${x + 3.6} Z`}
-                fill={lit ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.07)"}
-              />
-            </g>
-          );
-        });
-      })}
+      <path
+        d="M3 16 L5 3 H21 L23 16 Z"
+        fill={`url(#${gid}-g)`}
+        stroke={stroke}
+        strokeWidth="0.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 3 H21 L19 7 H7 Z"
+        fill={lit ? `rgba(255,255,255,${0.18 + 0.2 * heat})` : "rgba(255,255,255,0.07)"}
+      />
     </svg>
   );
 }
