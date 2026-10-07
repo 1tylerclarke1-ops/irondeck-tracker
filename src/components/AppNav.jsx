@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 const links = [
   { to: "/", label: "Season Setup" },
   { to: "/run-tracker", label: "Run Tracker" },
+  { to: "/decay", label: "Decay" },
 ];
 
 export default function AppNav() {

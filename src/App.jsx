@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 // Add page imports here
 import SeasonSetup from './pages/SeasonSetup';
 import RunTracker from './pages/RunTracker';
+import Decay from './pages/Decay';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 const AuthenticatedApp = () => {
@@ -41,6 +42,7 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<SeasonSetup />} />
         <Route path="/run-tracker" element={<RunTracker />} />
+        <Route path="/decay" element={<Decay />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
