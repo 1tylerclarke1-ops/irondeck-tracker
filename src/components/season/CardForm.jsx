@@ -47,6 +47,7 @@ export default function CardForm({ seasonId, onAdded }) {
         season_id: seasonId,
         name: name.trim(),
         copies: Number(copies),
+        original_copies: Number(copies),
         rarity,
         card_type: cardType,
         zone,

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
-import { manaInfoFor } from "@/components/season/arenaImport";
+import { manaInfoFor, lookupCards } from "@/components/season/arenaImport";
 
 export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -14,38 +14,30 @@ export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
     setError(null);
     setResult(null);
     try {
-      const uniqueNames = [...new Set(cards.map((c) => c.name))];
-      const infoByName = {};
-      let done = 0;
-      for (const name of uniqueNames) {
-        try {
-          const res = await fetch(
-            `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            infoByName[name.toLowerCase()] = manaInfoFor(data);
-          }
-        } catch {
-          // skip individual lookup failures
-        }
-        done += 1;
-        setProgress(`${done}/${uniqueNames.length}`);
-        await new Promise((r) => setTimeout(r, 100));
-      }
+      const entries = cards.map((c) => ({
+        name: c.name,
+        set: c.set || null,
+        number: c.collector_number || null,
+      }));
+      const lookedUp = await lookupCards(entries);
 
-      const updates = cards
-        .map((c) => {
-          const info = infoByName[c.name.toLowerCase()];
-          if (!info) return null;
-          return {
-            id: c.id,
-            mana_cost: info.mana_cost,
-            colours: info.colours,
-            mana_value: info.mana_value,
-          };
-        })
-        .filter(Boolean);
+      const updates = [];
+      for (let i = 0; i < cards.length; i++) {
+        const data = lookedUp[i];
+        if (data) {
+          const mi = manaInfoFor(data);
+          updates.push({
+            id: cards[i].id,
+            scryfall_id: data.id,
+            set: data.set,
+            collector_number: data.collector_number,
+            mana_cost: mi.mana_cost,
+            colours: mi.colours,
+            mana_value: mi.mana_value,
+          });
+        }
+        setProgress(`${i + 1}/${cards.length}`);
+      }
 
       if (updates.length) {
         await base44.entities.Card.bulkUpdate(updates);
@@ -69,8 +61,10 @@ export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
             : "Refresh card data"}
         </Button>
         <span className="text-sm text-muted-foreground">
-          Fills mana cost, colours and mana value from Scryfall by name. Does not
-          change copies, rarity or zone.
+          Fills Scryfall id, set, collector number, mana cost, colours and mana
+          value. Looks up by set + collector number, then exact name, then fuzzy
+          name (matching the full name or front face). Does not change copies,
+          original copies, rarity or zone.
         </span>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

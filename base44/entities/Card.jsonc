@@ -17,7 +17,7 @@
     "original_copies": {
       "type": "integer",
       "default": 0,
-      "description": "Copies when the card was first added to the deck"
+      "description": "Copies when the card was first added to the deck; set only on import or Add card, never changed by Decay"
     },
     "rarity": {
       "type": "string",
@@ -66,6 +66,18 @@
     "mana_value": {
       "type": "number",
       "description": "Mana value (converted mana cost)"
+    },
+    "scryfall_id": {
+      "type": "string",
+      "description": "Scryfall card id, used to load card images via /cards/<id>"
+    },
+    "set": {
+      "type": "string",
+      "description": "Card set code, e.g. DMU"
+    },
+    "collector_number": {
+      "type": "string",
+      "description": "Collector number within the set"
     },
     "is_decay_replacement": {
       "type": "boolean",

@@ -21,6 +21,13 @@
       },
       "description": "Card names shown as wheel slices"
     },
+    "wheel_card_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Scryfall ids for the wheel cards, parallel to wheel_card_names"
+    },
     "chosen_card": {
       "type": "string",
       "description": "Card the wheel landed on (the card that will decay)"
@@ -29,9 +36,17 @@
       "type": "string",
       "description": "Card removed from the deck"
     },
+    "card_removed_id": {
+      "type": "string",
+      "description": "Scryfall id of the card removed from the deck"
+    },
     "replacement_card": {
       "type": "string",
       "description": "Card added as the decay replacement"
+    },
+    "replacement_card_id": {
+      "type": "string",
+      "description": "Scryfall id of the replacement card"
     },
     "rarity_roll": {
       "type": "string",

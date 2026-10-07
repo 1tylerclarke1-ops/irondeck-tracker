@@ -28,6 +28,9 @@ const normalize = (data) => ({
   card_type: typeFor(data),
   imageUrl:
     data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal || null,
+  scryfall_id: data.id,
+  set: data.set,
+  collector_number: data.collector_number,
   ...manaInfoFor(data),
 });
 

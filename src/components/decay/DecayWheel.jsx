@@ -126,7 +126,7 @@ const DecayWheel = forwardRef(function DecayWheel(
             const a0 = i * angle;
             const a1 = (i + 1) * angle;
             const phi = i * angle + angle / 2;
-            const entry = art[c.name];
+            const entry = art[c.scryfall_id];
             const lt = labelTransform(phi);
             return (
               <g key={i}>

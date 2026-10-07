@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { differenceInCalendarDays, isSameDay, parseISO } from "date-fns";
 import { base44 } from "@/api/base44Client";
-import { postCollection } from "@/lib/scryfall";
 import DeckRow from "@/components/overlay/DeckRow";
+import useCardImagesById from "@/hooks/useCardImagesById";
 
 const RUST = "#a35a3d";
 
@@ -35,7 +35,6 @@ export default function OverlayDeck() {
   const [climb, setClimb] = useState(null);
   const [run, setRun] = useState(null);
   const [decays, setDecays] = useState([]);
-  const [images, setImages] = useState({});
 
   const isOutro = useMemo(() => {
     const p = new URLSearchParams(window.location.search);
@@ -114,49 +113,16 @@ export default function OverlayDeck() {
 
   const seasonNumber = season?.season_number ?? null;
 
-  const uniqueNames = useMemo(() => {
-    const names = Array.from(
+  const scryfallIds = useMemo(() => {
+    const ids = Array.from(
       new Set(
-        [...cards, ...sideCards].map((c) => c.name).filter(Boolean)
+        [...cards, ...sideCards].map((c) => c.scryfall_id).filter(Boolean)
       )
     );
-    names.sort();
-    return names;
+    ids.sort();
+    return ids;
   }, [cards, sideCards]);
-  const namesKey = uniqueNames.join("|");
-
-  useEffect(() => {
-    let active = true;
-    if (uniqueNames.length === 0) {
-      setImages({});
-      return;
-    }
-    const fetchImages = async () => {
-      try {
-        const data = await postCollection(
-          uniqueNames.map((n) => ({ name: n }))
-        );
-        if (!active) return;
-        setImages((prev) => {
-          const next = {};
-          for (const n of uniqueNames) next[n] = prev[n] ?? null;
-          for (const c of data) {
-            const url =
-              c.image_uris?.normal || c.card_faces?.[0]?.image_uris?.normal;
-            if (url) next[c.name] = url;
-          }
-          return next;
-        });
-      } catch (e) {
-        // ignore
-      }
-    };
-    fetchImages();
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [namesKey]);
+  const images = useCardImagesById(scryfallIds);
 
   const todayDecays = useMemo(() => {
     const now = new Date();
@@ -216,8 +182,10 @@ export default function OverlayDeck() {
             <DeckRow
               key={c.id}
               card={c}
-              imageUrl={images[c.name]}
-              loading={images[c.name] === undefined}
+              imageUrl={images[c.scryfall_id]?.normal}
+              loading={
+                Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined
+              }
               height={rowH}
             />
           ))}
@@ -241,8 +209,10 @@ export default function OverlayDeck() {
                 <DeckRow
                   key={c.id}
                   card={c}
-                  imageUrl={images[c.name]}
-                  loading={images[c.name] === undefined}
+                  imageUrl={images[c.scryfall_id]?.normal}
+                  loading={
+                    Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined
+                  }
                   height={rowH}
                 />
               ))}

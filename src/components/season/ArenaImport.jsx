@@ -67,6 +67,9 @@ export default function ArenaImport({ seasonId, onImported }) {
             mana_cost: mi.mana_cost,
             colours: mi.colours,
             mana_value: mi.mana_value,
+            scryfall_id: card ? card.id : null,
+            set: card ? card.set : null,
+            collector_number: card ? card.collector_number : null,
             found: !!card,
           };
         })
@@ -88,12 +91,16 @@ export default function ArenaImport({ seasonId, onImported }) {
           season_id: seasonId,
           name: r.name,
           copies: r.copies,
+          original_copies: r.copies,
           rarity: r.rarity,
           card_type: r.card_type,
           zone: r.zone,
           mana_cost: r.mana_cost,
           colours: r.colours,
           mana_value: r.mana_value,
+          scryfall_id: r.scryfall_id || null,
+          set: r.set || null,
+          collector_number: r.collector_number || null,
         }));
       if (toCreate.length) await base44.entities.Card.bulkCreate(toCreate);
       setText("");

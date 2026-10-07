@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import useCardImagesById from "@/hooks/useCardImagesById";
 
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
@@ -39,30 +40,18 @@ export default function ReplacementPanel({
     loading: true,
   });
 
+  const sid = decayedCard.scryfall_id;
+  const byId = useCardImagesById(sid ? [sid] : []);
+
   useEffect(() => {
-    let active = true;
-    setOldCard({ name: decayedCard.name, rarity, imageUrl: null, loading: true });
-    fetch(
-      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(decayedCard.name)}`
-    )
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!active) return;
-        if (!data) {
-          setOldCard((o) => ({ ...o, loading: false, imageUrl: null }));
-          return;
-        }
-        const url =
-          data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal;
-        setOldCard({ name: decayedCard.name, rarity, imageUrl: url, loading: false });
-      })
-      .catch(() => {
-        if (active) setOldCard((o) => ({ ...o, loading: false, imageUrl: null }));
-      });
-    return () => {
-      active = false;
-    };
-  }, [decayedCard?.name, rarity]);
+    const entry = sid ? byId[sid] : null;
+    setOldCard({
+      name: decayedCard.name,
+      rarity,
+      imageUrl: entry?.normal ?? null,
+      loading: sid ? entry === undefined : false,
+    });
+  }, [sid, decayedCard.name, rarity, byId]);
 
   return (
     <Card>

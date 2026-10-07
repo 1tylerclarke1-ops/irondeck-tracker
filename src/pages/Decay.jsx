@@ -164,6 +164,7 @@ export default function Decay() {
           mana_cost: replacementCard.mana_cost || "",
           colours: replacementCard.colours || "",
           mana_value: replacementCard.mana_value ?? null,
+          scryfall_id: replacementCard.scryfall_id || null,
           is_decay_replacement: true,
           decayed_at: now,
         });
@@ -227,6 +228,7 @@ export default function Decay() {
           step: "rolling",
           roll_cards: rollCards,
           replacement_card: replacement.name,
+          replacement_card_id: replacement.scryfall_id || null,
           updated_at: new Date().toISOString(),
         });
       }
@@ -244,8 +246,10 @@ export default function Decay() {
     const ev = await base44.entities.DecayEvent.create({
       step: "spinning",
       wheel_card_names: uniqueCards.map((c) => c.name),
+      wheel_card_ids: uniqueCards.map((c) => c.scryfall_id).filter(Boolean),
       chosen_card: chosen.name,
       card_removed: chosen.name,
+      card_removed_id: chosen.scryfall_id || null,
       updated_at: new Date().toISOString(),
     });
     eventRef.current = { id: ev.id, done: false };

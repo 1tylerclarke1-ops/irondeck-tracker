@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
-import { postCollection } from "@/lib/scryfall";
 import DeckCardTile from "@/components/overlay/DeckCardTile";
+import useCardImagesById from "@/hooks/useCardImagesById";
 
 export default function OverlayDeckIntro() {
   const [season, setSeason] = useState(null);
   const [cards, setCards] = useState([]);
   const [climb, setClimb] = useState(null);
-  const [images, setImages] = useState({});
 
   useEffect(() => {
     const html = document.documentElement;
@@ -68,44 +67,15 @@ export default function OverlayDeckIntro() {
 
   const seasonNumber = season?.season_number ?? null;
 
-  const uniqueNames = useMemo(() => {
-    const names = Array.from(new Set(cards.map((c) => c.name).filter(Boolean)));
-    names.sort();
-    return names;
+  const scryfallIds = useMemo(() => {
+    const ids = Array.from(
+      new Set(cards.map((c) => c.scryfall_id).filter(Boolean))
+    );
+    ids.sort();
+    return ids;
   }, [cards]);
 
-  const namesKey = uniqueNames.join("|");
-
-  useEffect(() => {
-    let active = true;
-    if (uniqueNames.length === 0) {
-      setImages({});
-      return;
-    }
-    const fetchImages = async () => {
-      try {
-        const data = await postCollection(uniqueNames.map((n) => ({ name: n })));
-        if (!active) return;
-        setImages((prev) => {
-          const next = {};
-          for (const n of uniqueNames) next[n] = prev[n] ?? null;
-          for (const c of data) {
-            const url =
-              c.image_uris?.normal || c.card_faces?.[0]?.image_uris?.normal;
-            if (url) next[c.name] = url;
-          }
-          return next;
-        });
-      } catch (e) {
-        // ignore
-      }
-    };
-    fetchImages();
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [namesKey]);
+  const images = useCardImagesById(scryfallIds);
 
   const title = `Season ${seasonNumber ?? "—"} · Day ${day ?? "—"}`;
 
@@ -143,8 +113,10 @@ export default function OverlayDeckIntro() {
           <DeckCardTile
             key={c.id}
             card={c}
-            imageUrl={images[c.name]}
-            loading={images[c.name] === undefined}
+            imageUrl={images[c.scryfall_id]?.normal}
+            loading={
+              Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined
+            }
           />
         ))}
       </div>

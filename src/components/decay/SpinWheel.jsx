@@ -2,10 +2,12 @@ import React, { useImperativeHandle, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import DecayWheel from "./DecayWheel";
-import useCardArt from "@/hooks/useCardArt";
+import useCardImagesById from "@/hooks/useCardImagesById";
 
 export default function SpinWheel({ cards, onDecayed, onSpin, spinRef }) {
-  const art = useCardArt(cards.map((c) => c.name));
+  const art = useCardImagesById(
+    cards.map((c) => c.scryfall_id).filter(Boolean)
+  );
   const wheelRef = useRef(null);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
@@ -34,17 +36,17 @@ export default function SpinWheel({ cards, onDecayed, onSpin, spinRef }) {
         </Button>
         {result && (
           <div className="flex flex-col items-center gap-2">
-            {art[result.name]?.normal && (
+            {art[result.scryfall_id]?.normal && (
               <img
-                src={art[result.name].normal}
+                src={art[result.scryfall_id].normal}
                 alt={result.name}
                 className="w-40 h-auto rounded-lg border"
               />
             )}
             <div className="text-lg font-semibold">{result.name}</div>
-            {art[result.name]?.artist && (
+            {art[result.scryfall_id]?.artist && (
               <div className="text-sm text-muted-foreground">
-                Art by {art[result.name].artist}
+                Art by {art[result.scryfall_id].artist}
               </div>
             )}
           </div>

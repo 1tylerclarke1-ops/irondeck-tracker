@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import DecayWheel from "@/components/decay/DecayWheel";
-import useCardArt from "@/hooks/useCardArt";
+import useCardImagesById from "@/hooks/useCardImagesById";
 
 const preloadImages = (urls) =>
   Promise.all(
@@ -67,14 +67,21 @@ export default function OverlayDecay() {
   const wheelNames = Array.isArray(event?.wheel_card_names)
     ? event.wheel_card_names
     : [];
-  const wheelCards = wheelNames.map((name) => ({ name }));
+  const wheelIds = Array.isArray(event?.wheel_card_ids)
+    ? event.wheel_card_ids
+    : [];
+  const wheelCards = wheelNames.map((name, i) => ({
+    name,
+    scryfall_id: wheelIds[i],
+  }));
   const chosenName = event?.chosen_card || event?.card_removed || null;
 
-  const wheelArt = useCardArt(wheelNames);
-  const revealNames = [event?.card_removed, event?.replacement_card].filter(
-    Boolean
-  );
-  const revealArt = useCardArt(revealNames);
+  const wheelArt = useCardImagesById(wheelIds);
+  const revealIds = [
+    event?.card_removed_id,
+    event?.replacement_card_id,
+  ].filter(Boolean);
+  const revealArt = useCardImagesById(revealIds);
 
   const startRarityFlip = () => {
     const target = (event?.rarity_roll || "uncommon").toUpperCase();
@@ -271,11 +278,11 @@ export default function OverlayDecay() {
   }
 
   // reveal
-  const oldImg = event.card_removed
-    ? revealArt[event.card_removed]?.normal
+  const oldImg = event.card_removed_id
+    ? revealArt[event.card_removed_id]?.normal
     : null;
-  const newImg = event.replacement_card
-    ? revealArt[event.replacement_card]?.normal
+  const newImg = event.replacement_card_id
+    ? revealArt[event.replacement_card_id]?.normal
     : null;
   const rarityRoll = event.rarity_roll || null;
 
