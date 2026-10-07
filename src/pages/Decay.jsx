@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import AppNav from "@/components/AppNav";
 import NoSeason from "@/components/run/NoSeason";
@@ -16,6 +16,9 @@ export default function Decay() {
   const [decayedCard, setDecayedCard] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [applying, setApplying] = useState(false);
+
+  const wheelSpinRef = useRef(null);
+  const eventRef = useRef(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -45,6 +48,20 @@ export default function Decay() {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  // When the page is left (or a new run starts elsewhere), close out the event.
+  useEffect(() => {
+    return () => {
+      const ev = eventRef.current;
+      if (ev?.id && !ev.done) {
+        ev.done = true;
+        base44.entities.DecayEvent.update(ev.id, {
+          step: "done",
+          updated_at: new Date().toISOString(),
+        }).catch(() => {});
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -114,7 +131,7 @@ export default function Decay() {
     }
   }
 
-  const applyDecay = async (howObtained, rolled) => {
+  const applyDecay = async (howObtained, rolled, rollRarity) => {
     setApplying(true);
     try {
       const targetZone = decayedCard.zone || "main";
@@ -156,10 +173,34 @@ export default function Decay() {
         zone: targetZone,
         date: new Date().toISOString(),
       });
+      if (eventRef.current?.id) {
+        await base44.entities.DecayEvent.update(eventRef.current.id, {
+          replacement_card: rolled.name,
+          rarity_roll: rollRarity,
+          zone: targetZone,
+          step: "reveal",
+          updated_at: new Date().toISOString(),
+        });
+      }
       setCompleted(true);
     } finally {
       setApplying(false);
     }
+  };
+
+  const handleSpin = async () => {
+    if (uniqueCards.length === 0) return;
+    const chosen =
+      uniqueCards[Math.floor(Math.random() * uniqueCards.length)];
+    const ev = await base44.entities.DecayEvent.create({
+      step: "spinning",
+      wheel_card_names: uniqueCards.map((c) => c.name),
+      chosen_card: chosen.name,
+      card_removed: chosen.name,
+      updated_at: new Date().toISOString(),
+    });
+    eventRef.current = { id: ev.id, done: false };
+    wheelSpinRef.current?.spinTo(chosen);
   };
 
   return (
@@ -170,7 +211,12 @@ export default function Decay() {
         Decay due for run {num(dueRun.round_wins)}–{num(dueRun.round_losses)}
       </p>
       <div className="space-y-6">
-        <SpinWheel cards={uniqueCards} onDecayed={setDecayedCard} />
+        <SpinWheel
+          cards={uniqueCards}
+          onDecayed={setDecayedCard}
+          onSpin={handleSpin}
+          spinRef={wheelSpinRef}
+        />
         {decayedCard && (
           <ReplacementPanel
             decayedCard={decayedCard}

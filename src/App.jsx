@@ -15,6 +15,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Overlay from './pages/Overlay';
 import OverlayDeck from './pages/OverlayDeck';
 import OverlayDeckIntro from './pages/OverlayDeckIntro';
+import OverlayDecay from './pages/OverlayDecay';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -46,6 +47,7 @@ const AuthenticatedApp = () => {
       <Route path="/overlay" element={<Overlay />} />
       <Route path="/overlay/deck" element={<OverlayDeck />} />
       <Route path="/overlay/deck-intro" element={<OverlayDeckIntro />} />
+      <Route path="/overlay/decay" element={<OverlayDecay />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<SeasonSetup />} />
         <Route path="/run-tracker" element={<RunTracker />} />

@@ -1,0 +1,79 @@
+{
+  "name": "DecayEvent",
+  "type": "object",
+  "properties": {
+    "step": {
+      "type": "string",
+      "enum": [
+        "spinning",
+        "reveal",
+        "done"
+      ],
+      "default": "spinning",
+      "description": "Current phase of the decay event shown on the overlay"
+    },
+    "wheel_card_names": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Card names shown as wheel slices"
+    },
+    "chosen_card": {
+      "type": "string",
+      "description": "Card the wheel landed on (the card that will decay)"
+    },
+    "card_removed": {
+      "type": "string",
+      "description": "Card removed from the deck"
+    },
+    "replacement_card": {
+      "type": "string",
+      "description": "Card added as the decay replacement"
+    },
+    "rarity_roll": {
+      "type": "string",
+      "enum": [
+        "uncommon",
+        "common",
+        "basic"
+      ],
+      "description": "The 50/50 rarity roll used for the replacement"
+    },
+    "zone": {
+      "type": "string",
+      "enum": [
+        "main",
+        "sideboard"
+      ],
+      "default": "main",
+      "description": "Deck zone the replacement went into"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event was last updated"
+    }
+  },
+  "required": [
+    "step"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

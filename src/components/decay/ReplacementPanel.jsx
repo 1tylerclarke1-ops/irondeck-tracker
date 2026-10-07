@@ -211,10 +211,10 @@ export default function ReplacementPanel({
         </div>
         {rolled && (
           <div className="grid grid-cols-3 gap-3 w-full">
-            <Button onClick={() => onApply("owned", rolled)} disabled={applying}>
+            <Button onClick={() => onApply("owned", rolled, rollRarity)} disabled={applying}>
               Owned
             </Button>
-            <Button onClick={() => onApply("wildcard", rolled)} disabled={applying}>
+            <Button onClick={() => onApply("wildcard", rolled, rollRarity)} disabled={applying}>
               Wildcard
             </Button>
             <Button variant="outline" onClick={roll} disabled={applying}>
