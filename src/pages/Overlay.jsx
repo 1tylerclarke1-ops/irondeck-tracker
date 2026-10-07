@@ -12,45 +12,62 @@ const PANEL_BG =
 const PANEL_BORDER = "rgba(204,90,58,0.4)";
 const SUBPANEL_BG =
   "linear-gradient(180deg, rgba(15,18,24,0.92) 0%, rgba(8,10,14,0.92) 100%)";
+const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
 
-const INGOTS = {
+const MEDALS = {
   hot: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/1cb79609f_ingot-hot-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/c8491aa42_ingot-hot-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/bad5b447f_ingot-hot-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/ff24b4ce1_ingot-hot-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/08fd2e925_ingot-hot-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/b65bf53f0_ingot-hot-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/752552ebc_ingot-hot-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2145e7e27_ingot-hot-7.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/810294b31_medal-hot-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/123325571_medal-hot-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/b2c010e86_medal-hot-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/5061f79b1_medal-hot-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2a67fd321_medal-hot-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/4c3e26e02_medal-hot-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/0ec16adc1_medal-hot-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/26a1425e9_medal-hot-7.png",
   ],
-  cold: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/7b34f6ef3_ingot-cold-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6e0ebc0a5_ingot-cold-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/6df23d4e3_ingot-cold-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2b7df2c62_ingot-cold-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/34b449170_ingot-cold-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/c1cea5d19_ingot-cold-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/08f9269fb_ingot-cold-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/540e14ab1_ingot-cold-7.png",
+  current: [
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/ea7a41c3c_medal-current-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/62054d24d_medal-current-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/7c1831fc3_medal-current-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/e50dc10c0_medal-current-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/8c2e88040_medal-current-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2e621e708_medal-current-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/495cc7154_medal-current-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/25d141688_medal-current-7.png",
+  ],
+  future: [
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2f366aa0b_medal-future-0.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/e589aef15_medal-future-1.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/f930d25d7_medal-future-2.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/5af031f2f_medal-future-3.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/75f4f0587_medal-future-4.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/9e0fc3e74_medal-future-5.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/ddab8e513_medal-future-6.png",
+    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/12ce72a02_medal-future-7.png",
   ],
 };
 
 const LOSS_EMPTY =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/9339e87ba_loss-empty.png";
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/85391f904_loss-empty.png";
 const LOSS_FILLED =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/4de5c31db_loss-filled.png";
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2ff301ce9_loss-filled.png";
+
+const SLOT_W = 118;
+const SLOT_GAP = 6;
+
+function activeKey(i, wins) {
+  return i < wins ? "hot" : i === wins ? "current" : "future";
+}
 
 export default function Overlay() {
   const [data, setData] = useState(null);
 
-  const [popSlot, setPopSlot] = useState(null);
+  const [popSlots, setPopSlots] = useState([]);
   const [shakePip, setShakePip] = useState(null);
   const [cleared, setCleared] = useState(false);
   const [died, setDied] = useState(false);
-  const [flashAll, setFlashAll] = useState(false);
 
-  const prevWins = useRef(null);
+  const prevActive = useRef(null);
   const prevLosses = useRef(null);
   const popTimer = useRef(null);
   const shakeTimer = useRef(null);
@@ -119,26 +136,25 @@ export default function Overlay() {
       ? Number(data.currentRun.stage_losses || 0)
       : 0;
 
-    if (prevWins.current === null) {
-      prevWins.current = wins;
+    const newActive = Array.from({ length: 8 }, (_, i) => activeKey(i, wins));
+
+    if (prevActive.current === null) {
+      prevActive.current = newActive;
       prevLosses.current = losses;
       return;
     }
 
-    if (wins > prevWins.current) {
-      setPopSlot(wins - 1);
-      if (popTimer.current) clearTimeout(popTimer.current);
-      popTimer.current = setTimeout(() => setPopSlot(null), 500);
-      if (wins >= 7) {
-        setCleared(true);
-        setFlashAll(true);
-        if (clearedTimer.current) clearTimeout(clearedTimer.current);
-        clearedTimer.current = setTimeout(() => {
-          setCleared(false);
-          setFlashAll(false);
-        }, 3000);
-      }
+    const changed = [];
+    for (let i = 0; i < 8; i++) {
+      if (newActive[i] !== prevActive.current[i]) changed.push(i);
     }
+    if (changed.length) {
+      setPopSlots(changed);
+      if (popTimer.current) clearTimeout(popTimer.current);
+      popTimer.current = setTimeout(() => setPopSlots([]), 500);
+    }
+    prevActive.current = newActive;
+
     if (losses > prevLosses.current) {
       setShakePip(losses);
       if (shakeTimer.current) clearTimeout(shakeTimer.current);
@@ -149,8 +165,12 @@ export default function Overlay() {
         diedTimer.current = setTimeout(() => setDied(false), 3000);
       }
     }
+    if (wins >= 7 && changed.length) {
+      setCleared(true);
+      if (clearedTimer.current) clearTimeout(clearedTimer.current);
+      clearedTimer.current = setTimeout(() => setCleared(false), 3000);
+    }
 
-    prevWins.current = wins;
     prevLosses.current = losses;
   }, [data]);
 
@@ -175,10 +195,8 @@ export default function Overlay() {
     >
       <style>{`
         @keyframes ov-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
-        @keyframes ov-flash { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.7) drop-shadow(0 0 10px rgba(204,90,58,0.95)); } }
-        @keyframes ov-pulse { 0%,100% { box-shadow: 0 0 6px rgba(204,90,58,0.45); } 50% { box-shadow: 0 0 16px rgba(204,90,58,0.9); } }
         @keyframes ov-msg { 0% { opacity: 0; transform: translateY(6px) scale(0.92); } 15% { opacity: 1; transform: translateY(0) scale(1); } 85% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-4px) scale(0.96); } }
-        @keyframes ov-crosspop { 0% { transform: scale(0.8); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        @keyframes ov-crosspop { 0% { transform: scale(0.82); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
       `}</style>
       <div
         style={{
@@ -226,91 +244,87 @@ export default function Overlay() {
 
         <Divider />
 
-        {/* CENTER: 8 ingots on a shared baseline */}
+        {/* CENTER: 8 medallions + timeline + labels */}
         <div
           style={{
             display: "flex",
-            gap: "0.5rem",
-            alignItems: "flex-end",
-            padding: "0.2rem 0",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "0.35rem",
+            justifyContent: "center",
           }}
         >
-          {Array.from({ length: 8 }).map((_, i) => {
-            const won = i < wins;
-            const isCurrent = i === wins;
-            const isPop = popSlot === i;
-            const isFlash = flashAll;
-            const dim = i > wins;
-            return (
+          {/* Medallions row */}
+          <div
+            style={{
+              display: "flex",
+              gap: SLOT_GAP,
+              alignItems: "flex-end",
+            }}
+          >
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Medallion
+                key={i}
+                index={i}
+                wins={wins}
+                pop={popSlots.includes(i)}
+              />
+            ))}
+          </div>
+
+          {/* Timeline: line + ticks */}
+          <div
+            style={{
+              position: "relative",
+              width: 8 * SLOT_W + 7 * SLOT_GAP,
+              borderTop: `1px solid ${TIMELINE_COLOR}`,
+              height: 8,
+              marginTop: 2,
+            }}
+          >
+            {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
                 style={{
-                  position: "relative",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "0.3rem",
-                  opacity: dim ? 0.45 : 1,
-                  transition: "opacity 0.3s ease",
+                  position: "absolute",
+                  top: 0,
+                  left: i * (SLOT_W + SLOT_GAP) + SLOT_W / 2,
+                  width: 2,
+                  height: 8,
+                  background: TIMELINE_COLOR,
+                  transform: "translateX(-1px)",
                 }}
-              >
+              />
+            ))}
+          </div>
+
+          {/* Labels row */}
+          <div style={{ display: "flex", gap: SLOT_GAP }}>
+            {Array.from({ length: 8 }).map((_, i) => {
+              const isCurrent = i === wins;
+              const isWon = i < wins;
+              return (
                 <div
+                  key={i}
                   style={{
-                    position: "relative",
-                    padding: 4,
-                    borderRadius: "11px",
-                    display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "center",
-                    border: `2px solid ${isCurrent ? RUST : "transparent"}`,
-                    boxShadow: isCurrent
-                      ? `0 0 14px ${RUST_GLOW}, inset 0 0 8px rgba(204,90,58,0.25)`
-                      : "none",
-                    animation: isCurrent
-                      ? "ov-pulse 1.6s ease-in-out infinite"
-                      : "none",
-                  }}
-                >
-                  <IngotImage index={i} won={won} pop={isPop} flash={isFlash} />
-                  {isCurrent && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: -7,
-                        left: -7,
-                        width: 22,
-                        height: 22,
-                        borderRadius: "999px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: RUST,
-                        border: "2px solid rgba(255,255,255,0.9)",
-                        boxShadow: `0 0 10px ${RUST_GLOW}`,
-                        fontSize: "0.72rem",
-                        fontWeight: 800,
-                        color: "#fff",
-                      }}
-                    >
-                      {wins}
-                    </div>
-                  )}
-                </div>
-                <span
-                  style={{
-                    fontSize: "0.5rem",
+                    width: SLOT_W,
+                    textAlign: "center",
+                    fontSize: "0.6rem",
                     letterSpacing: "0.03em",
                     fontWeight: 700,
-                    color: dim
-                      ? "rgba(255,255,255,0.4)"
-                      : "rgba(255,255,255,0.8)",
+                    color: isCurrent
+                      ? "#ffffff"
+                      : isWon
+                      ? RUST
+                      : "rgba(255,255,255,0.4)",
+                    transition: "color 0.3s ease",
                   }}
                 >
-                  {i} {i === 1 ? "Win" : "Wins"}
-                </span>
-              </div>
-            );
-          })}
+                  {i === 1 ? "1 Win" : `${i} Wins`}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <Divider />
@@ -345,8 +359,8 @@ export default function Overlay() {
                     alt=""
                     draggable={false}
                     style={{
-                      width: 40,
-                      height: 40,
+                      width: 46,
+                      height: 46,
                       objectFit: "contain",
                       filter: lost
                         ? `drop-shadow(0 0 8px ${RED_GLOW})`
@@ -429,7 +443,7 @@ export default function Overlay() {
           </div>
         </div>
 
-        {(cleared || (died && !cleared)) && (
+        {(cleared || died) && (
           <div
             style={{
               position: "absolute",
@@ -486,48 +500,36 @@ function Divider() {
   );
 }
 
-function IngotImage({ index, won, pop, flash }) {
-  const anim = pop
-    ? "ov-crosspop 0.5s ease-out"
-    : flash
-    ? "ov-flash 0.6s ease-in-out infinite"
-    : "none";
+function Medallion({ index, wins, pop }) {
+  const active = activeKey(index, wins);
+  const anim = pop ? "ov-crosspop 0.5s ease-out" : "none";
   return (
     <div
       style={{
         position: "relative",
-        width: 96,
+        width: SLOT_W,
+        height: SLOT_W,
         animation: anim,
       }}
     >
-      <img
-        src={INGOTS.cold[index]}
-        alt=""
-        draggable={false}
-        style={{
-          display: "block",
-          width: 96,
-          height: "auto",
-          opacity: won ? 0 : 1,
-          transition: "opacity 0.3s ease",
-          pointerEvents: "none",
-        }}
-      />
-      <img
-        src={INGOTS.hot[index]}
-        alt=""
-        draggable={false}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 96,
-          height: "auto",
-          opacity: won ? 1 : 0,
-          transition: "opacity 0.3s ease",
-          pointerEvents: "none",
-        }}
-      />
+      {["hot", "current", "future"].map((k) => (
+        <img
+          key={k}
+          src={MEDALS[k][index]}
+          alt=""
+          draggable={false}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: SLOT_W,
+            height: SLOT_W,
+            objectFit: "contain",
+            opacity: active === k ? 1 : 0,
+            transition: "opacity 0.3s ease",
+            pointerEvents: "none",
+          }}
+        />
+      ))}
     </div>
   );
 }
