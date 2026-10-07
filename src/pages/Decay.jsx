@@ -123,10 +123,13 @@ export default function Decay() {
       } else {
         await base44.entities.Card.update(decayedCard.id, { copies: newCopies });
       }
+      const now = new Date().toISOString();
       const existing = cards.find((c) => c.name === rolled.name);
       if (existing) {
         await base44.entities.Card.update(existing.id, {
           copies: num(existing.copies) + 1,
+          is_decay_replacement: true,
+          decayed_at: now,
         });
       } else {
         await base44.entities.Card.create({
@@ -135,6 +138,11 @@ export default function Decay() {
           copies: 1,
           rarity: rolled.rarity,
           card_type: rolled.card_type,
+          mana_cost: rolled.mana_cost || "",
+          colours: rolled.colours || "",
+          mana_value: rolled.mana_value ?? null,
+          is_decay_replacement: true,
+          decayed_at: now,
         });
       }
       await base44.entities.Decay.create({

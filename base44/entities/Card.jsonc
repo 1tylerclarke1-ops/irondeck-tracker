@@ -47,6 +47,30 @@
       ],
       "default": "main",
       "description": "Deck zone"
+    },
+    "mana_cost": {
+      "type": "string",
+      "description": "Mana cost, e.g. {2}{B}{G}",
+      "default": ""
+    },
+    "colours": {
+      "type": "string",
+      "description": "Card colour identity, e.g. BG",
+      "default": ""
+    },
+    "mana_value": {
+      "type": "number",
+      "description": "Mana value (converted mana cost)"
+    },
+    "is_decay_replacement": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this card entered the deck as a decay replacement"
+    },
+    "decayed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this card was added as a decay replacement"
     }
   },
   "required": [

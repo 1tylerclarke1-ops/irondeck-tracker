@@ -80,6 +80,17 @@ export function typeFor(card) {
   return "creature";
 }
 
+export function manaInfoFor(card) {
+  if (!card) return { mana_cost: "", colours: "", mana_value: null };
+  const face = card.card_faces && card.card_faces[0] ? card.card_faces[0] : card;
+  const mana_cost = face.mana_cost || "";
+  const colors = face.colors || card.colors || [];
+  const colours = colors.join("").toUpperCase();
+  const mana_value =
+    face.cmc != null ? face.cmc : card.cmc != null ? card.cmc : null;
+  return { mana_cost, colours, mana_value };
+}
+
 export async function lookupCards(entries) {
   const lookups = [];
   const byKey = {};

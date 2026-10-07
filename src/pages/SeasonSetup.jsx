@@ -6,6 +6,7 @@ import DeckCounters from "@/components/season/DeckCounters";
 import DecklistTable from "@/components/season/DecklistTable";
 import CardForm from "@/components/season/CardForm";
 import ArenaImport from "@/components/season/ArenaImport";
+import RefreshCardData from "@/components/season/RefreshCardData";
 import RulesChecklist from "@/components/season/RulesChecklist";
 import AppNav from "@/components/AppNav";
 
@@ -89,6 +90,11 @@ export default function SeasonSetup() {
               Decklist locked: this season has runs. Use the Decay page to change cards.
             </div>
           )}
+          <RefreshCardData
+            seasonId={season.id}
+            cards={cards}
+            onRefreshed={() => loadCards(season.id)}
+          />
           {!locked && (
             <>
               <CardForm seasonId={season.id} onAdded={() => loadCards(season.id)} />

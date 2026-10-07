@@ -28,6 +28,7 @@ import {
   lookupCards,
   rarityFor,
   typeFor,
+  manaInfoFor,
 } from "@/components/season/arenaImport";
 
 export default function ArenaImport({ seasonId, onImported }) {
@@ -54,12 +55,18 @@ export default function ArenaImport({ seasonId, onImported }) {
       setRows(
         entries.map((e, i) => {
           const card = cards[i];
+          const mi = card
+            ? manaInfoFor(card)
+            : { mana_cost: "", colours: "", mana_value: null };
           return {
             name: e.name,
             copies: e.copies,
             zone: e.zone,
             rarity: card ? rarityFor(card) : "",
             card_type: card ? typeFor(card) : "",
+            mana_cost: mi.mana_cost,
+            colours: mi.colours,
+            mana_value: mi.mana_value,
             found: !!card,
           };
         })
@@ -84,6 +91,9 @@ export default function ArenaImport({ seasonId, onImported }) {
           rarity: r.rarity,
           card_type: r.card_type,
           zone: r.zone,
+          mana_cost: r.mana_cost,
+          colours: r.colours,
+          mana_value: r.mana_value,
         }));
       if (toCreate.length) await base44.entities.Card.bulkCreate(toCreate);
       setText("");

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { num } from "@/components/run/runHelpers";
-import { rarityFor, typeFor } from "@/components/season/arenaImport";
+import { rarityFor, typeFor, manaInfoFor } from "@/components/season/arenaImport";
 
 const newRarityFor = (r) => (r === "mythic" ? "rare" : "uncommon");
 
@@ -106,6 +106,7 @@ export default function ReplacementPanel({
     card_type: typeFor(data),
     imageUrl:
       data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal || null,
+    ...manaInfoFor(data),
   });
 
   const pickBasicLand = () => {
@@ -146,7 +147,15 @@ export default function ReplacementPanel({
           }
         }
         const name = pickBasicLand();
-        setRolled({ name, rarity: "basic", card_type: "land", imageUrl: null });
+        setRolled({
+          name,
+          rarity: "basic",
+          card_type: "land",
+          imageUrl: null,
+          mana_cost: "",
+          colours: "",
+          mana_value: 0,
+        });
         return;
       }
 
