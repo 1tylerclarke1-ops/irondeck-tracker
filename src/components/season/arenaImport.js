@@ -106,19 +106,40 @@ export async function lookupCards(entries) {
     });
   }
 
-  const nameLookups = lookups.filter((l) => !l.card);
-  if (nameLookups.length) {
-    const uniqueNames = Array.from(new Set(nameLookups.map((l) => l.name)));
-    const ids = uniqueNames.map((name) => ({ name }));
-    const data = await postCollection(ids);
-    const byName = {};
-    data.forEach((c) => {
-      byName[c.name.toLowerCase()] = c;
-    });
-    nameLookups.forEach((l) => {
-      const c = byName[l.name.toLowerCase()];
-      if (c) l.card = c;
-    });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const nameMatches = (deckName, card) => {
+    const dn = (deckName || "").toLowerCase().trim();
+    const full = (card?.name || "").toLowerCase().trim();
+    const front = full.split(" // ")[0];
+    return dn === full || dn === front;
+  };
+  const fetchNamed = async (name, mode) => {
+    const url = `https://api.scryfall.com/cards/named?${mode}=${encodeURIComponent(
+      name
+    )}`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  // Cards not found by set + collector number: try exact name lookup.
+  const missingExact = lookups.filter((l) => !l.card);
+  for (const l of missingExact) {
+    const card = await fetchNamed(l.name, "exact");
+    if (card && nameMatches(l.name, card)) l.card = card;
+    await sleep(100);
+  }
+
+  // Still not found: try fuzzy name lookup.
+  const missingFuzzy = lookups.filter((l) => !l.card);
+  for (const l of missingFuzzy) {
+    const card = await fetchNamed(l.name, "fuzzy");
+    if (card && nameMatches(l.name, card)) l.card = card;
+    await sleep(100);
   }
 
   return entries.map((e) => {
