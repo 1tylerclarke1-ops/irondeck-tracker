@@ -215,15 +215,34 @@ export default function Overlay() {
       `}</style>
       <div
         style={{
-          position: "relative",
           display: "flex",
-          alignItems: "stretch",
-          gap: "1.3rem",
-          padding: "0.7rem 1.4rem",
-          color: "#fff",
-          fontFamily: "sans-serif",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "0.6rem",
         }}
       >
+        <span
+          style={{
+            fontSize: "0.95rem",
+            letterSpacing: "0.34em",
+            fontWeight: 800,
+            color: RUST,
+            textShadow: `0 0 14px ${RUST_GLOW}`,
+          }}
+        >
+          IRONDECK
+        </span>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "stretch",
+            gap: "1.3rem",
+            padding: "0.7rem 1.4rem",
+            color: "#fff",
+            fontFamily: "sans-serif",
+          }}
+        >
         {/* LEFT: Season / Day / Record */}
         <div
           style={{
@@ -235,17 +254,6 @@ export default function Overlay() {
             minWidth: "92px",
           }}
         >
-          <span
-            style={{
-              fontSize: "0.62rem",
-              letterSpacing: "0.24em",
-              fontWeight: 800,
-              color: RUST,
-              marginBottom: "0.2rem",
-            }}
-          >
-            IRONDECK
-          </span>
           <SideStat label="Season" value={seasonNumber ?? "—"} />
           <SideStat label="Day" value={day ?? "—"} />
           {record != null && (
@@ -483,6 +491,7 @@ export default function Overlay() {
             RUN DEATH
           </div>
         )}
+        </div>
       </div>
     </div>
   );
