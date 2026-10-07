@@ -6,6 +6,7 @@ import DecayStatus from "@/components/decay/DecayStatus";
 import SpinWheel from "@/components/decay/SpinWheel";
 import ReplacementPanel from "@/components/decay/ReplacementPanel";
 import { num } from "@/components/run/runHelpers";
+import { fetchRollCards } from "@/lib/decayRoll";
 
 export default function Decay() {
   const [season, setSeason] = useState(null);
@@ -16,6 +17,9 @@ export default function Decay() {
   const [decayedCard, setDecayedCard] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [rollRarity, setRollRarity] = useState(null);
+  const [replacementCard, setReplacementCard] = useState(null);
+  const [rolling, setRolling] = useState(false);
 
   const wheelSpinRef = useRef(null);
   const eventRef = useRef(null);
@@ -131,7 +135,8 @@ export default function Decay() {
     }
   }
 
-  const applyDecay = async (howObtained, rolled, rollRarity) => {
+  const applyDecay = async (howObtained) => {
+    if (!replacementCard) return;
     setApplying(true);
     try {
       const targetZone = decayedCard.zone || "main";
@@ -139,7 +144,8 @@ export default function Decay() {
       await base44.entities.Card.update(decayedCard.id, { copies: newCopies });
       const now = new Date().toISOString();
       const existing = cards.find(
-        (c) => c.name === rolled.name && (c.zone || "main") === targetZone
+        (c) =>
+          c.name === replacementCard.name && (c.zone || "main") === targetZone
       );
       if (existing) {
         await base44.entities.Card.update(existing.id, {
@@ -150,14 +156,14 @@ export default function Decay() {
       } else {
         await base44.entities.Card.create({
           season_id: season.id,
-          name: rolled.name,
+          name: replacementCard.name,
           copies: 1,
-          rarity: rolled.rarity,
-          card_type: rolled.card_type,
+          rarity: replacementCard.rarity,
+          card_type: replacementCard.card_type,
           zone: targetZone,
-          mana_cost: rolled.mana_cost || "",
-          colours: rolled.colours || "",
-          mana_value: rolled.mana_value ?? null,
+          mana_cost: replacementCard.mana_cost || "",
+          colours: replacementCard.colours || "",
+          mana_value: replacementCard.mana_value ?? null,
           is_decay_replacement: true,
           decayed_at: now,
         });
@@ -167,15 +173,15 @@ export default function Decay() {
         attempt_number: dueRun.attempt_number,
         card_removed: decayedCard.name,
         rarity_from: decayedCard.rarity,
-        rarity_to: rolled.rarity,
-        replacement_card: rolled.name,
+        rarity_to: replacementCard.rarity,
+        replacement_card: replacementCard.name,
         how_obtained: howObtained,
         zone: targetZone,
         date: new Date().toISOString(),
       });
       if (eventRef.current?.id) {
         await base44.entities.DecayEvent.update(eventRef.current.id, {
-          replacement_card: rolled.name,
+          replacement_card: replacementCard.name,
           rarity_roll: rollRarity,
           zone: targetZone,
           step: "reveal",
@@ -185,6 +191,49 @@ export default function Decay() {
       setCompleted(true);
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleDecayed = async (card) => {
+    setDecayedCard(card);
+    setReplacementCard(null);
+    const first = Math.random() < 0.5 ? "uncommon" : "common";
+    setRollRarity(first);
+    if (eventRef.current?.id) {
+      try {
+        await base44.entities.DecayEvent.update(eventRef.current.id, {
+          step: "rarity",
+          rarity_roll: first,
+          updated_at: new Date().toISOString(),
+        });
+      } catch {}
+    }
+  };
+
+  const handleRollReplacement = async () => {
+    if (!decayedCard || !rollRarity) return;
+    setRolling(true);
+    try {
+      const isLand = decayedCard.card_type === "land";
+      const { rollCards, replacement } = await fetchRollCards({
+        rarity: rollRarity,
+        season,
+        deckCards: cards,
+        isLand,
+      });
+      setReplacementCard(replacement);
+      if (eventRef.current?.id) {
+        await base44.entities.DecayEvent.update(eventRef.current.id, {
+          step: "rolling",
+          roll_cards: rollCards,
+          replacement_card: replacement.name,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      // leave the Roll button available to retry
+    } finally {
+      setRolling(false);
     }
   };
 
@@ -213,7 +262,7 @@ export default function Decay() {
       <div className="space-y-6">
         <SpinWheel
           cards={uniqueCards}
-          onDecayed={setDecayedCard}
+          onDecayed={handleDecayed}
           onSpin={handleSpin}
           spinRef={wheelSpinRef}
         />
@@ -221,8 +270,10 @@ export default function Decay() {
           <ReplacementPanel
             decayedCard={decayedCard}
             rarity={decayedCard.rarity}
-            season={season}
-            deckCards={cards}
+            rollRarity={rollRarity}
+            replacementCard={replacementCard}
+            rolling={rolling}
+            onRollReplacement={handleRollReplacement}
             onApply={applyDecay}
             applying={applying}
           />

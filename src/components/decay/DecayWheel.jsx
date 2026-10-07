@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import React, { forwardRef, useImperativeHandle, useRef, useState, useEffect } from "react";
 
 const COLORS = [
   "#1e293b",
@@ -51,6 +51,13 @@ const DecayWheel = forwardRef(function DecayWheel(
   const [result, setResult] = useState(null);
   const rotationRef = useRef(0);
   const timerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    },
+    []
+  );
 
   const n = cards.length;
   const angle = n > 0 ? 360 / n : 360;

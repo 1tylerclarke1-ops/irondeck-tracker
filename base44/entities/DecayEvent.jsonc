@@ -6,6 +6,8 @@
       "type": "string",
       "enum": [
         "spinning",
+        "rarity",
+        "rolling",
         "reveal",
         "done"
       ],
@@ -39,6 +41,21 @@
         "basic"
       ],
       "description": "The 50/50 rarity roll used for the replacement"
+    },
+    "roll_cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Cards shown during the rolling animation; the replacement is last"
     },
     "zone": {
       "type": "string",
