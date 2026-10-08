@@ -15,37 +15,15 @@ const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
 const SMOKE =
   "0 0 2px rgba(0,0,0,0.6), 0 1px 1px rgba(0,0,0,0.7)";
 
-const MEDALS = {
-  hot: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/810294b31_medal-hot-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/123325571_medal-hot-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/b2c010e86_medal-hot-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/5061f79b1_medal-hot-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2a67fd321_medal-hot-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/4c3e26e02_medal-hot-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/0ec16adc1_medal-hot-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/26a1425e9_medal-hot-7.png",
-  ],
-  current: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/ea7a41c3c_medal-current-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/62054d24d_medal-current-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/7c1831fc3_medal-current-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/e50dc10c0_medal-current-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/8c2e88040_medal-current-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2e621e708_medal-current-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/495cc7154_medal-current-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/25d141688_medal-current-7.png",
-  ],
-  future: [
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2f366aa0b_medal-future-0.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/e589aef15_medal-future-1.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/f930d25d7_medal-future-2.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/5af031f2f_medal-future-3.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/75f4f0587_medal-future-4.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/9e0fc3e74_medal-future-5.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/ddab8e513_medal-future-6.png",
-    "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/12ce72a02_medal-future-7.png",
-  ],
+const DPRE =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
+const DIAMONDS = {
+  won: ["38be64a04", "5337373cc", "6eb5fce6b", "05a34bf8d", "e3efd766f", "5c948e2e9", "71a2393e5", "cea71edb4"]
+    .map((h, i) => `${DPRE}${h}_win-won-${i}.png`),
+  current: ["8e325f0fa", "3b901dc1d", "373755d90", "f4940b9e8", "90d0d6415", "c8b225792", "b772464d0", "420488ff8"]
+    .map((h, i) => `${DPRE}${h}_win-current-${i}.png`),
+  future: ["0a12206eb", "d564baeb6", "a4e768272", "27a7e507c", "7341bda7b", "c686130ca", "abcfe0b90", "89a41878d"]
+    .map((h, i) => `${DPRE}${h}_win-future-${i}.png`),
 };
 
 const LOSS_EMPTY =
@@ -59,22 +37,24 @@ const SURVIVED =
 const DEATH_RUN =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/102bb0e38_death-run.png";
 
-const SLOT_W = 118;
+const SLOT_W = 110;
 const SLOT_GAP = 6;
 
 function activeKey(i, wins) {
-  return i < wins ? "hot" : i === wins ? "current" : "future";
+  return i < wins ? "won" : i === wins ? "current" : "future";
 }
 
 export default function Overlay() {
   const [data, setData] = useState(null);
 
-  const [popSlots, setPopSlots] = useState([]);
+  const [igniteSlot, setIgniteSlot] = useState(null);
+  const [pulseSlot, setPulseSlot] = useState(null);
   const [flashPip, setFlashPip] = useState(null);
 
   const prevActive = useRef(null);
+  const prevWins = useRef(null);
   const prevLosses = useRef(null);
-  const popTimer = useRef(null);
+  const igniteTimer = useRef(null);
   const flashTimer = useRef(null);
 
   useEffect(() => {
@@ -158,25 +138,25 @@ export default function Overlay() {
       : false;
 
     const newActive = Array.from({ length: 8 }, (_, i) =>
-      survived ? "hot" : activeKey(i, wins)
+      survived ? "won" : activeKey(i, wins)
     );
 
     if (prevActive.current === null) {
       prevActive.current = newActive;
+      prevWins.current = wins;
       prevLosses.current = losses;
       return;
     }
 
-    const changed = [];
-    for (let i = 0; i < 8; i++) {
-      if (newActive[i] !== prevActive.current[i]) changed.push(i);
-    }
-    if (changed.length) {
-      setPopSlots(changed);
-      if (popTimer.current) clearTimeout(popTimer.current);
-      popTimer.current = setTimeout(() => setPopSlots([]), 500);
-    }
     prevActive.current = newActive;
+
+    if (wins > prevWins.current) {
+      setIgniteSlot(wins - 1);
+      setPulseSlot(wins);
+      if (igniteTimer.current) clearTimeout(igniteTimer.current);
+      igniteTimer.current = setTimeout(() => setIgniteSlot(null), 400);
+    }
+    prevWins.current = wins;
 
     if (losses > prevLosses.current) {
       setFlashPip(losses - 1);
@@ -189,7 +169,7 @@ export default function Overlay() {
 
   useEffect(
     () => () => {
-      if (popTimer.current) clearTimeout(popTimer.current);
+      if (igniteTimer.current) clearTimeout(igniteTimer.current);
       if (flashTimer.current) clearTimeout(flashTimer.current);
     },
     []
@@ -210,7 +190,9 @@ export default function Overlay() {
       style={{ background: "transparent" }}
     >
       <style>{`
-        @keyframes ov-crosspop { 0% { transform: scale(0.82); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        @keyframes ov-ignite { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.25); filter: brightness(1.8) drop-shadow(0 0 10px rgba(255,140,40,0.9)); } 100% { transform: scale(1); filter: brightness(1); } }
+        @keyframes ov-breathe { 0%,100% { transform: scale(1.0); } 50% { transform: scale(1.05); } }
+        @keyframes ov-currentpop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
         @keyframes ov-pipflash { 0% { transform: scale(1); filter: drop-shadow(0 0 8px ${RED_GLOW}) brightness(1); } 30% { transform: scale(1.3); filter: drop-shadow(0 0 14px ${RED_GLOW}) brightness(2.4); } 100% { transform: scale(1); filter: drop-shadow(0 0 8px ${RED_GLOW}) brightness(1); } }
         @keyframes ov-titlestamp { 0% { transform: translate(-50%,-50%) scale(2.5) rotate(-12deg); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1) rotate(-4deg); opacity: 1; } }
         @keyframes ov-screenshake-sm { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(3px, -2px); } 60% { transform: translate(-2px, 1px); } 80% { transform: translate(1px, 0); } }
@@ -284,7 +266,7 @@ export default function Overlay() {
             style={{
               display: "flex",
               gap: SLOT_GAP,
-              alignItems: "flex-end",
+              alignItems: "center",
             }}
           >
             {Array.from({ length: 8 }).map((_, i) => (
@@ -293,7 +275,8 @@ export default function Overlay() {
                 index={i}
                 wins={wins}
                 survived={survived}
-                pop={popSlots.includes(i)}
+                ignite={igniteSlot === i}
+                pulse={pulseSlot === i}
               />
             ))}
           </div>
@@ -540,9 +523,16 @@ function Divider() {
   );
 }
 
-function Medallion({ index, wins, survived, pop }) {
-  const active = survived ? "hot" : activeKey(index, wins);
-  const anim = pop ? "ov-crosspop 0.5s ease-out" : "none";
+function Medallion({ index, wins, survived, ignite, pulse }) {
+  const active = survived ? "won" : activeKey(index, wins);
+  let anim = "none";
+  if (ignite) {
+    anim = "ov-ignite 0.4s ease-out";
+  } else if (active === "current") {
+    anim = pulse
+      ? "ov-currentpop 0.3s ease, ov-breathe 1.6s ease-in-out infinite 0.3s"
+      : "ov-breathe 1.6s ease-in-out infinite";
+  }
   return (
     <div
       style={{
@@ -552,10 +542,10 @@ function Medallion({ index, wins, survived, pop }) {
         animation: anim,
       }}
     >
-      {["hot", "current", "future"].map((k) => (
+      {["won", "current", "future"].map((k) => (
         <img
           key={k}
-          src={MEDALS[k][index]}
+          src={DIAMONDS[k][index]}
           alt=""
           draggable={false}
           style={{
