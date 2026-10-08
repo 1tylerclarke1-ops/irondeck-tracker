@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { postCollection } from "@/lib/scryfall";
 import DeathCardFrame from "@/components/overlay/DeathCardFrame";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
+import { INTRO_BG_STYLE } from "@/lib/overlayAssets";
 
 const DPRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
@@ -243,7 +244,7 @@ export default function DeckIntroRecap({ season, onDone }) {
         alignItems: "center",
         justifyContent: "center",
         gap: "1.1rem",
-        background: "linear-gradient(180deg, #0d1016 0%, #1a1d24 100%)",
+        background: INTRO_BG_STYLE,
         opacity: overlayOpacity,
         transition: `opacity ${phase === "outro" ? FADE_MS : COVER_MS}ms ease`,
       }}

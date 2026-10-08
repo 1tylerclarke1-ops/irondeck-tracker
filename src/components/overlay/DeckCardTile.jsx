@@ -1,4 +1,5 @@
 import React from "react";
+import { TILE_FRAME } from "@/lib/overlayAssets";
 
 const RUST = "#cc5a3a";
 
@@ -70,6 +71,27 @@ export default function DeckCardTile({ card, imageUrl, loading }) {
           }}
         />
       )}
+
+      {/* Tile frame overlay (state: rot / scavenged / steel) */}
+      <img
+        src={
+          rusted
+            ? TILE_FRAME.rot
+            : card.is_decay_replacement
+            ? TILE_FRAME.scavenged
+            : TILE_FRAME.steel
+        }
+        alt=""
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "fill",
+          pointerEvents: "none",
+        }}
+      />
 
       {/* Copies badge */}
       <div

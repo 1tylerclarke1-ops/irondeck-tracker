@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import DeckCardTile from "@/components/overlay/DeckCardTile";
 import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
 import useCardImagesById from "@/hooks/useCardImagesById";
+import { INTRO_BG_STYLE } from "@/lib/overlayAssets";
 
 export default function OverlayDeckIntro() {
   const [season, setSeason] = useState(null);
@@ -89,7 +90,7 @@ export default function OverlayDeckIntro() {
     <div
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #0d1016 0%, #1a1d24 100%)",
+        background: INTRO_BG_STYLE,
         color: "#fff",
         fontFamily: "sans-serif",
         padding: "1.5rem 1.5rem 2.5rem",
