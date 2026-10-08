@@ -19,22 +19,18 @@ const SMOKE =
 const DPRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
 const DIAMONDS = {
-  won: ["38be64a04", "5337373cc", "6eb5fce6b", "05a34bf8d", "e3efd766f", "5c948e2e9", "71a2393e5", "cea71edb4"]
+  won: ["d00d35fc6", "4a1fe34b6", "894562e97", "8e4c0cdf4", "f6c98f779", "c22df9ff5", "6b3cea327", "2aa7c4fa9"]
     .map((h, i) => `${DPRE}${h}_win-won-${i}.png`),
-  current: ["8e325f0fa", "3b901dc1d", "373755d90", "f4940b9e8", "90d0d6415", "c8b225792", "b772464d0", "420488ff8"]
+  current: ["abbc514ab", "248774feb", "13521630d", "d393fb7e4", "cbb512916", "3c510e6c7", "249c5eccb", "f64736e5a"]
     .map((h, i) => `${DPRE}${h}_win-current-${i}.png`),
-  future: ["0a12206eb", "d564baeb6", "a4e768272", "27a7e507c", "7341bda7b", "c686130ca", "abcfe0b90", "89a41878d"]
+  future: ["ae065396e", "72347b8a9", "866337c2f", "0c3e97da6", "32d047d90", "881388982", "be6471094", "d034996f4"]
     .map((h, i) => `${DPRE}${h}_win-future-${i}.png`),
 };
 
-const LOSS_EMPTY =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/15b7f88e7_loss-empty.png";
-const LOSS_1 =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/c31956642_loss-1.png";
-const LOSS_2 =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/e635c9962_loss-2.png";
-const SURVIVED =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/632b9478b_survived.png";
+const LOSS_EMPTY = `${DPRE}43bd79795_loss-empty.png`;
+const LOSS_1 = `${DPRE}04f5808d9_loss-1.png`;
+const LOSS_2 = `${DPRE}0901a13ba_loss-2.png`;
+const SURVIVED = `${DPRE}158b6c909_survived.png`;
 const DEATH_RUN =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/102bb0e38_death-run.png";
 
