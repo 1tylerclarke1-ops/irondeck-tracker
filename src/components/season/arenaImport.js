@@ -91,6 +91,22 @@ export function manaInfoFor(card) {
   return { mana_cost, colours, mana_value };
 }
 
+// Project a Scryfall card onto the Scryfall-derived fields stored on a Card.
+export function scryfallFieldsFor(card) {
+  if (!card) return null;
+  const mi = manaInfoFor(card);
+  return {
+    scryfall_id: card.id,
+    set: card.set,
+    collector_number: card.collector_number,
+    mana_cost: mi.mana_cost,
+    colours: mi.colours,
+    mana_value: mi.mana_value,
+    rarity: rarityFor(card),
+    card_type: typeFor(card),
+  };
+}
+
 export async function lookupCards(entries) {
   const lookups = [];
   const byKey = {};

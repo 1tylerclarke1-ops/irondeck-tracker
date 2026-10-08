@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { base44 } from "@/api/base44Client";
 import { Trash2 } from "lucide-react";
+import FixCardDialog from "@/components/season/FixCardDialog";
 
 const zoneOf = (c) => c.zone || "main";
 
@@ -84,20 +85,23 @@ export default function DecklistTable({ cards, onChange, locked }) {
         <TableCell className="capitalize">{card.rarity}</TableCell>
         <TableCell className="capitalize">{card.card_type}</TableCell>
         <TableCell className="text-right">
-          {locked ? (
-            <span className="text-xs text-muted-foreground">Locked</span>
-          ) : (
-            <div className="flex justify-end gap-2">
-              {editingId !== card.id && (
+          <div className="flex justify-end items-center gap-2">
+            {!card.scryfall_id && (
+              <FixCardDialog card={card} onFixed={onChange} />
+            )}
+            {locked ? (
+              <span className="text-xs text-muted-foreground">Locked</span>
+            ) : editingId !== card.id ? (
+              <>
                 <Button size="sm" variant="outline" onClick={() => startEdit(card)}>
                   Edit
                 </Button>
-              )}
-              <Button size="sm" variant="ghost" onClick={() => handleDelete(card)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          )}
+                <Button size="sm" variant="ghost" onClick={() => handleDelete(card)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
+            ) : null}
+          </div>
         </TableCell>
       </TableRow>
     ));

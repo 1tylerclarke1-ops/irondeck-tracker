@@ -23,13 +23,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { base44 } from "@/api/base44Client";
-import {
-  parseArenaText,
-  lookupCards,
-  rarityFor,
-  typeFor,
-  manaInfoFor,
-} from "@/components/season/arenaImport";
+import { parseArenaText, scryfallFieldsFor } from "@/components/season/arenaImport";
+import { resolveCards } from "@/lib/resolveCard";
+import CandidateChips from "@/components/season/CandidateChips";
 
 export default function ArenaImport({ seasonId, onImported }) {
   const [text, setText] = useState("");
@@ -40,6 +36,7 @@ export default function ArenaImport({ seasonId, onImported }) {
 
   const foundCount = rows.filter((r) => r.found).length;
   const notFoundCount = rows.length - foundCount;
+  const allResolved = rows.length > 0 && foundCount === rows.length;
 
   const handlePreview = async () => {
     setError(null);
@@ -51,26 +48,27 @@ export default function ArenaImport({ seasonId, onImported }) {
     }
     setLoading(true);
     try {
-      const cards = await lookupCards(entries);
+      const resolved = await resolveCards(entries);
       setRows(
         entries.map((e, i) => {
-          const card = cards[i];
-          const mi = card
-            ? manaInfoFor(card)
-            : { mana_cost: "", colours: "", mana_value: null };
+          const r = resolved[i];
+          const fields = r.card ? scryfallFieldsFor(r.card) : null;
           return {
             name: e.name,
             copies: e.copies,
             zone: e.zone,
-            rarity: card ? rarityFor(card) : "",
-            card_type: card ? typeFor(card) : "",
-            mana_cost: mi.mana_cost,
-            colours: mi.colours,
-            mana_value: mi.mana_value,
-            scryfall_id: card ? card.id : null,
-            set: card ? card.set : null,
-            collector_number: card ? card.collector_number : null,
-            found: !!card,
+            rarity: fields?.rarity || "",
+            card_type: fields?.card_type || "",
+            mana_cost: fields?.mana_cost || "",
+            colours: fields?.colours || "",
+            mana_value: fields?.mana_value ?? null,
+            scryfall_id: fields?.scryfall_id || null,
+            set: fields?.set || null,
+            collector_number: fields?.collector_number || null,
+            matchedName: r.card?.name || null,
+            confidence: r.confidence || 0,
+            candidates: r.candidates || [],
+            found: !!r.card,
           };
         })
       );
@@ -81,27 +79,43 @@ export default function ArenaImport({ seasonId, onImported }) {
     }
   };
 
+  const applyCardToRow = (i, scryfallCard) => {
+    const f = scryfallFieldsFor(scryfallCard);
+    setRows((prev) =>
+      prev.map((row, idx) =>
+        idx === i
+          ? {
+              ...row,
+              ...f,
+              matchedName: scryfallCard.name,
+              confidence: 100,
+              candidates: [],
+              found: true,
+            }
+          : row
+      )
+    );
+  };
+
   const handleConfirm = async () => {
     setConfirming(true);
     try {
       await base44.entities.Card.deleteMany({ season_id: seasonId });
-      const toCreate = rows
-        .filter((r) => r.found)
-        .map((r) => ({
-          season_id: seasonId,
-          name: r.name,
-          copies: r.copies,
-          original_copies: r.copies,
-          rarity: r.rarity,
-          card_type: r.card_type,
-          zone: r.zone,
-          mana_cost: r.mana_cost,
-          colours: r.colours,
-          mana_value: r.mana_value,
-          scryfall_id: r.scryfall_id || null,
-          set: r.set || null,
-          collector_number: r.collector_number || null,
-        }));
+      const toCreate = rows.map((r) => ({
+        season_id: seasonId,
+        name: r.name,
+        copies: r.copies,
+        original_copies: r.copies,
+        rarity: r.rarity,
+        card_type: r.card_type,
+        zone: r.zone,
+        mana_cost: r.mana_cost,
+        colours: r.colours,
+        mana_value: r.mana_value,
+        scryfall_id: r.scryfall_id || null,
+        set: r.set || null,
+        collector_number: r.collector_number || null,
+      }));
       if (toCreate.length) await base44.entities.Card.bulkCreate(toCreate);
       setText("");
       setRows([]);
@@ -139,6 +153,7 @@ export default function ArenaImport({ seasonId, onImported }) {
           <div className="space-y-3">
             <div className="text-sm text-muted-foreground">
               {foundCount} found, {notFoundCount} not found
+              {!allResolved && " — resolve every row to confirm import"}
             </div>
             <div className="rounded-lg border overflow-x-auto">
               <Table>
@@ -154,7 +169,25 @@ export default function ArenaImport({ seasonId, onImported }) {
                 <TableBody>
                   {rows.map((r, i) => (
                     <TableRow key={i} className={!r.found ? "bg-destructive/10" : ""}>
-                      <TableCell>{r.name}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{r.name}</div>
+                        {r.found ? (
+                          r.matchedName &&
+                          r.matchedName.toLowerCase() !==
+                            r.name.toLowerCase() && (
+                            <div className="text-xs text-muted-foreground">
+                              → {r.matchedName}
+                            </div>
+                          )
+                        ) : (
+                          <div className="mt-1">
+                            <CandidateChips
+                              candidates={r.candidates}
+                              onPick={(card) => applyCardToRow(i, card)}
+                            />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{r.copies}</TableCell>
                       <TableCell className="capitalize">
                         {r.zone || "—"}
@@ -172,19 +205,14 @@ export default function ArenaImport({ seasonId, onImported }) {
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button>Confirm import</Button>
+                <Button disabled={!allResolved}>Confirm import</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Replace decklist?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will replace your current decklist with {foundCount} card
-                    {foundCount === 1 ? "" : "s"}.
-                    {notFoundCount > 0
-                      ? ` ${notFoundCount} card${
-                          notFoundCount === 1 ? "" : "s"
-                        } not found will be skipped.`
-                      : ""}
+                    This will replace your current decklist with {rows.length} card
+                    {rows.length === 1 ? "" : "s"}.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

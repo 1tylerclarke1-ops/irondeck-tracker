@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
-import { manaInfoFor, lookupCards } from "@/components/season/arenaImport";
+import { manaInfoFor } from "@/components/season/arenaImport";
+import { resolveCards } from "@/lib/resolveCard";
 
 export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -19,11 +20,11 @@ export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
         set: c.set || null,
         number: c.collector_number || null,
       }));
-      const lookedUp = await lookupCards(entries);
+      const resolved = await resolveCards(entries);
 
       const updates = [];
       for (let i = 0; i < cards.length; i++) {
-        const data = lookedUp[i];
+        const data = resolved[i].card;
         if (data) {
           const mi = manaInfoFor(data);
           updates.push({
@@ -42,7 +43,12 @@ export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
       if (updates.length) {
         await base44.entities.Card.bulkUpdate(updates);
       }
-      setResult(`Updated ${updates.length} of ${cards.length} cards.`);
+      const unresolved = cards.length - updates.length;
+      setResult(
+        `Updated ${updates.length} of ${cards.length} cards.${
+          unresolved ? ` ${unresolved} unresolved — use Fix on the decklist.` : ""
+        }`
+      );
       onRefreshed();
     } catch (e) {
       setError(e.message || "Refresh failed.");
@@ -62,9 +68,9 @@ export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
         </Button>
         <span className="text-sm text-muted-foreground">
           Fills Scryfall id, set, collector number, mana cost, colours and mana
-          value. Looks up by set + collector number, then exact name, then fuzzy
-          name (matching the full name or front face). Does not change copies,
-          original copies, rarity or zone.
+          value. Looks up by set + collector number, then a scored name search,
+          then fuzzy name. Does not change copies, original copies, rarity or
+          zone.
         </span>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
