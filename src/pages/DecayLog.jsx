@@ -33,6 +33,17 @@ export default function DecayLog() {
     loadAll();
   }, [loadAll]);
 
+  const setHowObtained = useCallback(
+    async (id, value) => {
+      await base44.entities.Decay.update(id, { how_obtained: value });
+      if (season) {
+        const list = await base44.entities.Decay.filter({ season_id: season.id });
+        setDecays(list);
+      }
+    },
+    [season]
+  );
+
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto p-6">
@@ -67,7 +78,7 @@ export default function DecayLog() {
       <AppNav />
       <h1 className="text-2xl font-bold mb-6">Decay Log</h1>
       <DecayLogTotals decays={decays} />
-      <DecayLogTable rows={rows} />
+      <DecayLogTable rows={rows} onSetHowObtained={setHowObtained} />
     </div>
   );
 }

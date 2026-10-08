@@ -9,6 +9,7 @@ import BestRun from "@/components/run/BestRun";
 import VerifyDeck from "@/components/run/VerifyDeck";
 import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
+import { performDecay } from "@/lib/performDecay";
 
 export default function RunTracker() {
   const [season, setSeason] = useState(null);
@@ -21,6 +22,8 @@ export default function RunTracker() {
   const [mythicBusy, setMythicBusy] = useState(false);
   const [history, setHistory] = useState([]);
   const [deathEvent, setDeathEvent] = useState(null);
+  const [decayApplying, setDecayApplying] = useState(false);
+  const [decayError, setDecayError] = useState(null);
 
   const loadSeason = useCallback(async () => {
     const active = await base44.entities.Season.filter({ status: "active" });
@@ -166,13 +169,30 @@ export default function RunTracker() {
       const prev = snapshot(inProgress);
       const newRoundLosses = num(inProgress.round_losses) + 1;
       const update = { round_losses: newRoundLosses };
-      if (newRoundLosses >= 2) {
+      const died = newRoundLosses >= 2;
+      if (died) {
         update.round_status = "died";
         update.result = "died";
       }
       await base44.entities.Run.update(inProgress.id, update);
       setHistory((h) => [...h, prev]);
       await loadRuns(season.id);
+      if (died) {
+        setDecayError(null);
+        setDecayApplying(true);
+        try {
+          await performDecay({ season, cards, run: inProgress });
+          await Promise.all([
+            loadCards(season.id),
+            loadDecays(season.id),
+            loadDeathEvent(),
+          ]);
+        } catch (e) {
+          setDecayError(e?.message || "Decay failed");
+        } finally {
+          setDecayApplying(false);
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -301,6 +321,17 @@ export default function RunTracker() {
           rulesLoading={rulesLoading}
           decayDue={decayDue}
         />
+        {decayApplying && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+            Applying decay…
+          </div>
+        )}
+        {decayError && !decayApplying && (
+          <div className="text-sm text-destructive">
+            Decays failed: {decayError}
+          </div>
+        )}
       </div>
     </div>
   );
