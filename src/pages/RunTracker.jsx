@@ -10,6 +10,7 @@ import VerifyDeck from "@/components/run/VerifyDeck";
 import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 import { performDecay } from "@/lib/performDecay";
+import { createDayLog, deleteLatestDayLogForRun } from "@/lib/dayLog";
 
 export default function RunTracker() {
   const [season, setSeason] = useState(null);
@@ -158,6 +159,19 @@ export default function RunTracker() {
       await base44.entities.Run.update(inProgress.id, update);
       setHistory((h) => [...h, prev]);
       await loadRuns(season.id);
+      if (newRoundWins >= 7) {
+        await createDayLog({
+          season,
+          run: inProgress,
+          climb,
+          day,
+          roundWins: newRoundWins,
+          roundLosses: num(inProgress.round_losses),
+          result: "survived",
+          runWinsAfter: newRunWins,
+          decayIds: [],
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -180,8 +194,10 @@ export default function RunTracker() {
       if (died) {
         setDecayError(null);
         setDecayApplying(true);
+        let decayId = null;
         try {
-          await performDecay({ season, cards, run: inProgress });
+          const decayResult = await performDecay({ season, cards, run: inProgress });
+          decayId = decayResult?.decayId || null;
           await Promise.all([
             loadCards(season.id),
             loadDecays(season.id),
@@ -192,6 +208,17 @@ export default function RunTracker() {
         } finally {
           setDecayApplying(false);
         }
+        await createDayLog({
+          season,
+          run: inProgress,
+          climb,
+          day,
+          roundWins: num(inProgress.round_wins),
+          roundLosses: newRoundLosses,
+          result: "died",
+          runWinsAfter: num(inProgress.total_wins),
+          decayIds: decayId ? [decayId] : [],
+        });
       }
     } finally {
       setBusy(false);
@@ -205,7 +232,13 @@ export default function RunTracker() {
     if (!target) return;
     setBusy(true);
     try {
+      const wasEnded =
+        target.round_status === "survived" || target.round_status === "died";
+      const willBePlaying = prev.round_status === "playing";
       await base44.entities.Run.update(target.id, prev);
+      if (wasEnded && willBePlaying) {
+        await deleteLatestDayLogForRun(target.id);
+      }
       setHistory((h) => h.slice(0, -1));
       await loadRuns(season.id);
     } finally {

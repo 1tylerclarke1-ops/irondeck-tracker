@@ -1,0 +1,85 @@
+{
+  "name": "DayLog",
+  "type": "object",
+  "properties": {
+    "season_id": {
+      "type": "string",
+      "description": "Season this day log belongs to"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Run this day log belongs to"
+    },
+    "climb_id": {
+      "type": "string",
+      "description": "Climb this day log belongs to"
+    },
+    "day": {
+      "type": "number",
+      "description": "Climb day number"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the round"
+    },
+    "wins": {
+      "type": "integer",
+      "default": 0,
+      "description": "Wins in the round"
+    },
+    "losses": {
+      "type": "integer",
+      "default": 0,
+      "description": "Losses in the round"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "survived",
+        "died"
+      ],
+      "description": "Round outcome"
+    },
+    "run_wins_after": {
+      "type": "integer",
+      "default": 0,
+      "description": "Run total wins after the round"
+    },
+    "decay_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Decay ids triggered by a death round"
+    }
+  },
+  "required": [
+    "season_id",
+    "run_id",
+    "date",
+    "wins",
+    "losses",
+    "result",
+    "run_wins_after"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -156,5 +156,5 @@ export async function performDecay({ season, cards, run }) {
     updated_at: now,
   });
 
-  return event;
+  return { event, decayId: decay.id };
 }
