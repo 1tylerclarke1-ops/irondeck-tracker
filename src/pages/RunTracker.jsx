@@ -48,8 +48,16 @@ export default function RunTracker() {
     setDecays(list);
   }, []);
 
-  const loadDeathEvent = useCallback(async () => {
-    const list = await base44.entities.DecayEvent.list("-updated_date", 1);
+  const loadDeathEvent = useCallback(async (seasonId) => {
+    if (!seasonId) {
+      setDeathEvent(null);
+      return;
+    }
+    const list = await base44.entities.DecayEvent.filter(
+      { season_id: seasonId },
+      "-updated_date",
+      1
+    );
     setDeathEvent(list && list.length ? list[0] : null);
   }, []);
 
@@ -69,7 +77,7 @@ export default function RunTracker() {
           loadRuns(found.id),
           loadCards(found.id),
           loadDecays(found.id),
-          loadDeathEvent(),
+          loadDeathEvent(found.id),
         ]);
       } else {
         setRuns([]);
@@ -203,7 +211,7 @@ export default function RunTracker() {
           await Promise.all([
             loadCards(season.id),
             loadDecays(season.id),
-            loadDeathEvent(),
+            loadDeathEvent(season.id),
           ]);
         } catch (e) {
           setDecayError(e?.message || "Decay failed");
@@ -340,7 +348,7 @@ export default function RunTracker() {
         <VerifyDeck
           deathEvent={deathEvent}
           cards={cards}
-          onVerified={loadDeathEvent}
+          onVerified={() => loadDeathEvent(season.id)}
         />
         <RoundPanel
           phase={phase}
