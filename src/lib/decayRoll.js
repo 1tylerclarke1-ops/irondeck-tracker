@@ -12,13 +12,7 @@ const COLOUR_LAND = {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const buildQuery = (rarityVal, season, isLand) => {
-  const typeFilter = isLand ? "t:land" : "-t:land";
-  return `f:standard game:arena r:${rarityVal} ${typeFilter} id<=${(
-    season.colours || ""
-  ).toLowerCase()}`;
-};
-
+const colourClause = (season) => `id<=${(season.colours || "").toLowerCase()}`;
 const randomUrl = (q) =>
   `https://api.scryfall.com/cards/random?q=${encodeURIComponent(q)}`;
 
@@ -34,6 +28,15 @@ const normalize = (data) => ({
   ...manaInfoFor(data),
 });
 
+// A card is only usable when it has a name, a Scryfall id, and a normal image.
+const isValid = (data) =>
+  !!(
+    data &&
+    data.name &&
+    data.id &&
+    (data.image_uris?.normal || data.card_faces?.[0]?.image_uris?.normal)
+  );
+
 const pickBasicLand = (season) => {
   const colours = (season.colours || "")
     .toLowerCase()
@@ -43,66 +46,92 @@ const pickBasicLand = (season) => {
   return COLOUR_LAND[pool[Math.floor(Math.random() * pool.length)]];
 };
 
-// Fetch 13 cards (12 decoys + replacement last) from Scryfall /cards/random,
-// about 100ms apart, using the same query as the original replacement roll.
-// Returns { cards (full normalized), rollCards ({name, image_url}), replacement }.
+// Ordered fallback queries for a slot.
+const buildQueries = (rarity, season, isLand) => {
+  const base = `f:standard game:arena ${colourClause(season)}`;
+  const typeFilter = isLand ? "t:land" : "-t:land";
+  if (isLand) {
+    return [
+      `${base} r:${rarity} ${typeFilter}`,
+      `${base} r:${OTHER_RARITY[rarity]} ${typeFilter}`,
+    ];
+  }
+  return [
+    `${base} r:${rarity} ${typeFilter}`,
+    `${base} r:${OTHER_RARITY[rarity]} ${typeFilter}`,
+    `${base} (r:uncommon or r:common) ${typeFilter}`,
+  ];
+};
+
+const fetchRandom = async (q) => {
+  try {
+    const res = await fetch(randomUrl(q));
+    if (!res.ok) return { status: res.status, data: null };
+    return { status: res.status, data: await res.json() };
+  } catch {
+    return { status: 0, data: null };
+  }
+};
+
+const fetchNamedExact = async (name) => {
+  try {
+    const res = await fetch(
+      `https://api.scryfall.com/cards/named?exact=${encodeURIComponent(name)}`
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
+
+// Fetch 13 cards (12 decoys + replacement last) from Scryfall /cards/random.
+// Nonland slots retry with the other rarity, then uncommon-or-common with no
+// rarity filter. Land slots fall back to a basic land (with id + image). The
+// replacement (last slot) must resolve or this throws.
 export async function fetchRollCards({ rarity, season, deckCards, isLand }) {
   const seen = new Set();
   const cards = [];
-  let q = buildQuery(rarity, season, isLand);
-  let switched = false;
+  const queries = buildQueries(rarity, season, isLand);
 
   for (let i = 0; i < 13; i++) {
-    let data = null;
-    for (let attempt = 0; attempt < 4 && !data; attempt++) {
-      let res = null;
-      try {
-        res = await fetch(randomUrl(q));
-      } catch {
-        res = null;
-      }
-      if (!res) {
-        await delay(100);
+    let card = null;
+    let queryIdx = 0;
+
+    // Up to 5 attempts: 1 initial + 4 retries. Advance the query on a 404.
+    for (let attempt = 0; attempt < 5 && !card; attempt++) {
+      const q = queries[Math.min(queryIdx, queries.length - 1)];
+      const { status, data } = await fetchRandom(q);
+      await delay(100);
+      if (status === 404) {
+        queryIdx++;
         continue;
       }
-      if (res.status === 404) {
-        if (!switched) {
-          switched = true;
-          q = buildQuery(OTHER_RARITY[rarity], season, isLand);
-        }
-        break;
-      }
-      if (!res.ok) {
-        await delay(100);
-        continue;
-      }
-      data = await res.json();
+      if (!data || !isValid(data)) continue;
       const existing = deckCards.find((c) => c.name === data.name);
-      if (existing && num(existing.copies) >= 4) {
-        data = null;
-        continue;
-      }
-      if (seen.has(data.name)) {
-        data = null;
-        continue;
-      }
+      if (existing && num(existing.copies) >= 4) continue;
+      if (seen.has(data.name)) continue;
+      card = normalize(data);
     }
-    if (data) {
-      seen.add(data.name);
-      cards.push(normalize(data));
-    } else {
+
+    // Basic land fallback only for land decays; fetch its id + image.
+    if (!card && isLand) {
       const name = pickBasicLand(season);
-      cards.push({
-        name,
-        rarity: "basic",
-        card_type: "land",
-        imageUrl: null,
-        mana_cost: "",
-        colours: "",
-        mana_value: 0,
-      });
+      const data = await fetchNamedExact(name);
+      await delay(100);
+      if (isValid(data)) card = normalize(data);
     }
-    await delay(100);
+
+    if (!card) {
+      if (i === 12) {
+        throw new Error("Could not find a replacement card for the decay roll.");
+      }
+      // Skip an unfilled decoy rather than return an invalid card.
+      continue;
+    }
+
+    seen.add(card.name);
+    cards.push(card);
   }
 
   const replacement = cards[cards.length - 1];
