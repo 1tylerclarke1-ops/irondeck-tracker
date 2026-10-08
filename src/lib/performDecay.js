@@ -24,12 +24,11 @@ export async function performDecay({ season, cards, run }) {
 
   // 2. Roll uncommon or common 50/50, then fetch replacement + decoys.
   const rollRarity = Math.random() < 0.5 ? "uncommon" : "common";
-  const isLand = chosen.card_type === "land";
-  const { rollCards, replacement } = await fetchRollCards({
+  const { rollCards, replacement, replacementRule } = await fetchRollCards({
     rarity: rollRarity,
     season,
     deckCards: cards,
-    isLand,
+    cardType: chosen.card_type,
   });
 
   // 3. Fetch the removed card's image and every wheel card's art in parallel.
@@ -129,6 +128,7 @@ export async function performDecay({ season, cards, run }) {
     how_obtained: "pending",
     zone: targetZone,
     sideboard_rotted: sideboardRotted,
+    replacement_rule: replacementRule,
     date: now,
   });
 
@@ -152,6 +152,7 @@ export async function performDecay({ season, cards, run }) {
     roll_cards: rollCards,
     zone: targetZone,
     sideboard_rotted: sideboardRotted,
+    replacement_rule: replacementRule,
     updated_at: now,
   });
 

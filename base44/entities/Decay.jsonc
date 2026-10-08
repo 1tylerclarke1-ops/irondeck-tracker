@@ -68,6 +68,10 @@
       "default": false,
       "description": "Whether this decay caused the sideboard to rot to zero copies"
     },
+    "replacement_rule": {
+      "type": "string",
+      "description": "The Scryfall query rule used for the replacement, e.g. creature \u2192 creature"
+    },
     "date": {
       "type": "string",
       "format": "date-time",

@@ -48,21 +48,61 @@ const pickBasicLand = (season) => {
   return COLOUR_LAND[pool[Math.floor(Math.random() * pool.length)]];
 };
 
-// Ordered fallback queries for a slot.
-const buildQueries = (rarity, season, isLand) => {
+// Ordered type filters per decayed card type. Each entry is tried with the
+// rolled rarity first, then the other rarity; we advance only on a 404.
+const TYPE_FILTERS = {
+  creature: [{ q: "t:creature", label: "creature" }],
+  planeswalker: [
+    { q: "t:planeswalker", label: "planeswalker" },
+    { q: "t:creature", label: "creature" },
+  ],
+  battle: [
+    { q: "t:battle", label: "battle" },
+    { q: "t:creature", label: "creature" },
+  ],
+  instant: [
+    { q: "t:instant", label: "instant" },
+    { q: "t:sorcery", label: "sorcery" },
+    { q: "-t:land", label: "nonland" },
+  ],
+  sorcery: [
+    { q: "t:sorcery", label: "sorcery" },
+    { q: "t:instant", label: "instant" },
+    { q: "-t:land", label: "nonland" },
+  ],
+  artifact: [
+    { q: "t:artifact -t:creature -t:land", label: "artifact" },
+    { q: "t:enchantment -t:creature", label: "enchantment" },
+    { q: "-t:land", label: "nonland" },
+  ],
+  enchantment: [
+    { q: "t:enchantment -t:creature -t:land", label: "enchantment" },
+    { q: "t:artifact -t:creature", label: "artifact" },
+    { q: "-t:land", label: "nonland" },
+  ],
+  land: [{ q: "t:land -t:basic", label: "land" }],
+};
+
+// Flat ordered query list: each type filter × (rolled rarity, other rarity).
+const buildQueryList = (cardType, rarity, season) => {
   const base = `f:standard game:arena ${colourClause(season)}`;
-  const typeFilter = isLand ? "t:land" : "-t:land";
-  if (isLand) {
-    return [
-      `${base} r:${rarity} ${typeFilter}`,
-      `${base} r:${OTHER_RARITY[rarity]} ${typeFilter}`,
-    ];
-  }
-  return [
-    `${base} r:${rarity} ${typeFilter}`,
-    `${base} r:${OTHER_RARITY[rarity]} ${typeFilter}`,
-    `${base} (r:uncommon or r:common) ${typeFilter}`,
-  ];
+  const filters = TYPE_FILTERS[cardType] || TYPE_FILTERS.creature;
+  const list = [];
+  filters.forEach((f, idx) => {
+    list.push({
+      query: `${base} r:${rarity} ${f.q}`,
+      label: f.label,
+      fallback: idx > 0,
+      kind: "random",
+    });
+    list.push({
+      query: `${base} r:${OTHER_RARITY[rarity]} ${f.q}`,
+      label: f.label,
+      fallback: idx > 0,
+      kind: "random",
+    });
+  });
+  return list;
 };
 
 const fetchRandom = async (q) => {
@@ -87,56 +127,74 @@ const fetchNamedExact = async (name) => {
   }
 };
 
-// Fetch 13 cards (12 decoys + replacement last) from Scryfall /cards/random.
-// Nonland slots retry with the other rarity, then uncommon-or-common with no
-// rarity filter. Land slots fall back to a basic land (with id + image). The
+// Fetch 13 cards (up to 12 decoys + replacement last) from Scryfall. The
+// replacement and decoys share one locked query (the first that returns
+// matches). Land decays fall back to a random season basic land. The
 // replacement (last slot) must resolve or this throws.
-export async function fetchRollCards({ rarity, season, deckCards, isLand }) {
+export async function fetchRollCards({ rarity, season, deckCards, cardType }) {
   const seen = new Set();
-  const cards = [];
-  const queries = buildQueries(rarity, season, isLand);
+  const decoys = [];
+  const queryList = buildQueryList(cardType, rarity, season);
+  const isLand = cardType === "land";
 
-  for (let i = 0; i < 13; i++) {
-    let card = null;
-    let queryIdx = 0;
+  // 1. Lock the first query that returns matches (non-404). Land falls back to basics.
+  let locked = null;
+  for (const item of queryList) {
+    const { status } = await fetchRandom(item.query);
+    await delay(100);
+    if (status === 404) continue;
+    locked = item;
+    break;
+  }
+  if (!locked && isLand) {
+    locked = { kind: "basic", label: "basic land", fallback: true };
+  }
+  if (!locked) {
+    throw new Error("Could not find a replacement card for the decay roll.");
+  }
 
-    // Up to 5 attempts: 1 initial + 4 retries. Advance the query on a 404.
-    for (let attempt = 0; attempt < 5 && !card; attempt++) {
-      const q = queries[Math.min(queryIdx, queries.length - 1)];
-      const { status, data } = await fetchRandom(q);
-      await delay(100);
-      if (status === 404) {
-        queryIdx++;
-        continue;
-      }
-      if (!data || !isValid(data)) continue;
-      const existing = deckCards.find((c) => c.name === data.name);
-      if (existing && num(existing.copies) >= 4) continue;
-      if (seen.has(data.name)) continue;
-      card = normalize(data);
-    }
+  const replacementRule = `${cardType} → ${locked.label}${
+    locked.fallback ? " (fallback)" : ""
+  }`;
 
-    // Basic land fallback only for land decays; fetch its id + image.
-    if (!card && isLand) {
+  // 2. Fetch one distinct, valid card from the locked query (or basic fallback).
+  const fetchOne = async () => {
+    if (locked.kind === "basic") {
       const name = pickBasicLand(season);
       const data = await fetchNamedExact(name);
       await delay(100);
-      if (isValid(data)) card = normalize(data);
+      if (!isValid(data) || seen.has(data.name)) return null;
+      return normalize(data);
     }
-
-    if (!card) {
-      if (i === 12) {
-        throw new Error("Could not find a replacement card for the decay roll.");
-      }
-      // Skip an unfilled decoy rather than return an invalid card.
-      continue;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const { status, data } = await fetchRandom(locked.query);
+      await delay(100);
+      if (status === 404) return null;
+      if (!data || !isValid(data)) continue;
+      if (seen.has(data.name)) continue;
+      const existing = deckCards.find((c) => c.name === data.name);
+      if (existing && num(existing.copies) >= 4) continue;
+      return normalize(data);
     }
+    return null;
+  };
 
+  // 3. Replacement first (must resolve or throw).
+  const replacement = await fetchOne();
+  if (!replacement) {
+    throw new Error("Could not find a replacement card for the decay roll.");
+  }
+  seen.add(replacement.name);
+
+  // 4. Fill up to 12 decoys (skip when unavailable).
+  while (decoys.length < 12) {
+    const card = await fetchOne();
+    if (!card) break;
     seen.add(card.name);
-    cards.push(card);
+    decoys.push(card);
   }
 
-  const replacement = cards[cards.length - 1];
-  const rollCards = cards.map((c) => ({ name: c.name, image_url: c.imageUrl }));
-  return { cards, rollCards, replacement };
+  const allCards = [...decoys, replacement];
+  const rollCards = allCards.map((c) => ({ name: c.name, image_url: c.imageUrl }));
+  return { cards: allCards, rollCards, replacement, replacementRule };
 }
