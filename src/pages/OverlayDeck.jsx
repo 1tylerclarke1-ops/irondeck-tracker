@@ -253,36 +253,66 @@ export default function OverlayDeck({ outro } = {}) {
     })
     .filter((r) => r.rusted > 0)
     .sort((a, b) => b.rusted - a.rusted);
-  const totalRusted = rustedCards.reduce((s, r) => s + r.rusted, 0);
+  const rustedMainCards = rustedCards.filter(
+    (r) => (r.card.zone || "main") === "main"
+  );
+  const rustedSideCards = rustedCards.filter(
+    (r) => (r.card.zone || "main") === "sideboard"
+  );
+  const rustedMainCount = rustedMainCards.reduce((s, r) => s + r.rusted, 0);
+  const rustedSideCount = rustedSideCards.reduce((s, r) => s + r.rusted, 0);
 
   // Row height from the final (current) state so it stays stable mid-animation
   const finalMain = cards.filter((c) => (Number(c.copies) || 0) > 0);
   const finalSide = sideCards.filter((c) => (Number(c.copies) || 0) > 0);
-  const finalRusted = [...cards, ...sideCards].filter((c) => {
+  const finalRustedMain = cards.filter((c) => {
+    const o = Number(c.original_copies) || 0;
+    const cp = Number(c.copies) || 0;
+    return (c.zone || "main") === "main" && o > 0 && o - cp > 0;
+  });
+  const finalRustedSide = sideCards.filter((c) => {
     const o = Number(c.original_copies) || 0;
     const cp = Number(c.copies) || 0;
     return o > 0 && o - cp > 0;
   });
   const fHasSide = finalSide.length > 0;
-  const fHasRusted = finalRusted.length > 0;
-  const fTotalRows = finalMain.length + finalSide.length + finalRusted.length;
-  const fHeadings = (fHasSide ? 1 : 0) + (fHasRusted ? 1 : 0);
-  const fChildCount = fTotalRows + fHeadings;
-  const fGaps = fChildCount > 1 ? (fChildCount - 1) * ROW_GAP : 0;
+  const fHasRustedMain = finalRustedMain.length > 0;
+  const fHasRustedSide = finalRustedSide.length > 0;
   const avail = TOTAL_HEIGHT - PAD_VERTICAL - TITLE_BLOCK;
+
+  // Sideboard rusted is a compact strip sized for up to 5 rows
+  const COMPACT_ROW = 18;
+  const sideRustedRows = finalRustedSide.length;
+  const sideRustedFootprint = fHasRustedSide
+    ? HEADING_HEIGHT +
+      ROW_GAP +
+      sideRustedRows * COMPACT_ROW +
+      Math.max(0, sideRustedRows - 1) * ROW_GAP
+    : 0;
+
+  const mainRows =
+    finalMain.length + finalSide.length + finalRustedMain.length;
+  const mainHeadings = (fHasSide ? 1 : 0) + (fHasRustedMain ? 1 : 0);
+  const mainChildCount = mainRows + mainHeadings;
+  const mainGaps = mainChildCount > 1 ? (mainChildCount - 1) * ROW_GAP : 0;
   const rowH =
-    fTotalRows > 0
+    mainRows > 0
       ? Math.max(
           MIN_ROW,
           Math.min(
             MAX_ROW,
-            (avail - fHeadings * HEADING_HEIGHT - fGaps) / fTotalRows
+            (avail -
+              sideRustedFootprint -
+              mainHeadings * HEADING_HEIGHT -
+              mainGaps) /
+              mainRows
           )
         )
       : MAX_ROW;
 
   const hasSide = sideMain.length > 0;
-  const hasRusted = rustedCards.length > 0;
+  const hasRustedMain = rustedMainCards.length > 0;
+  const hasRustedSide = rustedSideCards.length > 0;
 
   const title = `Season ${seasonNumber ?? "—"} · Day ${day ?? "—"}`;
 
@@ -372,7 +402,7 @@ export default function OverlayDeck({ outro } = {}) {
               ))}
             </>
           )}
-          {hasRusted && (
+          {hasRustedMain && (
             <>
               <div
                 style={{
@@ -386,9 +416,9 @@ export default function OverlayDeck({ outro } = {}) {
                   color: RUST,
                 }}
               >
-                RUSTED ({totalRusted})
+                RUSTED – MAIN ({rustedMainCount})
               </div>
-              {rustedCards.map((r) => (
+              {rustedMainCards.map((r) => (
                 <DeckRow
                   key={r.card.id}
                   card={r.card}
@@ -397,6 +427,36 @@ export default function OverlayDeck({ outro } = {}) {
                   entering={animating && isRustedEntering(r.card)}
                   glow={isOutro && todayRustedNames.has(r.card.name)}
                   {...rowProps(r.card)}
+                />
+              ))}
+            </>
+          )}
+          {hasRustedSide && (
+            <>
+              <div
+                style={{
+                  height: HEADING_HEIGHT,
+                  display: "flex",
+                  alignItems: "center",
+                  paddingLeft: "2px",
+                  fontSize: "0.7rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.18em",
+                  color: RUST,
+                }}
+              >
+                RUSTED – SIDEBOARD ({rustedSideCount})
+              </div>
+              {rustedSideCards.map((r) => (
+                <DeckRow
+                  key={r.card.id}
+                  card={r.card}
+                  variant="rusted"
+                  copies={animating ? dCopies(r.card) : undefined}
+                  entering={animating && isRustedEntering(r.card)}
+                  glow={isOutro && todayRustedNames.has(r.card.name)}
+                  {...rowProps(r.card)}
+                  height={COMPACT_ROW}
                 />
               ))}
             </>
