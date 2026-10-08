@@ -13,6 +13,7 @@ export const TILE_FRAME = {
 export const BADGE = {
   steel: `${DPRE}3f0cb75d7_badge-steel.png`,
   scavenged: `${DPRE}bc0f1e66d_badge-scavenged.png`,
+  rot: `${DPRE}1e8e2607c_badge-rot.png`,
 };
 
 // Shared page background: the intro artwork darkened for legibility.
