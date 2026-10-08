@@ -10,5 +10,10 @@ export const TILE_FRAME = {
   steel: `${DPRE}8d3cc6f6a_tileframe-steel.png`,
 };
 
+export const BADGE = {
+  steel: `${DPRE}3f0cb75d7_badge-steel.png`,
+  scavenged: `${DPRE}bc0f1e66d_badge-scavenged.png`,
+};
+
 // Shared page background: the intro artwork darkened for legibility.
 export const INTRO_BG_STYLE = `linear-gradient(rgba(13,16,22,0.72), rgba(13,16,22,0.72)), url('${INTRO_BG}') center/cover no-repeat, #0d1016`;
