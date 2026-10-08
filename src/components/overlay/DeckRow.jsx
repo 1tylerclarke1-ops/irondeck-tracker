@@ -1,162 +1,170 @@
 import React from "react";
+import ManaSymbols from "@/components/overlay/ManaSymbols";
+import { goldText, steelText, purpleText } from "@/lib/overlayText";
 
-const RUST = "#a35a3d";
-const RUST_TEXTURE =
-  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3c387b3a0_image.png";
-const SALVAGED_GREEN = "#2d8a4e";
+const DPRE =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
+const ASSETS = {
+  steel: { badge: `${DPRE}74a8e34a0_badge-steel.png`, row: `${DPRE}3aa8873ea_row-steel.png` },
+  salvaged: { badge: `${DPRE}3664fa241_badge-salvaged.png`, row: `${DPRE}7e7c5cbe9_row-salvaged.png` },
+  rot: { badge: `${DPRE}01034fb60_badge-rot.png`, row: `${DPRE}20b18b2ec_row-rot.png` },
+};
+
+const FRAME_W = 482;
 
 export default function DeckRow({
   card,
-  imageUrl,
-  loading,
-  height = 44,
+  copies,
   variant = "current",
-  glow = false,
+  height = 74,
   corroding = false,
   entering = false,
   salvaged,
-  copies,
+  glow = false,
 }) {
   const cp = Number(copies ?? card.copies) || 0;
   const original = Number(card.original_copies) || 0;
+  const isRotted = variant === "rusted";
   const showSalvaged =
     salvaged !== undefined ? salvaged : Boolean(card.is_decay_replacement);
-  const rustedCount = original > 0 ? original - cp : 0;
+  const boxCount = isRotted ? (original > 0 ? original - cp : 0) : cp;
 
-  const isRusted = variant === "rusted";
-  const boxCount = isRusted ? rustedCount : cp;
+  const state = isRotted ? "rot" : showSalvaged ? "salvaged" : "steel";
+  const { badge, row } = ASSETS[state];
 
-  const scale = height / 44;
-  const boxSize = height;
-  const countFont = Math.max(0.58, 0.95 * scale);
-  const salvagedFont = Math.max(0.4, 0.48 * scale);
+  const countFont = Math.max(10, height * 0.42);
+  const titleFont = Math.max(9, height * 0.34);
+  const tagFont = Math.max(7, height * 0.2);
+  const manaScale = Math.max(0.45, Math.min(1.1, height / 52));
 
-  const barImgStyle = {
-    display: "block",
-    width: "100%",
-    height: "auto",
-    marginTop: "-4%",
-  };
+  const numberStyle = isRotted
+    ? purpleText(countFont)
+    : showSalvaged
+    ? goldText(countFont)
+    : steelText(countFont);
+
+  const titleStyle = isRotted ? steelText(titleFont, true) : steelText(titleFont);
 
   let containerAnim = "none";
   if (corroding) containerAnim = "ovd-shake 0.5s ease-in-out infinite";
   else if (entering)
-    containerAnim = isRusted
+    containerAnim = isRotted
       ? "ovd-slidein 0.4s ease-out"
       : "ovd-dropin 0.4s ease-out";
 
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "stretch",
-        gap: "6px",
+        position: "relative",
+        width: FRAME_W,
         height,
-        borderRadius: "5px",
-        boxShadow: glow ? "0 0 10px 2px rgba(251,191,36,0.55)" : "none",
         animation: containerAnim,
+        boxShadow: glow ? "0 0 10px 2px rgba(180,140,240,0.5)" : "none",
       }}
     >
-      {/* Copies box */}
-      <div
+      {/* Frame image */}
+      <img
+        src={row}
+        alt=""
+        draggable={false}
         style={{
-          width: boxSize,
-          height: boxSize,
-          flexShrink: 0,
-          borderRadius: "5px",
-          border: `1px solid ${isRusted ? RUST : "rgba(255,255,255,0.7)"}`,
-          background: isRusted ? RUST : "rgba(0,0,0,0.35)",
+          position: "absolute",
+          inset: 0,
+          width: FRAME_W,
+          height,
+          objectFit: "fill",
+          filter: isRotted ? "grayscale(0.5) brightness(0.85)" : "none",
+          pointerEvents: "none",
+        }}
+      />
+      {/* Purple tint over rotted bar */}
+      {isRotted && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(150,120,200,0.45)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {/* Badge */}
+      <img
+        src={badge}
+        alt=""
+        draggable={false}
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: height,
+          height,
+          objectFit: "contain",
+          pointerEvents: "none",
+        }}
+      />
+      {/* Copies number on badge */}
+      <span
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: height,
+          height,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#fff",
-          fontWeight: 800,
-          lineHeight: 1,
-          overflow: "hidden",
+          ...numberStyle,
         }}
       >
-        <span style={{ fontSize: `${countFont}rem` }}>×{boxCount}</span>
-      </div>
-
-      {/* Card bar */}
+        {boxCount}
+      </span>
+      {/* Bar content */}
       <div
         style={{
-          position: "relative",
-          flex: 1,
+          position: "absolute",
+          left: height + 4,
+          right: 12,
+          top: 0,
           height,
-          borderRadius: "5px",
-          overflow: "hidden",
-          background: "#1a1d24",
-          border: "1px solid rgba(255,255,255,0.12)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
         }}
       >
-        {loading ? (
-          <div
-            className="animate-pulse"
-            style={{ position: "absolute", inset: 0, background: "#2a2e36" }}
-          />
-        ) : imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={card.name}
-            draggable={false}
+        <span
+          style={{
+            flex: 1,
+            ...titleStyle,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {card.name}
+        </span>
+        {showSalvaged && !isRotted && (
+          <span
             style={{
-              ...barImgStyle,
-              filter: isRusted ? "grayscale(1) brightness(0.7)" : "none",
-            }}
-          />
-        ) : null}
-
-        {/* Rusted variant: texture over the whole bar */}
-        {isRusted && imageUrl && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${RUST_TEXTURE})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              opacity: 0.85,
-            }}
-          />
-        )}
-
-        {/* Corroding: rust texture spreads left to right over 2s */}
-        {corroding && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              backgroundImage: `url(${RUST_TEXTURE})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              transformOrigin: "left center",
-              animation: "ovd-corrode 2s ease-out forwards",
-              opacity: 0.9,
-            }}
-          />
-        )}
-
-        {/* SALVAGED tag (current variant only) */}
-        {showSalvaged && !isRusted && (
-          <div
-            style={{
-              position: "absolute",
-              top: "-1px",
-              right: "6px",
+              flexShrink: 0,
               padding: "1px 5px",
-              borderRadius: "8px",
-              background: SALVAGED_GREEN,
-              color: "#fff",
-              fontSize: `${salvagedFont}rem`,
+              borderRadius: 4,
+              background: "linear-gradient(180deg,#FFF0CD,#D68C3C)",
+              color: "#1A120C",
+              fontSize: tagFont,
               fontWeight: 800,
               letterSpacing: "0.05em",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+              lineHeight: 1,
             }}
           >
             SALVAGED
-          </div>
+          </span>
         )}
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+          <div style={{ transform: `scale(${manaScale})`, transformOrigin: "right center" }}>
+            <ManaSymbols cost={card.mana_cost} />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
+import { goldText, steelText, irondeckText } from "@/lib/overlayText";
 
 const RUST = "#cc5a3a";
 const RUST_GLOW = "rgba(204,90,58,0.9)";
@@ -14,52 +15,6 @@ const SUBPANEL_BG =
 const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
 const SMOKE =
   "0 0 2px rgba(0,0,0,0.6), 0 1px 1px rgba(0,0,0,0.7)";
-
-const FONT_CINZEL = '"Cinzel", serif';
-const FONT_CINZEL_DEC = '"Cinzel Decorative", serif';
-
-const goldText = (fontSize) => ({
-  fontFamily: FONT_CINZEL,
-  fontWeight: 900,
-  fontSize,
-  lineHeight: 1,
-  background: "linear-gradient(180deg, #FFF0CD 0%, #D68C3C 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-  WebkitTextStroke: "1.5px #1A120C",
-  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
-});
-
-const steelText = (fontSize, dark = false) => ({
-  fontFamily: FONT_CINZEL,
-  fontWeight: 700,
-  fontSize,
-  lineHeight: 1,
-  textTransform: "uppercase",
-  letterSpacing: "1px",
-  background: dark
-    ? "linear-gradient(180deg, #787E88 0%, #5A606A 100%)"
-    : "linear-gradient(180deg, #ECF0F6 0%, #8C94A0 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-  WebkitTextStroke: "1.5px #1A120C",
-  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
-});
-
-const irondeckText = (fontSize) => ({
-  fontFamily: FONT_CINZEL_DEC,
-  fontWeight: 900,
-  fontSize,
-  lineHeight: 1,
-  background: "linear-gradient(180deg, #FFC896 0%, #C85A28 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-  WebkitTextStroke: "1.5px #1A120C",
-  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
-});
 
 const DPRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
