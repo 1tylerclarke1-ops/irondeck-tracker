@@ -65,13 +65,11 @@ export default function Overlay() {
 
   const [popSlots, setPopSlots] = useState([]);
   const [shakePip, setShakePip] = useState(null);
-  const [died, setDied] = useState(false);
 
   const prevActive = useRef(null);
   const prevLosses = useRef(null);
   const popTimer = useRef(null);
   const shakeTimer = useRef(null);
-  const diedTimer = useRef(null);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -178,11 +176,6 @@ export default function Overlay() {
       setShakePip(losses);
       if (shakeTimer.current) clearTimeout(shakeTimer.current);
       shakeTimer.current = setTimeout(() => setShakePip(null), 500);
-      if (losses >= 2) {
-        setDied(true);
-        if (diedTimer.current) clearTimeout(diedTimer.current);
-        diedTimer.current = setTimeout(() => setDied(false), 3000);
-      }
     }
 
     prevLosses.current = losses;
@@ -192,7 +185,6 @@ export default function Overlay() {
     () => () => {
       if (popTimer.current) clearTimeout(popTimer.current);
       if (shakeTimer.current) clearTimeout(shakeTimer.current);
-      if (diedTimer.current) clearTimeout(diedTimer.current);
     },
     []
   );
@@ -201,6 +193,7 @@ export default function Overlay() {
   const wins = s?.currentRun ? Number(s.currentRun.round_wins || 0) : 0;
   const losses = s?.currentRun ? Number(s.currentRun.round_losses || 0) : 0;
   const survived = Boolean(s?.currentRun?.round_status === "survived");
+  const died = losses >= 2;
   const seasonNumber = s?.season?.season_number ?? null;
   const day = s?.day ?? null;
   const record = s?.record ?? null;
@@ -212,8 +205,10 @@ export default function Overlay() {
     >
       <style>{`
         @keyframes ov-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
-        @keyframes ov-msg { 0% { opacity: 0; transform: translateY(6px) scale(0.92); } 15% { opacity: 1; transform: translateY(0) scale(1); } 85% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-4px) scale(0.96); } }
         @keyframes ov-crosspop { 0% { transform: scale(0.82); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+        @keyframes ov-stamp { 0% { transform: translateX(-50%) scale(2.4); opacity: 0; } 60% { transform: translateX(-50%) scale(0.92); opacity: 1; } 78% { transform: translateX(-50%) scale(1.06); } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
+        @keyframes ov-slam { 0% { transform: translateX(-50%) translateY(-70px); opacity: 0; } 65% { transform: translateX(-50%) translateY(6px); opacity: 1; } 82% { transform: translateX(-50%) translateY(-3px); } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        @keyframes ov-screenshake { 0%,100% { transform: translate(0,0); } 10% { transform: translate(-5px, 2px); } 20% { transform: translate(6px, -3px); } 30% { transform: translate(-7px, 1px); } 40% { transform: translate(5px, 2px); } 50% { transform: translate(-4px, -2px); } 60% { transform: translate(4px, 1px); } 70% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 1px); } 90% { transform: translate(-1px, 0); } }
       `}</style>
       <div
         style={{
@@ -243,6 +238,8 @@ export default function Overlay() {
             padding: "0.7rem 1.4rem",
             color: "#fff",
             fontFamily: "sans-serif",
+            animation:
+              died && !survived ? "ov-screenshake 0.5s ease-in-out" : "none",
           }}
         >
         {/* LEFT: Season / Day / Record */}
@@ -467,6 +464,7 @@ export default function Overlay() {
               color: RUST,
               textShadow: `0 0 16px ${RUST_GLOW}`,
               whiteSpace: "nowrap",
+              animation: "ov-stamp 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.1) both",
             }}
           >
             DAY SURVIVED
@@ -485,7 +483,7 @@ export default function Overlay() {
               letterSpacing: "0.1em",
               color: RED,
               textShadow: `0 0 16px ${RED_GLOW}`,
-              animation: "ov-msg 3s ease-in-out forwards",
+              animation: "ov-slam 0.55s cubic-bezier(0.2, 0.8, 0.3, 1.05) both",
               whiteSpace: "nowrap",
             }}
           >
