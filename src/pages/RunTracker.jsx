@@ -6,6 +6,7 @@ import NoSeason from "@/components/run/NoSeason";
 import RunStats from "@/components/run/RunStats";
 import RoundPanel from "@/components/run/RoundPanel";
 import BestRun from "@/components/run/BestRun";
+import VerifyDeck from "@/components/run/VerifyDeck";
 import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 
@@ -19,6 +20,7 @@ export default function RunTracker() {
   const [busy, setBusy] = useState(false);
   const [mythicBusy, setMythicBusy] = useState(false);
   const [history, setHistory] = useState([]);
+  const [deathEvent, setDeathEvent] = useState(null);
 
   const loadSeason = useCallback(async () => {
     const active = await base44.entities.Season.filter({ status: "active" });
@@ -42,6 +44,11 @@ export default function RunTracker() {
     setDecays(list);
   }, []);
 
+  const loadDeathEvent = useCallback(async () => {
+    const list = await base44.entities.DecayEvent.list("-updated_date", 1);
+    setDeathEvent(list && list.length ? list[0] : null);
+  }, []);
+
   const loadClimb = useCallback(async () => {
     const all = await base44.entities.Climb.list();
     const sorted = [...all].sort((a, b) => (b.number || 0) - (a.number || 0));
@@ -57,15 +64,17 @@ export default function RunTracker() {
         await loadRuns(found.id);
         await loadCards(found.id);
         await loadDecays(found.id);
+        await loadDeathEvent();
       } else {
         setRuns([]);
         setCards([]);
         setDecays([]);
+        setDeathEvent(null);
       }
     } finally {
       setLoading(false);
     }
-  }, [loadSeason, loadRuns, loadCards, loadDecays, loadClimb]);
+  }, [loadSeason, loadRuns, loadCards, loadDecays, loadDeathEvent, loadClimb]);
 
   useEffect(() => {
     loadAll();
@@ -252,7 +261,8 @@ export default function RunTracker() {
 
   const showMythic = Boolean(climb && climb.status === "active");
   const survived = inProgress?.round_status === "survived";
-  const canStart = allPass && !decayDue;
+  const deathUnverified = deathEvent?.step === "death";
+  const canStart = allPass && !decayDue && !deathUnverified;
   const canUndo = history.length > 0;
 
   return (
@@ -272,6 +282,11 @@ export default function RunTracker() {
           mythicBusy={mythicBusy}
         />
         <BestRun runs={runs} />
+        <VerifyDeck
+          deathEvent={deathEvent}
+          cards={cards}
+          onVerified={loadDeathEvent}
+        />
         <RoundPanel
           phase={phase}
           survived={survived}
