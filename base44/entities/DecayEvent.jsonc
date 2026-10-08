@@ -2,6 +2,18 @@
   "name": "DecayEvent",
   "type": "object",
   "properties": {
+    "season_id": {
+      "type": "string",
+      "description": "Season this decay event belongs to"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Run this decay event belongs to"
+    },
+    "decay_id": {
+      "type": "string",
+      "description": "Decay record this event corresponds to"
+    },
     "step": {
       "type": "string",
       "enum": [

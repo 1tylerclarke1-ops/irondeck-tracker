@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Season this decay belongs to"
     },
+    "run_id": {
+      "type": "string",
+      "description": "Run this decay belongs to"
+    },
     "attempt_number": {
       "type": "integer",
       "description": "Attempt number that triggered this decay"
@@ -45,7 +49,8 @@
       "enum": [
         "owned",
         "wildcard",
-        "reroll"
+        "reroll",
+        "pending"
       ],
       "description": "How the replacement was obtained"
     },
@@ -66,7 +71,6 @@
   },
   "required": [
     "season_id",
-    "attempt_number",
     "card_removed",
     "rarity_from",
     "rarity_to",
