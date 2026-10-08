@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import DecayWheel from "@/components/decay/DecayWheel";
-import useCardImagesById from "@/hooks/useCardImagesById";
 
 const preloadImages = (urls) =>
   Promise.all(
@@ -137,7 +136,18 @@ export default function OverlayDecay() {
   }));
   const chosenName = event?.chosen_card || event?.card_removed || null;
 
-  const wheelArt = useCardImagesById(wheelIds);
+  const wheelArt = useMemo(() => {
+    const arts = Array.isArray(event?.wheel_card_art)
+      ? event.wheel_card_art
+      : [];
+    const map = {};
+    wheelNames.forEach((name, i) => {
+      const id = wheelIds[i];
+      if (id) map[id] = { artCrop: arts[i] || null };
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.wheel_card_art, wheelNames.join("|"), wheelIds.join("|")]);
 
   const removed = useResolveCardImage(
     event?.card_removed_image || null,

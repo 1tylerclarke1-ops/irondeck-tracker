@@ -7,6 +7,7 @@ import SpinWheel from "@/components/decay/SpinWheel";
 import ReplacementPanel from "@/components/decay/ReplacementPanel";
 import { num } from "@/components/run/runHelpers";
 import { fetchRollCards } from "@/lib/decayRoll";
+import { fetchCardArtById } from "@/lib/scryfall";
 
 export default function Decay() {
   const [season, setSeason] = useState(null);
@@ -259,10 +260,20 @@ export default function Decay() {
         }
       } catch {}
     }
+    const wheelArt = [];
+    for (const c of uniqueCards) {
+      if (!c.scryfall_id) {
+        wheelArt.push(null);
+        continue;
+      }
+      const artData = await fetchCardArtById(c.scryfall_id);
+      wheelArt.push(artData?.artCrop || null);
+    }
     const ev = await base44.entities.DecayEvent.create({
       step: "spinning",
       wheel_card_names: uniqueCards.map((c) => c.name),
       wheel_card_ids: uniqueCards.map((c) => c.scryfall_id).filter(Boolean),
+      wheel_card_art: wheelArt,
       chosen_card: chosen.name,
       card_removed: chosen.name,
       card_removed_id: chosen.scryfall_id || null,

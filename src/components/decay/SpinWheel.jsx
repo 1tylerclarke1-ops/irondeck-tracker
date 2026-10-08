@@ -2,10 +2,10 @@ import React, { useImperativeHandle, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import DecayWheel from "./DecayWheel";
-import useCardImagesById from "@/hooks/useCardImagesById";
+import useCardArtById from "@/hooks/useCardArtById";
 
 export default function SpinWheel({ cards, onDecayed, onSpin, spinRef }) {
-  const art = useCardImagesById(
+  const art = useCardArtById(
     cards.map((c) => c.scryfall_id).filter(Boolean)
   );
   const wheelRef = useRef(null);

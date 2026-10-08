@@ -28,6 +28,13 @@
       },
       "description": "Scryfall ids for the wheel cards, parallel to wheel_card_names"
     },
+    "wheel_card_art": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Art crop image URLs for the wheel cards, parallel to wheel_card_names"
+    },
     "chosen_card": {
       "type": "string",
       "description": "Card the wheel landed on (the card that will decay)"
