@@ -1,14 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
-import DeckCardTile from "@/components/overlay/DeckCardTile";
+import IntroLayout from "@/components/overlay/IntroLayout";
 import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
 import useCardImagesById from "@/hooks/useCardImagesById";
-import { INTRO_BG_STYLE } from "@/lib/overlayAssets";
+
+function sortDeck(list) {
+  const key = (c) => (c.card_type === "land" ? 999 : Number(c.mana_value) || 0);
+  return [...list].sort((a, b) => key(a) - key(b) || (a.name || "").localeCompare(b.name || ""));
+}
 
 export default function OverlayDeckIntro() {
   const [season, setSeason] = useState(null);
   const [cards, setCards] = useState([]);
+  const [allCards, setAllCards] = useState([]);
+  const [runs, setRuns] = useState([]);
+  const [climbs, setClimbs] = useState([]);
   const [climb, setClimb] = useState(null);
   const [recapDone, setRecapDone] = useState(false);
   const recapOff = useMemo(
@@ -37,20 +44,27 @@ export default function OverlayDeckIntro() {
         if (!s) {
           setSeason(null);
           setCards([]);
+          setAllCards([]);
+          setRuns([]);
+          setClimbs([]);
           setClimb(null);
           return;
         }
-        const [list, climbs] = await Promise.all([
+        const [list, climbList, runList] = await Promise.all([
           base44.entities.Card.filter({ season_id: s.id }),
           base44.entities.Climb.list(),
+          base44.entities.Run.filter({ season_id: s.id }),
         ]);
         if (!active) return;
-        const sortedClimbs = [...climbs].sort(
+        const sortedClimbs = [...climbList].sort(
           (a, b) => (b.number || 0) - (a.number || 0)
         );
         setSeason(s);
+        setClimbs(sortedClimbs);
         setClimb(sortedClimbs[0] || null);
-        setCards(list.filter((c) => (c.zone || "main") === "main"));
+        setRuns(runList);
+        setAllCards(list);
+        setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main" && (Number(c.copies) || 0) > 0)));
       } catch (e) {
         // keep last data on error
       }
@@ -84,55 +98,37 @@ export default function OverlayDeckIntro() {
 
   const images = useCardImagesById(scryfallIds);
 
-  const title = `Season ${seasonNumber ?? "—"} · Day ${day ?? "—"}`;
+  const num = (v) => Number(v) || 0;
+  const currentRun =
+    runs.find((r) => r.result === "in_progress") ||
+    [...runs].sort((a, b) => num(b.attempt_number) - num(a.attempt_number))[0] || null;
+  const best = runs.reduce((m, r) => Math.max(m, num(r.total_wins)), 0);
+  const completed = climbs.filter((c) => c.status === "complete" && c.days_taken != null);
+  const record = completed.length ? Math.min(...completed.map((c) => c.days_taken)) : null;
+  const rottedCount = allCards.reduce((sum, c) => {
+    const o = num(c.original_copies);
+    return o > 0 ? sum + Math.max(0, o - num(c.copies)) : sum;
+  }, 0);
+  const zoneCount = (zone) =>
+    allCards.filter((c) => (c.zone || "main") === zone).reduce((sum, c) => sum + num(c.copies), 0);
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: INTRO_BG_STYLE,
-        color: "#fff",
-        fontFamily: "sans-serif",
-        padding: "1.5rem 1.5rem 2.5rem",
-        boxSizing: "border-box",
-      }}
-    >
-      <h1
-        style={{
-          textAlign: "center",
-          fontSize: "2rem",
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          margin: "0 0 1.5rem",
-          color: "#fff",
-        }}
-      >
-        {title}
-      </h1>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
-        {cards.map((c) => (
-          <DeckCardTile
-            key={c.id}
-            card={c}
-            imageUrl={images[c.scryfall_id]?.normal}
-            loading={
-              Boolean(c.scryfall_id) && images[c.scryfall_id] === undefined
-            }
-          />
-        ))}
-      </div>
+    <>
+      <IntroLayout
+        seasonNumber={seasonNumber}
+        day={day}
+        runWins={currentRun ? num(currentRun.total_wins) : null}
+        best={best}
+        record={record}
+        rottedCount={rottedCount}
+        sideboardCount={zoneCount("sideboard")}
+        mainCount={zoneCount("main")}
+        cards={cards}
+        images={images}
+      />
       {!recapDone && !recapOff && (
-        <DeckIntroRecap
-          season={season}
-          onDone={() => setRecapDone(true)}
-        />
+        <DeckIntroRecap season={season} onDone={() => setRecapDone(true)} />
       )}
-    </div>
+    </>
   );
 }
