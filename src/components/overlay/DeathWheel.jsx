@@ -10,7 +10,9 @@ import {
   labelTransform,
 } from "@/components/decay/wheelGeometry";
 
-const DecayWheel = forwardRef(function DecayWheel(
+const SPIN_MS = 5000;
+
+const DeathWheel = forwardRef(function DeathWheel(
   { cards, art, onLand, onSpinningChange },
   ref
 ) {
@@ -53,13 +55,14 @@ const DecayWheel = forwardRef(function DecayWheel(
         onSpinningChange?.(false);
         setResult(cards[target]);
         onLand?.(cards[target]);
-      }, 4000);
+      }, SPIN_MS);
     },
   }));
 
   const resultIndex = result
     ? cards.findIndex((c) => c.name === result.name)
     : -1;
+  const landed = result && !spinning && resultIndex >= 0;
 
   return (
     <div className="relative w-72 h-72">
@@ -72,12 +75,12 @@ const DecayWheel = forwardRef(function DecayWheel(
             const a0 = i * angle;
             const a1 = (i + 1) * angle;
             return (
-              <clipPath id={`clip-${i}`} key={i}>
+              <clipPath id={`dwclip-${i}`} key={i}>
                 <path d={wedgePath(a0, a1)} />
               </clipPath>
             );
           })}
-          <radialGradient id="centreFade" cx="50%" cy="50%" r="50%">
+          <radialGradient id="dwcentreFade" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="rgba(0,0,0,0.85)" />
             <stop offset="40%" stopColor="rgba(0,0,0,0.3)" />
             <stop offset="60%" stopColor="rgba(0,0,0,0)" />
@@ -87,7 +90,7 @@ const DecayWheel = forwardRef(function DecayWheel(
         <g
           transform={`rotate(${rotation} ${CX} ${CY})`}
           style={{
-            transition: "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)",
+            transition: `transform ${SPIN_MS}ms cubic-bezier(0.15, 0.85, 0.2, 1)`,
           }}
         >
           {cards.map((c, i) => {
@@ -96,8 +99,15 @@ const DecayWheel = forwardRef(function DecayWheel(
             const phi = i * angle + angle / 2;
             const entry = art[c.scryfall_id];
             const lt = labelTransform(phi);
+            const dim = landed && i !== resultIndex;
             return (
-              <g key={i}>
+              <g
+                key={i}
+                style={{
+                  opacity: dim ? 0.18 : 1,
+                  transition: "opacity 0.6s ease",
+                }}
+              >
                 {entry?.artCrop ? (
                   <image
                     href={entry.artCrop}
@@ -106,7 +116,7 @@ const DecayWheel = forwardRef(function DecayWheel(
                     width={2 * R}
                     height={2 * R}
                     preserveAspectRatio="xMidYMid slice"
-                    clipPath={`url(#clip-${i})`}
+                    clipPath={`url(#dwclip-${i})`}
                   />
                 ) : (
                   <path d={wedgePath(a0, a1)} fill={COLORS[i % COLORS.length]} />
@@ -134,19 +144,22 @@ const DecayWheel = forwardRef(function DecayWheel(
               </g>
             );
           })}
-          {result && !spinning && resultIndex >= 0 && (
+          {landed && (
             <path
               d={wedgePath(resultIndex * angle, (resultIndex + 1) * angle)}
               fill="none"
               stroke="#fbbf24"
-              strokeWidth={4}
+              strokeWidth={5}
+              style={{
+                filter: "drop-shadow(0 0 6px rgba(251,191,36,0.95))",
+              }}
             />
           )}
         </g>
-        <circle cx={CX} cy={CY} r={R} fill="url(#centreFade)" />
+        <circle cx={CX} cy={CY} r={R} fill="url(#dwcentreFade)" />
       </svg>
     </div>
   );
 });
 
-export default DecayWheel;
+export default DeathWheel;

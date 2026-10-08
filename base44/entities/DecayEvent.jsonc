@@ -9,6 +9,8 @@
         "rarity",
         "rolling",
         "reveal",
+        "death",
+        "verified",
         "done"
       ],
       "default": "spinning",
