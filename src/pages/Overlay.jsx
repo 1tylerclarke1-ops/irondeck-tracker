@@ -15,6 +15,52 @@ const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
 const SMOKE =
   "0 0 2px rgba(0,0,0,0.6), 0 1px 1px rgba(0,0,0,0.7)";
 
+const FONT_CINZEL = '"Cinzel", serif';
+const FONT_CINZEL_DEC = '"Cinzel Decorative", serif';
+
+const goldText = (fontSize) => ({
+  fontFamily: FONT_CINZEL,
+  fontWeight: 900,
+  fontSize,
+  lineHeight: 1,
+  background: "linear-gradient(180deg, #FFF0CD 0%, #D68C3C 100%)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+  WebkitTextStroke: "1.5px #1A120C",
+  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
+});
+
+const steelText = (fontSize, dark = false) => ({
+  fontFamily: FONT_CINZEL,
+  fontWeight: 700,
+  fontSize,
+  lineHeight: 1,
+  textTransform: "uppercase",
+  letterSpacing: "1px",
+  background: dark
+    ? "linear-gradient(180deg, #787E88 0%, #5A606A 100%)"
+    : "linear-gradient(180deg, #ECF0F6 0%, #8C94A0 100%)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+  WebkitTextStroke: "1.5px #1A120C",
+  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
+});
+
+const irondeckText = (fontSize) => ({
+  fontFamily: FONT_CINZEL_DEC,
+  fontWeight: 900,
+  fontSize,
+  lineHeight: 1,
+  background: "linear-gradient(180deg, #FFC896 0%, #C85A28 100%)",
+  WebkitBackgroundClip: "text",
+  backgroundClip: "text",
+  color: "transparent",
+  WebkitTextStroke: "1.5px #1A120C",
+  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
+});
+
 const DPRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
 const DIAMONDS = {
@@ -205,17 +251,7 @@ export default function Overlay() {
           gap: "0.6rem",
         }}
       >
-        <span
-          style={{
-            fontSize: "0.95rem",
-            letterSpacing: "0.34em",
-            fontWeight: 800,
-            color: RUST,
-            textShadow: `0 0 14px ${RUST_GLOW}`,
-          }}
-        >
-          IRONDECK
-        </span>
+        <span style={irondeckText(24)}>IRONDECK</span>
         <div
           style={{
             position: "relative",
@@ -242,10 +278,10 @@ export default function Overlay() {
             minWidth: "92px",
           }}
         >
-          <SideStat label="Season" value={seasonNumber ?? "—"} />
-          <SideStat label="Day" value={day ?? "—"} />
+          <SideStat label="SEASON" value={seasonNumber ?? "—"} labelStyle={steelText(26)} valueStyle={steelText(40)} />
+          <SideStat label="DAY" value={day ?? "—"} labelStyle={steelText(26)} valueStyle={goldText(54)} />
           {record != null && (
-            <SideStat label="Record" value={`${record} days`} />
+            <SideStat label="RECORD" value={`${record} DAYS`} labelStyle={steelText(26)} valueStyle={steelText(26)} />
           )}
         </div>
 
@@ -310,24 +346,15 @@ export default function Overlay() {
           {/* Labels row */}
           <div style={{ display: "flex", gap: SLOT_GAP }}>
             {Array.from({ length: 8 }).map((_, i) => {
-              const isCurrent = i === wins;
-              const isWon = i < wins;
+              const isReached = i <= wins;
               return (
                 <div
                   key={i}
                   style={{
                     width: SLOT_W,
                     textAlign: "center",
-                    fontSize: "0.6rem",
-                    letterSpacing: "0.03em",
-                    fontWeight: 700,
-                    color: isCurrent
-                      ? "#ffffff"
-                      : isWon
-                      ? RUST
-                      : "rgba(255,255,255,0.4)",
-                    textShadow: isWon ? "none" : SMOKE,
-                    transition: "color 0.3s ease",
+                    ...(isReached ? goldText(17) : steelText(17, true)),
+                    transition: "background 0.3s ease",
                   }}
                 >
                   {i === 1 ? "1 Win" : `${i} Wins`}
@@ -380,17 +407,7 @@ export default function Overlay() {
                 );
               })}
             </div>
-            <span
-              style={{
-                fontSize: "0.55rem",
-                letterSpacing: "0.14em",
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.5)",
-                textShadow: SMOKE,
-              }}
-            >
-              LOSSES
-            </span>
+            <span style={steelText(18)}>LOSSES</span>
           </div>
         </div>
 
@@ -414,37 +431,9 @@ export default function Overlay() {
               minWidth: "110px",
             }}
           >
-            <span
-              style={{
-                fontSize: "0.55rem",
-                letterSpacing: "0.18em",
-                fontWeight: 700,
-                color: RUST,
-              }}
-            >
-              RUN WINS
-            </span>
-            <span
-              style={{
-                fontSize: "2.6rem",
-                fontWeight: 800,
-                lineHeight: 1,
-                color: "#fff",
-                textShadow: SMOKE,
-              }}
-            >
-              {s?.currentRun?.total_wins ?? "—"}
-            </span>
-            <span
-              style={{
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.7)",
-                textShadow: SMOKE,
-              }}
-            >
-              Best {s?.bestRun ?? "—"}
-            </span>
+            <span style={steelText(26)}>RUN</span>
+            <span style={goldText(76)}>{s?.currentRun?.total_wins ?? "—"}</span>
+            <span style={steelText(26)}>BEST {s?.bestRun ?? "—"}</span>
           </div>
         </div>
 
@@ -490,23 +479,11 @@ export default function Overlay() {
   );
 }
 
-function SideStat({ label, value }) {
+function SideStat({ label, value, labelStyle, valueStyle }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <span
-        style={{
-          fontSize: "0.58rem",
-          letterSpacing: "0.14em",
-          fontWeight: 700,
-          color: "rgba(255,255,255,0.5)",
-          textShadow: SMOKE,
-        }}
-      >
-        {label}
-      </span>
-      <span style={{ fontSize: "1.25rem", fontWeight: 800, color: "#fff", textShadow: SMOKE }}>
-        {value}
-      </span>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+      <span style={labelStyle}>{label}</span>
+      <span style={valueStyle}>{value}</span>
     </div>
   );
 }
