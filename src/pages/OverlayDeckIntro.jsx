@@ -2,12 +2,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import DeckCardTile from "@/components/overlay/DeckCardTile";
+import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
 import useCardImagesById from "@/hooks/useCardImagesById";
 
 export default function OverlayDeckIntro() {
   const [season, setSeason] = useState(null);
   const [cards, setCards] = useState([]);
   const [climb, setClimb] = useState(null);
+  const [recapDone, setRecapDone] = useState(false);
+  const recapOff = useMemo(
+    () => new URLSearchParams(window.location.search).get("recap") === "off",
+    []
+  );
 
   useEffect(() => {
     const html = document.documentElement;
@@ -120,6 +126,12 @@ export default function OverlayDeckIntro() {
           />
         ))}
       </div>
+      {!recapDone && !recapOff && (
+        <DeckIntroRecap
+          season={season}
+          onDone={() => setRecapDone(true)}
+        />
+      )}
     </div>
   );
 }
