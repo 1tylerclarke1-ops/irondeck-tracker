@@ -31,8 +31,7 @@ const LOSS_EMPTY = `${DPRE}43bd79795_loss-empty.png`;
 const LOSS_1 = `${DPRE}04f5808d9_loss-1.png`;
 const LOSS_2 = `${DPRE}0901a13ba_loss-2.png`;
 const SURVIVED = `${DPRE}158b6c909_survived.png`;
-const DEATH_RUN =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/102bb0e38_death-run.png";
+const DEATH_RUN = `${DPRE}a1e57edaa_death-run.png`;
 
 const SLOT_W = 110;
 const SLOT_GAP = 6;

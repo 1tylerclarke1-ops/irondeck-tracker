@@ -5,8 +5,12 @@ import DeathWheel from "@/components/overlay/DeathWheel";
 import DeathCardFrame from "@/components/overlay/DeathCardFrame";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
 
-const DEATH_RUN =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/102bb0e38_death-run.png";
+const PRE =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
+const DEATH_RUN = `${PRE}a1e57edaa_death-run.png`;
+const DEATH_VIGNETTE = `${PRE}be70dc153_death-vignette.png`;
+const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
+const DECK_VERIFIED = `${PRE}2b65f8dfa_deck-verified.png`;
 
 const INTRO_MS = 500;
 const COUNTDOWN_FROM = 5;
@@ -19,11 +23,8 @@ const CENTERED_MS = 500;
 const VERIFIED_MS = 4000;
 const OUTRO_MS = 600;
 
-const PANEL_W = 800;
-const PANEL_H = 900;
-
-const VIGNETTE =
-  "radial-gradient(ellipse at center, rgba(20,8,32,0.2) 0%, rgba(8,4,16,0.85) 70%, rgba(4,2,8,0.95) 100%)";
+const PANEL_W = 920;
+const PANEL_H = 1020;
 
 const collectUrls = (ev) => {
   const urls = [];
@@ -31,7 +32,7 @@ const collectUrls = (ev) => {
   if (ev?.card_removed_image) urls.push(ev.card_removed_image);
   if (ev?.replacement_card_image) urls.push(ev.replacement_card_image);
   (ev?.roll_cards || []).forEach((c) => c?.image_url && urls.push(c.image_url));
-  urls.push(DEATH_RUN);
+  urls.push(DEATH_RUN, DEATH_VIGNETTE, DEATH_PANEL, DECK_VERIFIED);
   return [...new Set(urls)];
 };
 
@@ -354,16 +355,22 @@ export default function OverlayDeath() {
       `}</style>
 
       {/* Vignette */}
-      <div
+      <img
+        src={DEATH_VIGNETTE}
+        alt=""
+        draggable={false}
         style={{
           position: "fixed",
           inset: 0,
-          background: VIGNETTE,
+          width: "100vw",
+          height: "100vh",
+          objectFit: "fill",
           opacity: fadingOut ? 0 : 1,
           animation: fadingOut
             ? "odFadeOut 0.6s ease forwards"
             : "odVignetteIn 0.5s ease",
           transition: fadingOut ? "opacity 0.6s ease" : "none",
+          pointerEvents: "none",
         }}
       />
 
@@ -376,27 +383,42 @@ export default function OverlayDeath() {
           transform: "translate(-50%,-50%)",
           width: PANEL_W,
           height: PANEL_H,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          background: "rgba(8,6,14,0.92)",
-          border: "3px solid #6b4a9a",
-          borderRadius: 16,
-          boxShadow: "0 0 44px 10px rgba(107,74,154,0.5)",
           opacity: fadingOut ? 0 : 1,
           animation: fadingOut
             ? "odFadeOut 0.6s ease forwards"
             : "odPanelRise 0.5s ease",
           transition: fadingOut ? "opacity 0.6s ease" : "none",
-          overflow: "hidden",
         }}
       >
+        <img
+          src={DEATH_PANEL}
+          alt=""
+          draggable={false}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: PANEL_W,
+            height: PANEL_H,
+            objectFit: "fill",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "relative",
+            width: PANEL_W,
+            height: PANEL_H,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
         {/* DEATH RUN title */}
         <img
           src={DEATH_RUN}
           alt="DEATH RUN"
           draggable={false}
-          style={{ width: 300, height: "auto", marginTop: 34, pointerEvents: "none" }}
+          style={{ width: 700, height: "auto", marginTop: 46, pointerEvents: "none" }}
         />
 
         {/* Wheel area */}
@@ -434,7 +456,7 @@ export default function OverlayDeath() {
           <div
             style={{
               position: "relative",
-              width: PANEL_W,
+              width: 800,
               height: 420,
               marginTop: 18,
             }}
@@ -521,29 +543,24 @@ export default function OverlayDeath() {
               top: "50%",
               left: "50%",
               transform: "translate(-50%,-50%)",
-              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 14,
               animation: "odStampIn 0.35s cubic-bezier(0.15,0.9,0.3,1) both",
               pointerEvents: "none",
             }}
           >
-            <div
-              style={{
-                padding: "20px 56px",
-                borderRadius: 16,
-                background: "rgba(8,6,14,0.85)",
-                border: "3px solid #d68c3c",
-                boxShadow: "0 0 30px 8px rgba(214,140,60,0.5)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <div style={goldText(48)}>DECK VERIFIED ✓</div>
-              <div style={steelText(22)}>{stampLabel}</div>
-            </div>
+            <img
+              src={DECK_VERIFIED}
+              alt="DECK VERIFIED"
+              draggable={false}
+              style={{ width: 700, height: "auto", pointerEvents: "none" }}
+            />
+            <div style={steelText(22)}>{stampLabel}</div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
