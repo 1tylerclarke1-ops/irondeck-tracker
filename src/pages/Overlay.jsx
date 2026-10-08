@@ -49,9 +49,15 @@ const MEDALS = {
 };
 
 const LOSS_EMPTY =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/85391f904_loss-empty.png";
-const LOSS_FILLED =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/2ff301ce9_loss-filled.png";
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/15b7f88e7_loss-empty.png";
+const LOSS_1 =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/c31956642_loss-1.png";
+const LOSS_2 =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/e635c9962_loss-2.png";
+const SURVIVED =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/632b9478b_survived.png";
+const DEATH_RUN =
+  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/102bb0e38_death-run.png";
 
 const SLOT_W = 118;
 const SLOT_GAP = 6;
@@ -64,12 +70,12 @@ export default function Overlay() {
   const [data, setData] = useState(null);
 
   const [popSlots, setPopSlots] = useState([]);
-  const [shakePip, setShakePip] = useState(null);
+  const [flashPip, setFlashPip] = useState(null);
 
   const prevActive = useRef(null);
   const prevLosses = useRef(null);
   const popTimer = useRef(null);
-  const shakeTimer = useRef(null);
+  const flashTimer = useRef(null);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -173,9 +179,9 @@ export default function Overlay() {
     prevActive.current = newActive;
 
     if (losses > prevLosses.current) {
-      setShakePip(losses);
-      if (shakeTimer.current) clearTimeout(shakeTimer.current);
-      shakeTimer.current = setTimeout(() => setShakePip(null), 500);
+      setFlashPip(losses - 1);
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+      flashTimer.current = setTimeout(() => setFlashPip(null), 400);
     }
 
     prevLosses.current = losses;
@@ -184,7 +190,7 @@ export default function Overlay() {
   useEffect(
     () => () => {
       if (popTimer.current) clearTimeout(popTimer.current);
-      if (shakeTimer.current) clearTimeout(shakeTimer.current);
+      if (flashTimer.current) clearTimeout(flashTimer.current);
     },
     []
   );
@@ -204,11 +210,10 @@ export default function Overlay() {
       style={{ background: "transparent" }}
     >
       <style>{`
-        @keyframes ov-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(4px); } }
         @keyframes ov-crosspop { 0% { transform: scale(0.82); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
-        @keyframes ov-stamp { 0% { transform: translateX(-50%) scale(2.4); opacity: 0; } 60% { transform: translateX(-50%) scale(0.92); opacity: 1; } 78% { transform: translateX(-50%) scale(1.06); } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
-        @keyframes ov-slam { 0% { transform: translateX(-50%) translateY(-70px); opacity: 0; } 65% { transform: translateX(-50%) translateY(6px); opacity: 1; } 82% { transform: translateX(-50%) translateY(-3px); } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
-        @keyframes ov-screenshake { 0%,100% { transform: translate(0,0); } 10% { transform: translate(-5px, 2px); } 20% { transform: translate(6px, -3px); } 30% { transform: translate(-7px, 1px); } 40% { transform: translate(5px, 2px); } 50% { transform: translate(-4px, -2px); } 60% { transform: translate(4px, 1px); } 70% { transform: translate(-3px, -1px); } 80% { transform: translate(2px, 1px); } 90% { transform: translate(-1px, 0); } }
+        @keyframes ov-pipflash { 0% { transform: scale(1); filter: drop-shadow(0 0 8px ${RED_GLOW}) brightness(1); } 30% { transform: scale(1.3); filter: drop-shadow(0 0 14px ${RED_GLOW}) brightness(2.4); } 100% { transform: scale(1); filter: drop-shadow(0 0 8px ${RED_GLOW}) brightness(1); } }
+        @keyframes ov-titlestamp { 0% { transform: translate(-50%,-50%) scale(2.5) rotate(-12deg); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1) rotate(-4deg); opacity: 1; } }
+        @keyframes ov-screenshake-sm { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(3px, -2px); } 60% { transform: translate(-2px, 1px); } 80% { transform: translate(1px, 0); } }
       `}</style>
       <div
         style={{
@@ -239,7 +244,9 @@ export default function Overlay() {
             color: "#fff",
             fontFamily: "sans-serif",
             animation:
-              died && !survived ? "ov-screenshake 0.5s ease-in-out" : "none",
+              survived || died
+                ? "ov-screenshake-sm 0.4s ease-in-out 0.35s"
+                : "none",
           }}
         >
         {/* LEFT: Season / Day / Record */}
@@ -358,23 +365,31 @@ export default function Overlay() {
           >
             <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
               {[0, 1].map((i) => {
-                const lost = i < losses;
-                const isShake = shakePip === i;
+                const filled = i === 0 ? losses >= 1 : losses >= 2;
+                const src =
+                  i === 0
+                    ? losses >= 1
+                      ? LOSS_1
+                      : LOSS_EMPTY
+                    : losses >= 2
+                    ? LOSS_2
+                    : LOSS_EMPTY;
+                const isFlash = flashPip === i;
                 return (
                   <img
                     key={i}
-                    src={lost ? LOSS_FILLED : LOSS_EMPTY}
+                    src={src}
                     alt=""
                     draggable={false}
                     style={{
                       width: 46,
                       height: 46,
                       objectFit: "contain",
-                      filter: lost
+                      filter: filled
                         ? `drop-shadow(0 0 8px ${RED_GLOW})`
                         : "none",
-                      animation: isShake
-                        ? "ov-shake 0.5s ease-in-out"
+                      animation: isFlash
+                        ? "ov-pipflash 0.4s ease-out"
                         : "none",
                       pointerEvents: "none",
                     }}
@@ -450,48 +465,44 @@ export default function Overlay() {
           </div>
         </div>
 
-        {survived && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: "50%",
-              transform: "translateX(-50%)",
-              marginTop: "0.5rem",
-              fontSize: "1.3rem",
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              color: RUST,
-              textShadow: `0 0 16px ${RUST_GLOW}`,
-              whiteSpace: "nowrap",
-              animation: "ov-stamp 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.1) both",
-            }}
-          >
-            DAY SURVIVED
-          </div>
-        )}
-        {died && !survived && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: "50%",
-              transform: "translateX(-50%)",
-              marginTop: "0.5rem",
-              fontSize: "1.3rem",
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              color: RED,
-              textShadow: `0 0 16px ${RED_GLOW}`,
-              animation: "ov-slam 0.55s cubic-bezier(0.2, 0.8, 0.3, 1.05) both",
-              whiteSpace: "nowrap",
-            }}
-          >
-            RUN DEATH
-          </div>
-        )}
         </div>
       </div>
+      {survived && (
+        <img
+          src={SURVIVED}
+          alt="DAY SURVIVED"
+          draggable={false}
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            width: 520,
+            transform: "translate(-50%,-50%)",
+            animation:
+              "ov-titlestamp 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
+            zIndex: 50,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {died && !survived && (
+        <img
+          src={DEATH_RUN}
+          alt="RUN DEATH"
+          draggable={false}
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            width: 520,
+            transform: "translate(-50%,-50%)",
+            animation:
+              "ov-titlestamp 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
+            zIndex: 50,
+            pointerEvents: "none",
+          }}
+        />
+      )}
     </div>
   );
 }
