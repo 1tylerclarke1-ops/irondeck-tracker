@@ -5,9 +5,9 @@ import { goldText, steelText, purpleText } from "@/lib/overlayText";
 const DPRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
 const ASSETS = {
-  steel: { badge: `${DPRE}74a8e34a0_badge-steel.png`, row: `${DPRE}3aa8873ea_row-steel.png` },
-  salvaged: { badge: `${DPRE}3664fa241_badge-salvaged.png`, row: `${DPRE}7e7c5cbe9_row-salvaged.png` },
-  rot: { badge: `${DPRE}01034fb60_badge-rot.png`, row: `${DPRE}20b18b2ec_row-rot.png` },
+  steel: { badge: `${DPRE}3f0cb75d7_badge-steel.png`, row: `${DPRE}1d5337307_row-steel.png` },
+  scavenged: { badge: `${DPRE}bc0f1e66d_badge-scavenged.png`, row: `${DPRE}a27146c77_row-scavenged.png` },
+  rot: { badge: `${DPRE}1e8e2607c_badge-rot.png`, row: `${DPRE}63835552b_row-rot.png` },
 };
 
 const FRAME_W = 482;
@@ -25,11 +25,11 @@ export default function DeckRow({
   const cp = Number(copies ?? card.copies) || 0;
   const original = Number(card.original_copies) || 0;
   const isRotted = variant === "rusted";
-  const showSalvaged =
+  const showScavenged =
     salvaged !== undefined ? salvaged : Boolean(card.is_decay_replacement);
   const boxCount = isRotted ? (original > 0 ? original - cp : 0) : cp;
 
-  const state = isRotted ? "rot" : showSalvaged ? "salvaged" : "steel";
+  const state = isRotted ? "rot" : showScavenged ? "scavenged" : "steel";
   const { badge, row } = ASSETS[state];
 
   const countFont = Math.max(10, height * 0.42);
@@ -39,7 +39,7 @@ export default function DeckRow({
 
   const numberStyle = isRotted
     ? purpleText(countFont)
-    : showSalvaged
+    : showScavenged
     ? goldText(countFont)
     : steelText(countFont);
 
@@ -143,7 +143,7 @@ export default function DeckRow({
         >
           {card.name}
         </span>
-        {showSalvaged && !isRotted && (
+        {showScavenged && !isRotted && (
           <span
             style={{
               flexShrink: 0,
@@ -157,7 +157,7 @@ export default function DeckRow({
               lineHeight: 1,
             }}
           >
-            SALVAGED
+            SCAVENGED
           </span>
         )}
         <div style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
