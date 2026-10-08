@@ -63,12 +63,14 @@ export default function RunTracker() {
     setLoading(true);
     try {
       const found = await loadSeason();
-      await loadClimb();
       if (found) {
-        await loadRuns(found.id);
-        await loadCards(found.id);
-        await loadDecays(found.id);
-        await loadDeathEvent();
+        await Promise.all([
+          loadClimb(),
+          loadRuns(found.id),
+          loadCards(found.id),
+          loadDecays(found.id),
+          loadDeathEvent(),
+        ]);
       } else {
         setRuns([]);
         setCards([]);

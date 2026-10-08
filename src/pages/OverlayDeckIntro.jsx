@@ -56,7 +56,7 @@ export default function OverlayDeckIntro() {
       }
     };
     load();
-    const id = setInterval(load, 2000);
+    const id = setInterval(load, 5000);
     return () => {
       active = false;
       clearInterval(id);

@@ -96,7 +96,7 @@ export default function OverlayDeck({ outro } = {}) {
       }
     };
     load();
-    const id = setInterval(load, 2000);
+    const id = setInterval(load, 5000);
     return () => {
       active = false;
       clearInterval(id);

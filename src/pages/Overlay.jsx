@@ -116,7 +116,7 @@ export default function Overlay() {
       }
     };
     load();
-    const id = setInterval(load, 2000);
+    const id = setInterval(load, 4000);
     return () => {
       active = false;
       clearInterval(id);

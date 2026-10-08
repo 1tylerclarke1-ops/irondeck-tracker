@@ -103,7 +103,7 @@ export default function OverlayDecay() {
       }
     };
     load();
-    const id = setInterval(load, 1000);
+    const id = setInterval(load, 3000);
     return () => {
       active = false;
       clearInterval(id);
