@@ -1,5 +1,3 @@
-import { postCollection, cardHasOutsideTheGame } from "@/lib/scryfall";
-
 export const zoneOf = (c) => c.zone || "main";
 
 const BASIC_LAND_NAMES = new Set([
@@ -49,13 +47,12 @@ export function copiesRulePass(cards) {
   return Object.values(map).every((v) => v <= 4);
 }
 
-export async function sideboardAllowedPass(cards) {
+export function sideboardAllowedPass(cards) {
   if (sideCount(cards) === 0) return true;
-  const mainCards = cards.filter((c) => zoneOf(c) === "main");
-  const names = Array.from(
-    new Set(mainCards.map((c) => c.name).filter(Boolean))
+  return cards.some(
+    (c) =>
+      zoneOf(c) === "main" &&
+      (c.copies || 0) > 0 &&
+      c.outside_the_game === true
   );
-  if (names.length === 0) return false;
-  const data = await postCollection(names.map((n) => ({ name: n })));
-  return data.some(cardHasOutsideTheGame);
 }

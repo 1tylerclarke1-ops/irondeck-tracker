@@ -20,12 +20,17 @@ const findAppCard = (appList, arenaName, zone) => {
   });
 };
 
-const compareDeck = (arenaEntries, appCards) => {
-  const appActive = appCards.filter((c) => (Number(c.copies) || 0) > 0);
+const compareDeck = (arenaEntries, appCards, expectEmptySideboard = false) => {
+  const appActive = appCards.filter(
+    (c) =>
+      (Number(c.copies) || 0) > 0 &&
+      (!expectEmptySideboard || (c.zone || "main") !== "sideboard")
+  );
   const arenaSum = {};
   const unmatched = [];
   for (const e of arenaEntries) {
     if (e.zone !== "main" && e.zone !== "sideboard") continue;
+    if (expectEmptySideboard && e.zone === "sideboard") continue;
     const appCard = findAppCard(appActive, e.name, e.zone);
     if (appCard) {
       arenaSum[appCard.id] = (arenaSum[appCard.id] || 0) + e.copies;
@@ -64,7 +69,11 @@ export default function VerifyDeck({ deathEvent, cards, onVerified }) {
     setBusy(true);
     try {
       const entries = parseArenaText(text);
-      const { match, diffs } = compareDeck(entries, cards);
+      const { match, diffs } = compareDeck(
+        entries,
+        cards,
+        deathEvent.sideboard_rotted
+      );
       if (match) {
         await base44.entities.DecayEvent.update(deathEvent.id, {
           step: "verified",
@@ -92,6 +101,11 @@ export default function VerifyDeck({ deathEvent, cards, onVerified }) {
           A run died. Paste your Arena deck export, then click Verify to confirm
           your deck matches before starting the next round.
         </p>
+        {deathEvent.sideboard_rotted && (
+          <p className="text-sm font-medium text-purple-700">
+            The sideboard rotted: remove all sideboard cards before verifying.
+          </p>
+        )}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}

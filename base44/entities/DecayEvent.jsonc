@@ -110,6 +110,11 @@
       "default": "main",
       "description": "Deck zone the replacement went into"
     },
+    "sideboard_rotted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this decay caused the sideboard to rot to zero copies"
+    },
     "updated_at": {
       "type": "string",
       "format": "date-time",

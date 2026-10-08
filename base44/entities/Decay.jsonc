@@ -63,6 +63,11 @@
       "default": "main",
       "description": "Deck zone the replacement card went into"
     },
+    "sideboard_rotted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this decay caused the sideboard to rot to zero copies"
+    },
     "date": {
       "type": "string",
       "format": "date-time",

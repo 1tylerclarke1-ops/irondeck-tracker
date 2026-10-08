@@ -1,4 +1,5 @@
 import { rarityFor, typeFor, manaInfoFor } from "@/components/season/arenaImport";
+import { cardHasOutsideTheGame } from "@/lib/scryfall";
 import { num } from "@/components/run/runHelpers";
 
 const OTHER_RARITY = { uncommon: "common", common: "uncommon" };
@@ -25,6 +26,7 @@ const normalize = (data) => ({
   scryfall_id: data.id,
   set: data.set,
   collector_number: data.collector_number,
+  outside_the_game: cardHasOutsideTheGame(data),
   ...manaInfoFor(data),
 });
 

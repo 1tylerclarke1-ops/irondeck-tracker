@@ -4,14 +4,12 @@ import { fetchCardArtById } from "@/lib/scryfall";
 import { num } from "@/components/run/runHelpers";
 
 // Run the full decay flow for a dead run and create a single "death" DecayEvent.
-// Reuses the same logic the Decay page used to do by hand.
 export async function performDecay({ season, cards, run }) {
   if (!season || !run) throw new Error("Missing season or run");
 
   // 1. Pick a random unique mythic/rare card with copies > 0 (main or sideboard).
   const eligible = cards.filter(
-    (c) =>
-      num(c.copies) > 0 && (c.rarity === "mythic" || c.rarity === "rare")
+    (c) => num(c.copies) > 0 && (c.rarity === "mythic" || c.rarity === "rare")
   );
   if (eligible.length === 0) throw new Error("No eligible cards to decay");
   const seen = new Set();
@@ -35,7 +33,6 @@ export async function performDecay({ season, cards, run }) {
   });
 
   // 3. Fetch the removed card's image and every wheel card's art in parallel.
-  //    Use "" (not null) for any that fail.
   const fetches = [
     chosen.scryfall_id
       ? fetchCardArtById(chosen.scryfall_id)
@@ -56,14 +53,16 @@ export async function performDecay({ season, cards, run }) {
   const existing = cards.find(
     (c) => c.name === replacement.name && (c.zone || "main") === targetZone
   );
+  let replacementCardId;
   if (existing) {
+    replacementCardId = existing.id;
     await base44.entities.Card.update(existing.id, {
       copies: num(existing.copies) + 1,
       is_decay_replacement: true,
       decayed_at: now,
     });
   } else {
-    await base44.entities.Card.create({
+    const created = await base44.entities.Card.create({
       season_id: season.id,
       name: replacement.name,
       copies: 1,
@@ -74,12 +73,51 @@ export async function performDecay({ season, cards, run }) {
       colours: replacement.colours || "",
       mana_value: replacement.mana_value ?? null,
       scryfall_id: replacement.scryfall_id || null,
+      outside_the_game: Boolean(replacement.outside_the_game),
       is_decay_replacement: true,
       decayed_at: now,
     });
+    replacementCardId = created?.id || null;
   }
 
-  // 5. Create the Decay record (run_id, how_obtained "pending").
+  // 5. Compute post-decay deck state and decide whether the sideboard rots.
+  const postCards = cards.map((c) => {
+    if (c.id === chosen.id) return { ...c, copies: newCopies };
+    if (existing && c.id === existing.id)
+      return { ...c, copies: num(existing.copies) + 1 };
+    return c;
+  });
+  if (!existing && replacementCardId) {
+    postCards.push({
+      id: replacementCardId,
+      copies: 1,
+      zone: targetZone,
+      outside_the_game: Boolean(replacement.outside_the_game),
+    });
+  }
+  const sideHasCopies = postCards.some(
+    (c) => (c.zone || "main") === "sideboard" && num(c.copies) > 0
+  );
+  const mainHasOutside = postCards.some(
+    (c) =>
+      (c.zone || "main") === "main" &&
+      num(c.copies) > 0 &&
+      c.outside_the_game === true
+  );
+  const sideboardRotted = sideHasCopies && !mainHasOutside;
+
+  if (sideboardRotted) {
+    const toZero = postCards.filter(
+      (c) => (c.zone || "main") === "sideboard" && num(c.copies) > 0
+    );
+    if (toZero.length) {
+      await base44.entities.Card.bulkUpdate(
+        toZero.map((c) => ({ id: c.id, copies: 0 }))
+      );
+    }
+  }
+
+  // 6. Create the Decay record.
   const decay = await base44.entities.Decay.create({
     season_id: season.id,
     run_id: run.id,
@@ -90,10 +128,11 @@ export async function performDecay({ season, cards, run }) {
     replacement_card: replacement.name,
     how_obtained: "pending",
     zone: targetZone,
+    sideboard_rotted: sideboardRotted,
     date: now,
   });
 
-  // 6. Create one DecayEvent with everything, step "death".
+  // 7. Create one DecayEvent with everything, step "death".
   const event = await base44.entities.DecayEvent.create({
     season_id: season.id,
     run_id: run.id,
@@ -112,6 +151,7 @@ export async function performDecay({ season, cards, run }) {
     rarity_roll: rollRarity,
     roll_cards: rollCards,
     zone: targetZone,
+    sideboard_rotted: sideboardRotted,
     updated_at: now,
   });
 

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   mainRulePass,
   sideRulePass,
@@ -9,34 +8,7 @@ import {
 } from "@/lib/deckRules";
 
 export function useDeckRules(cards) {
-  const [sideAllowed, setSideAllowed] = useState(null);
-  const [sideError, setSideError] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    if (sideCount(cards) === 0) {
-      setSideAllowed(true);
-      setSideError(null);
-      return;
-    }
-    setSideAllowed(null);
-    sideboardAllowedPass(cards)
-      .then((v) => {
-        if (active) {
-          setSideAllowed(v);
-          setSideError(null);
-        }
-      })
-      .catch((e) => {
-        if (active) {
-          setSideAllowed(false);
-          setSideError(e?.message || "Scryfall lookup failed");
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [cards]);
+  const sideAllowed = sideboardAllowedPass(cards);
 
   const rules = [
     {
@@ -61,8 +33,6 @@ export function useDeckRules(cards) {
       label:
         'Sideboard allowed: a main-deck card references "outside the game"',
       pass: sideAllowed,
-      loading: sideAllowed === null,
-      error: sideError,
     },
   ];
 

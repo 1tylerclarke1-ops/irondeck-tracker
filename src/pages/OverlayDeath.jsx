@@ -3,7 +3,7 @@ import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import DeathWheel from "@/components/overlay/DeathWheel";
 import DeathCardFrame from "@/components/overlay/DeathCardFrame";
-import { goldText, steelText, irondeckText } from "@/lib/overlayText";
+import { goldText, steelText, irondeckText, purpleText } from "@/lib/overlayText";
 
 const PRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
@@ -19,6 +19,7 @@ const CARDS_IN_MS = 600;
 const ROLL_MS = 5000;
 const DRAIN_MS = 1500;
 const KNOCK_MS = 700;
+const SIDE_ROT_MS = 2000;
 const CENTERED_MS = 500;
 const VERIFIED_MS = 4000;
 const OUTRO_MS = 600;
@@ -191,7 +192,14 @@ export default function OverlayDeath() {
       return () => clearTimeout(t);
     }
     if (phase === "knock") {
-      const t = setTimeout(() => setPhase("centered"), KNOCK_MS);
+      const t = setTimeout(
+        () => setPhase(seq?.sideboard_rotted ? "sideRot" : "centered"),
+        KNOCK_MS
+      );
+      return () => clearTimeout(t);
+    }
+    if (phase === "sideRot") {
+      const t = setTimeout(() => setPhase("centered"), SIDE_ROT_MS);
       return () => clearTimeout(t);
     }
     if (phase === "centered") {
@@ -307,17 +315,26 @@ export default function OverlayDeath() {
     "rolling",
     "drain",
     "knock",
+    "sideRot",
     "centered",
     "holding",
     "verified",
   ].includes(phase);
 
-  const rightCentered = ["knock", "centered", "holding", "verified"].includes(
-    phase
-  );
-  const leftHidden = ["centered", "holding", "verified", "outro"].includes(
-    phase
-  );
+  const rightCentered = [
+    "knock",
+    "sideRot",
+    "centered",
+    "holding",
+    "verified",
+  ].includes(phase);
+  const leftHidden = [
+    "sideRot",
+    "centered",
+    "holding",
+    "verified",
+    "outro",
+  ].includes(phase);
   const leftKnock = phase === "knock";
   const draining = ["drain", "knock", "centered", "holding", "verified"].includes(
     phase
@@ -513,6 +530,19 @@ export default function OverlayDeath() {
             />
 
             {/* Bottom text */}
+            {phase === "sideRot" && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  textAlign: "center",
+                }}
+              >
+                <span style={purpleText(40)}>THE SIDEBOARD ROTS</span>
+              </div>
+            )}
             {showBottom && (
               <div
                 style={{
@@ -528,6 +558,7 @@ export default function OverlayDeath() {
               >
                 <div style={goldText(26)}>
                   REMOVE 1 {removedName} · ADD 1 {replacementName}
+                  {seq?.sideboard_rotted ? " · Remove all sideboard cards" : ""}
                 </div>
                 <div style={steelText(20)}>Update your deck in Arena</div>
               </div>
