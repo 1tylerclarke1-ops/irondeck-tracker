@@ -88,6 +88,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When this card was added as a decay replacement"
+    },
+    "outside_the_game": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the card's oracle text references cards from outside the game"
     }
   },
   "required": [

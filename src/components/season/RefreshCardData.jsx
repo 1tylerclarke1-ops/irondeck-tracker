@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { manaInfoFor } from "@/components/season/arenaImport";
 import { resolveCards } from "@/lib/resolveCard";
+import { cardHasOutsideTheGame } from "@/lib/scryfall";
 
 export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
   const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +36,7 @@ export default function RefreshCardData({ seasonId, cards, onRefreshed }) {
             mana_cost: mi.mana_cost,
             colours: mi.colours,
             mana_value: mi.mana_value,
+            outside_the_game: cardHasOutsideTheGame(data),
           });
         }
         setProgress(`${i + 1}/${cards.length}`);

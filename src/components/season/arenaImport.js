@@ -1,4 +1,4 @@
-import { postCollection } from "@/lib/scryfall";
+import { postCollection, cardHasOutsideTheGame } from "@/lib/scryfall";
 const RARITY_ENUM = ["mythic", "rare", "uncommon", "common", "basic"];
 const TYPE_PRIORITY = [
   "creature",
@@ -104,6 +104,7 @@ export function scryfallFieldsFor(card) {
     mana_value: mi.mana_value,
     rarity: rarityFor(card),
     card_type: typeFor(card),
+    outside_the_game: cardHasOutsideTheGame(card),
   };
 }
 
