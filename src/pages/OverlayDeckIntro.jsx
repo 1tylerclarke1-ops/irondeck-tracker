@@ -90,11 +90,11 @@ export default function OverlayDeckIntro() {
 
   const scryfallIds = useMemo(() => {
     const ids = Array.from(
-      new Set(cards.map((c) => c.scryfall_id).filter(Boolean))
+      new Set(allCards.map((c) => c.scryfall_id).filter(Boolean))
     );
     ids.sort();
     return ids;
-  }, [cards]);
+  }, [allCards]);
 
   const images = useCardImagesById(scryfallIds);
 
@@ -109,6 +109,13 @@ export default function OverlayDeckIntro() {
     const o = num(c.original_copies);
     return o > 0 ? sum + Math.max(0, o - num(c.copies)) : sum;
   }, 0);
+  const sideCards = sortDeck(
+    allCards.filter((c) => c.zone === "sideboard" && num(c.copies) > 0)
+  );
+  const rottedCards = allCards
+    .map((c) => ({ card: c, rotted: Math.max(0, num(c.original_copies) - num(c.copies)) }))
+    .filter((r) => num(r.card.original_copies) > 0 && r.rotted > 0)
+    .sort((a, b) => b.rotted - a.rotted);
   const zoneCount = (zone) =>
     allCards.filter((c) => (c.zone || "main") === zone).reduce((sum, c) => sum + num(c.copies), 0);
 
@@ -124,6 +131,8 @@ export default function OverlayDeckIntro() {
         sideboardCount={zoneCount("sideboard")}
         mainCount={zoneCount("main")}
         cards={cards}
+        sideCards={sideCards}
+        rottedCards={rottedCards}
         images={images}
       />
       {!recapDone && !recapOff && (
