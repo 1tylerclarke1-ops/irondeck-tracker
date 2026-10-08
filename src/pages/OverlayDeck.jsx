@@ -29,7 +29,7 @@ function sortDeck(cards) {
   return enriched;
 }
 
-export default function OverlayDeck() {
+export default function OverlayDeck({ outro } = {}) {
   const [season, setSeason] = useState(null);
   const [cards, setCards] = useState([]);
   const [sideCards, setSideCards] = useState([]);
@@ -38,9 +38,10 @@ export default function OverlayDeck() {
   const [decays, setDecays] = useState([]);
 
   const isOutro = useMemo(() => {
+    if (outro !== undefined) return Boolean(outro);
     const p = new URLSearchParams(window.location.search);
     return p.get("mode") === "outro";
-  }, []);
+  }, [outro]);
 
   useEffect(() => {
     const html = document.documentElement;

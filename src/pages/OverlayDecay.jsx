@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import DecayWheel from "@/components/decay/DecayWheel";
+import OverlayDeck from "@/pages/OverlayDeck";
+
+const RUST_TEXTURE =
+  "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3c387b3a0_image.png";
 
 const preloadImages = (urls) =>
   Promise.all(
@@ -16,82 +20,66 @@ const preloadImages = (urls) =>
     )
   );
 
-// Resolve a card image: use the saved URL if present, else look it up by
-// scryfall id, then by fuzzy name. Returns { url, loading }.
-function useResolveCardImage(imageUrl, scryfallId, name) {
-  const [url, setUrl] = useState(imageUrl || null);
-  const [loading, setLoading] = useState(!imageUrl);
+const CARD_W = 200;
+const CARD_H = 280;
 
-  useEffect(() => {
-    let active = true;
-    if (imageUrl) {
-      setUrl(imageUrl);
-      setLoading(false);
-      return () => {};
-    }
-    setUrl(null);
-    if (!scryfallId && !name) {
-      setLoading(false);
-      return () => {};
-    }
-    setLoading(true);
-    (async () => {
-      let resolved = null;
-      if (scryfallId) {
-        try {
-          const res = await fetch(`https://api.scryfall.com/cards/${scryfallId}`);
-          if (res.ok) {
-            const data = await res.json();
-            resolved =
-              data.image_uris?.normal ||
-              data.card_faces?.[0]?.image_uris?.normal ||
-              null;
-          }
-        } catch {}
-      }
-      if (!resolved && name) {
-        try {
-          const res = await fetch(
-            `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(name)}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            resolved =
-              data.image_uris?.normal ||
-              data.card_faces?.[0]?.image_uris?.normal ||
-              null;
-          }
-        } catch {}
-      }
-      if (!active) return;
-      setUrl(resolved);
-      setLoading(false);
-    })();
-    return () => {
-      active = false;
-    };
-  }, [imageUrl, scryfallId, name]);
-
-  return { url, loading };
+function CardImage({ src, alt, borderColor }) {
+  if (!src) {
+    return (
+      <div
+        style={{
+          width: CARD_W,
+          height: CARD_H,
+          borderRadius: 10,
+          background: "#334155",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#fff",
+          textAlign: "center",
+          padding: "0 1rem",
+          border: `1px solid ${borderColor || "#fff"}`,
+        }}
+      >
+        {alt}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      draggable={false}
+      style={{
+        width: CARD_W,
+        height: CARD_H,
+        objectFit: "cover",
+        borderRadius: 10,
+        border: `1px solid ${borderColor || "#fff"}`,
+        display: "block",
+      }}
+    />
+  );
 }
 
 export default function OverlayDecay() {
   const [event, setEvent] = useState(null);
   const [phase, setPhase] = useState("done");
+  const [landed, setLanded] = useState(false);
+  const [wheelShown, setWheelShown] = useState(true);
   const [rarityText, setRarityText] = useState("");
   const [rollIndex, setRollIndex] = useState(0);
   const [rollGlow, setRollGlow] = useState(false);
   const [preloading, setPreloading] = useState(false);
-  const [revealReady, setRevealReady] = useState(false);
-  const [revealPreloading, setRevealPreloading] = useState(false);
+  const [revealStage, setRevealStage] = useState(null);
+  const [fadingOut, setFadingOut] = useState(false);
+  const [showDeck, setShowDeck] = useState(false);
 
   const wheelRef = useRef(null);
-  const playedRef = useRef(null);
   const rarityTimer = useRef(null);
   const rollTimer = useRef(null);
   const rollActive = useRef(false);
 
-  // Transparent background for stream capture
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -103,7 +91,6 @@ export default function OverlayDecay() {
     };
   }, []);
 
-  // Poll the latest DecayEvent every second
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -123,7 +110,6 @@ export default function OverlayDecay() {
     };
   }, []);
 
-  const step = event?.step || "done";
   const wheelNames = Array.isArray(event?.wheel_card_names)
     ? event.wheel_card_names
     : [];
@@ -135,6 +121,8 @@ export default function OverlayDecay() {
     scryfall_id: wheelIds[i],
   }));
   const chosenName = event?.chosen_card || event?.card_removed || null;
+  const removedImg = event?.card_removed_image || null;
+  const replacementImg = event?.replacement_card_image || null;
 
   const wheelArt = useMemo(() => {
     const arts = Array.isArray(event?.wheel_card_art)
@@ -148,17 +136,6 @@ export default function OverlayDecay() {
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.wheel_card_art, wheelNames.join("|"), wheelIds.join("|")]);
-
-  const removed = useResolveCardImage(
-    event?.card_removed_image || null,
-    event?.card_removed_id || null,
-    event?.card_removed || null
-  );
-  const replacement = useResolveCardImage(
-    event?.replacement_card_image || null,
-    event?.replacement_card_id || null,
-    event?.replacement_card || null
-  );
 
   const startRarityFlip = () => {
     const target = (event?.rarity_roll || "uncommon").toUpperCase();
@@ -207,15 +184,14 @@ export default function OverlayDecay() {
     showTick();
   };
 
-  // Drive each step once per (event id, step)
+  // Drive each step
   useEffect(() => {
     if (!event) {
       setPhase("done");
       return;
     }
-    const key = event.id + ":" + step;
-    if (playedRef.current === key) return;
-    playedRef.current = key;
+    const st = event.step || "done";
+    setPhase(st);
 
     if (rarityTimer.current) {
       clearTimeout(rarityTimer.current);
@@ -227,60 +203,64 @@ export default function OverlayDecay() {
     }
     rollActive.current = false;
 
-    if (step === "spinning" && chosenName) {
-      setPhase("spinning");
-      const t = setTimeout(() => {
-        wheelRef.current?.spinTo({ name: chosenName });
-      }, 60);
-      return () => clearTimeout(t);
+    if (st === "spinning") {
+      setLanded(false);
+      setWheelShown(true);
+      setRevealStage(null);
+      setFadingOut(false);
+      setShowDeck(false);
+      return;
     }
-    if (step === "rarity") {
-      setPhase("rarity");
+    // Past spinning -> the chosen card is visible
+    setLanded(true);
+    if (st === "rarity") {
       startRarityFlip();
       return;
     }
-    if (step === "rolling") {
-      setPhase("rolling");
+    if (st === "rolling") {
       startRolling();
       return;
     }
-    if (step === "reveal") {
-      setPhase("reveal");
-      return;
-    }
-    setPhase("done");
+    // reveal / done handled by their own effects
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.id, step, chosenName]);
+  }, [event?.id, event?.step]);
 
-  // Preload both reveal images so they appear together
+  // Spin the wheel shortly after it fades in
   useEffect(() => {
-    if (step !== "reveal") {
-      setRevealReady(false);
-      setRevealPreloading(false);
-      return;
-    }
-    if (removed.loading || replacement.loading) return;
-    if (revealReady) return;
-    let active = true;
-    setRevealPreloading(true);
-    preloadImages([removed.url, replacement.url]).then(() => {
-      if (!active) return;
-      setRevealReady(true);
-      setRevealPreloading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [
-    step,
-    removed.url,
-    removed.loading,
-    replacement.url,
-    replacement.loading,
-    revealReady,
-  ]);
+    if (phase !== "spinning" || !chosenName) return;
+    const t = setTimeout(() => {
+      wheelRef.current?.spinTo({ name: chosenName });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [phase, chosenName]);
 
-  // Clean up timers on unmount
+  // Fade the wheel out once the chosen card is up
+  useEffect(() => {
+    if (!landed) return;
+    const t = setTimeout(() => setWheelShown(false), 500);
+    return () => clearTimeout(t);
+  }, [landed]);
+
+  // Reveal sequence: rust -> knock -> hold -> fade to deck
+  useEffect(() => {
+    if (phase !== "reveal") return;
+    setRevealStage("rust");
+    const t1 = setTimeout(() => setRevealStage("knock"), 1500);
+    const t2 = setTimeout(() => setRevealStage("hold"), 2200);
+    const t3 = setTimeout(() => setFadingOut(true), 4200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    if (!fadingOut) return;
+    const t = setTimeout(() => setShowDeck(true), 600);
+    return () => clearTimeout(t);
+  }, [fadingOut]);
+
   useEffect(
     () => () => {
       rollActive.current = false;
@@ -290,231 +270,203 @@ export default function OverlayDecay() {
     []
   );
 
-  if (phase === "done" || !event) {
-    return null;
-  }
+  const handleLand = () => setLanded(true);
 
-  if (phase === "spinning") {
+  if (showDeck) {
     return (
-      <div
-        className="w-screen h-screen flex items-center justify-center"
-        style={{ background: "transparent" }}
-      >
-        <DecayWheel ref={wheelRef} cards={wheelCards} art={wheelArt} />
+      <div style={{ animation: "od-deckin 0.6s ease forwards" }}>
+        <OverlayDeck outro />
       </div>
     );
   }
 
-  if (phase === "rarity") {
-    return (
-      <div
-        className="w-screen h-screen flex items-center justify-center"
-        style={{ background: "transparent" }}
-      >
-        <span
-          style={{
-            fontSize: "3rem",
-            fontWeight: 800,
-            letterSpacing: "0.12em",
-            color: "#fbbf24",
-            textShadow: "0 2px 6px rgba(0,0,0,0.9)",
-            fontFamily: "sans-serif",
-          }}
-        >
-          {rarityText}
-        </span>
-      </div>
-    );
-  }
+  if (phase === "done" || !event) return null;
 
-  if (phase === "rolling") {
-    const rc = (event.roll_cards || [])[rollIndex];
-    return (
-      <div
-        className="w-screen h-screen flex items-center justify-center"
-        style={{ background: "transparent" }}
-      >
-        <style>{`
-          @keyframes ovd-glow { 0%,100% { box-shadow: 0 0 18px 6px rgba(251,191,36,0.75); } 50% { box-shadow: 0 0 34px 12px rgba(251,191,36,1); } }
-        `}</style>
-        {preloading ? (
-          <div className="w-6 h-6 border-4 border-slate-300 border-t-amber-500 rounded-full animate-spin"></div>
-        ) : rc ? (
-          <div
-            style={{
-              borderRadius: 12,
-              animation: rollGlow ? "ovd-glow 1s ease-in-out infinite" : "none",
-              lineHeight: 0,
-            }}
-          >
-            {rc.image_url ? (
-              <img
-                src={rc.image_url}
-                alt={rc.name}
-                style={{
-                  width: 240,
-                  borderRadius: 12,
-                  border: rollGlow ? "2px solid #fbbf24" : "1px solid #fff",
-                  display: "block",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 240,
-                  height: 336,
-                  borderRadius: 12,
-                  background: "#334155",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  textAlign: "center",
-                  padding: "0 1rem",
-                }}
-              >
-                {rc.name}
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
-    );
-  }
+  const chosenAnim =
+    phase === "reveal" && (revealStage === "knock" || revealStage === "hold")
+      ? "od-knockoff 0.7s ease forwards"
+      : "od-chosenin 0.5s ease";
 
-  // reveal
-  const oldImg = removed.url;
-  const newImg = replacement.url;
-  const rarityRoll = event.rarity_roll || null;
+  const rc = (event.roll_cards || [])[rollIndex];
 
   return (
     <div
       className="w-screen h-screen flex items-center justify-center"
-      style={{ background: "transparent" }}
+      style={{
+        background: "transparent",
+        opacity: fadingOut ? 0 : 1,
+        transition: "opacity 0.6s ease",
+      }}
     >
       <style>{`
-        @keyframes ovd-fadeout { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes ovd-slidein { from { transform: translateX(90px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes od-wheelin { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes od-chosenin { from { opacity: 0; transform: translate(-50%,-50%) scale(0.96); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+        @keyframes od-rustspread { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        @keyframes od-drain { from { filter: none; } to { filter: grayscale(1) sepia(0.45) brightness(0.7); } }
+        @keyframes od-knockoff { from { transform: translate(-50%,-50%) translateX(0) rotate(0); opacity: 1; } to { transform: translate(-50%,-50%) translateX(-460px) rotate(-35deg); opacity: 0; } }
+        @keyframes od-flyin { 0% { transform: translate(-50%,-50%) translateX(560px); opacity: 0; } 70% { transform: translate(-50%,-50%) translateX(-14px); opacity: 1; } 100% { transform: translate(-50%,-50%) translateX(0); opacity: 1; } }
+        @keyframes od-salvagedin { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes od-deckin { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes ov-glow { 0%,100% { box-shadow: 0 0 18px 6px rgba(251,191,36,0.75); } 50% { box-shadow: 0 0 34px 12px rgba(251,191,36,1); } }
       `}</style>
-      {revealPreloading || !revealReady ? (
-        <div className="w-6 h-6 border-4 border-slate-300 border-t-amber-500 rounded-full animate-spin"></div>
-      ) : (
-        <div
-          style={{
-            display: "flex",
-            gap: "3rem",
-            alignItems: "center",
-            fontFamily: "sans-serif",
-          }}
-        >
+      <div style={{ position: "relative", width: 760, height: 480 }}>
+        {/* Spinning wheel */}
+        {wheelShown && (
           <div
             style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%,-50%)",
+              opacity: landed ? 0 : 1,
+              transition: "opacity 0.5s ease",
+              animation: "od-wheelin 0.6s ease",
+            }}
+          >
+            <DecayWheel
+              ref={wheelRef}
+              cards={wheelCards}
+              art={wheelArt}
+              onLand={handleLand}
+            />
+          </div>
+        )}
+
+        {/* Chosen / removed card (stays through rarity/rolling/reveal) */}
+        {landed && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              width: CARD_W,
+              height: CARD_H,
+              animation: chosenAnim,
+            }}
+          >
+            <img
+              src={removedImg}
+              alt={event.card_removed || ""}
+              draggable={false}
+              style={{
+                width: CARD_W,
+                height: CARD_H,
+                objectFit: "cover",
+                borderRadius: 10,
+                border: "1px solid #fff",
+                display: "block",
+                animation:
+                  phase === "reveal" ? "od-drain 1.5s ease forwards" : "none",
+              }}
+            />
+            {phase === "reveal" && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: 10,
+                  backgroundImage: `url(${RUST_TEXTURE})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  transformOrigin: "left center",
+                  animation: "od-rustspread 1.5s ease forwards",
+                  opacity: 0.9,
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Rarity / rolling action, beside the chosen card */}
+        {(phase === "rarity" || phase === "rolling") && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%,-50%) translateX(240px)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: "0.5rem",
-              animation: "ovd-fadeout 1.2s ease forwards",
             }}
           >
-            {oldImg ? (
-              <img
-                src={oldImg}
-                alt={event.card_removed}
-                style={{ width: 200, borderRadius: 10, border: "1px solid #fff" }}
-              />
-            ) : (
-              <div
+            {phase === "rarity" && (
+              <span
                 style={{
-                  width: 200,
-                  height: 280,
-                  borderRadius: 10,
-                  background: "#334155",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  textAlign: "center",
-                  padding: "0 1rem",
+                  fontSize: "2.4rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  color: "#fbbf24",
+                  textShadow: "0 2px 6px rgba(0,0,0,0.9)",
+                  fontFamily: "sans-serif",
                 }}
               >
-                {event.card_removed}
-              </div>
+                {rarityText}
+              </span>
             )}
-            <span
-              style={{
-                color: "#fff",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textShadow: "0 1px 2px rgba(0,0,0,0.9)",
-              }}
-            >
-              REMOVED
-            </span>
+            {phase === "rolling" &&
+              (preloading ? (
+                <div className="w-6 h-6 border-4 border-slate-300 border-t-amber-500 rounded-full animate-spin" />
+              ) : rc ? (
+                <div
+                  style={{
+                    borderRadius: 12,
+                    lineHeight: 0,
+                    animation: rollGlow
+                      ? "ov-glow 1s ease-in-out infinite"
+                      : "none",
+                  }}
+                >
+                  <CardImage
+                    src={rc.image_url}
+                    alt={rc.name}
+                    borderColor={rollGlow ? "#fbbf24" : "#fff"}
+                  />
+                </div>
+              ) : null)}
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.5rem",
-              animation: "ovd-slidein 0.8s ease forwards",
-            }}
-          >
-            {newImg ? (
-              <img
-                src={newImg}
-                alt={event.replacement_card}
-                style={{
-                  width: 200,
-                  borderRadius: 10,
-                  border: "1px solid #fbbf24",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 200,
-                  height: 280,
-                  borderRadius: 10,
-                  background: "#0f766e",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  textAlign: "center",
-                  padding: "0 1rem",
-                }}
-              >
-                {event.replacement_card}
-              </div>
-            )}
-            <span
-              style={{
-                color: "#fbbf24",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textShadow: "0 1px 2px rgba(0,0,0,0.9)",
-              }}
-            >
-              ADDED
-            </span>
-          </div>
-          {rarityRoll && (
+        )}
+
+        {/* Replacement card flies in and settles */}
+        {phase === "reveal" &&
+          (revealStage === "knock" || revealStage === "hold") && (
             <div
               style={{
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: "0.95rem",
-                letterSpacing: "0.08em",
-                textTransform: "capitalize",
-                textShadow: "0 1px 2px rgba(0,0,0,0.9)",
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                width: CARD_W,
+                height: CARD_H,
+                animation: "od-flyin 0.7s cubic-bezier(0.2,0.8,0.3,1.05) forwards",
               }}
             >
-              Rarity roll: {rarityRoll}
+              <CardImage
+                src={replacementImg}
+                alt={event.replacement_card || ""}
+                borderColor="#fbbf24"
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: -1,
+                  right: 6,
+                  padding: "2px 6px",
+                  borderRadius: 8,
+                  background: "#2d8a4e",
+                  color: "#fff",
+                  fontSize: "0.6rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.05em",
+                  animation: "od-salvagedin 0.3s ease 0.5s both",
+                }}
+              >
+                SALVAGED
+              </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
