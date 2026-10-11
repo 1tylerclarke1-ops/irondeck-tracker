@@ -1,0 +1,67 @@
+{
+  "name": "ArenaRank",
+  "type": "object",
+  "properties": {
+    "season_ordinal": {
+      "type": "integer",
+      "description": "Season ordinal this rank snapshot belongs to"
+    },
+    "rank_class": {
+      "type": "string",
+      "description": "Rank class, e.g. Bronze, Silver, Gold, Platinum, Diamond, Mythic"
+    },
+    "level": {
+      "type": "integer",
+      "description": "Level within the rank class"
+    },
+    "tier": {
+      "type": "integer",
+      "description": "Tier within the level"
+    },
+    "step": {
+      "type": "integer",
+      "description": "Step within the tier"
+    },
+    "matches_won": {
+      "type": "integer",
+      "default": 0,
+      "description": "Matches won at this rank"
+    },
+    "matches_lost": {
+      "type": "integer",
+      "default": 0,
+      "description": "Matches lost at this rank"
+    },
+    "percentile": {
+      "type": "number",
+      "description": "Percentile standing, e.g. top 0.5%"
+    },
+    "leaderboard_place": {
+      "type": "integer",
+      "description": "Leaderboard placement"
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this rank snapshot was captured"
+    }
+  },
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
