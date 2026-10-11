@@ -1,0 +1,58 @@
+{
+  "name": "ArenaMatch",
+  "type": "object",
+  "properties": {
+    "match_id": {
+      "type": "string",
+      "description": "Unique match identifier from Arena"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Arena event identifier the match was played in"
+    },
+    "result": {
+      "type": "string",
+      "description": "Match result, e.g. Win, Loss, Draw"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the match finished"
+    },
+    "applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this match has been applied to the tracker"
+    },
+    "outcome": {
+      "type": "string",
+      "description": "Outcome detail, e.g. round survived, round lost, stage cleared"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Run this match was applied to"
+    }
+  },
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
