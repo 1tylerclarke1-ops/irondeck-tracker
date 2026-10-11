@@ -14,6 +14,13 @@ const DECK_VERIFIED = `${PRE}2b65f8dfa_deck-verified.png`;
 
 const INTRO_MS = 900;
 const FRESH_MS = 30 * 60 * 1000; // only play a death that happened in the last 30 minutes
+const DEATH_DELAY_MS = 2500; // let the HUD's DEATH RUN banner show before the wheel slides in
+// Base44 timestamps can lack a time zone ("2026-10-11T20:35:12"); they are UTC.
+const toMs = (v) => {
+  if (!v) return 0;
+  const s = String(v);
+  return new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(s) ? s : `${s}Z`).getTime();
+};
 const COUNTDOWN_FROM = 5;
 const WHEEL_HOLD_MS = 2000;
 const CARDS_IN_MS = 600;
@@ -140,8 +147,8 @@ export default function OverlayDeath() {
 
   // Start the sequence when a "death" event arrives
   useEffect(() => {
-    const fresh =
-      event && Date.now() - new Date(event.created_date || 0).getTime() < FRESH_MS;
+    const born = toMs(event?.updated_at) || toMs(event?.created_date);
+    const fresh = event && Date.now() - born < FRESH_MS;
     if (event && event.step === "death" && fresh && playedFor.current !== event.id) {
       playedFor.current = event.id;
       eventIdRef.current = event.id;
@@ -150,7 +157,7 @@ export default function OverlayDeath() {
       setRollIndex(0);
       setRollGlow(false);
       setRarityText("");
-      setPhase("intro");
+      setPhase("waiting");
       preloadImages(collectUrls(event)).then(() => setPreloaded(true));
     }
   }, [event]);
@@ -188,6 +195,10 @@ export default function OverlayDeath() {
 
   // Phase timers
   useEffect(() => {
+    if (phase === "waiting") {
+      const t = setTimeout(() => setPhase("intro"), DEATH_DELAY_MS);
+      return () => clearTimeout(t);
+    }
     if (phase === "intro") {
       const t = setTimeout(() => setPhase("countdown"), INTRO_MS);
       return () => clearTimeout(t);
@@ -369,7 +380,7 @@ export default function OverlayDeath() {
       )}:${pad(stampTime.getMinutes())}`
     : "";
 
-  if (phase === "idle" || phase === "done") return null;
+  if (phase === "idle" || phase === "waiting" || phase === "done") return null;
 
   return (
     <div className="w-screen h-screen" style={{ background: "transparent" }}>
