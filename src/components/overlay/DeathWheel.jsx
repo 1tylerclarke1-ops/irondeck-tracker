@@ -88,8 +88,10 @@ const DeathWheel = forwardRef(function DeathWheel(
           </radialGradient>
         </defs>
         <g
-          transform={`rotate(${rotation} ${CX} ${CY})`}
           style={{
+            transform: `rotate(${rotation}deg)`,
+            transformBox: "view-box",
+            transformOrigin: `${CX}px ${CY}px`,
             transition: `transform ${SPIN_MS}ms cubic-bezier(0.15, 0.85, 0.2, 1)`,
           }}
         >
