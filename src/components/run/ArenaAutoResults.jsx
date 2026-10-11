@@ -54,8 +54,8 @@ export function useArenaAutoResults({ enabled, run, busy, onWin, onLoss }) {
         if (m) {
           const current = fns.current.run;
           const playing = current?.round_status === "playing";
-          const startedAt = toMs(current?.round_started_at || current?.updated_date);
-          const counts = playing && toMs(m.finished_at) >= startedAt;
+         const startedAt = toMs(current?.round_started_at);
+          const counts = playing && startedAt > 0 && toMs(m.finished_at) >= startedAt;
           await base44.entities.ArenaMatch.update(m.id, {
             applied: true,
             outcome: counts ? "counted" : "ignored",
