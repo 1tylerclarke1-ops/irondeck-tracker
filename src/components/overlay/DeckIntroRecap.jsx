@@ -181,22 +181,21 @@ export default function DeckIntroRecap({ season, onDone }) {
   }, [decays]);
 
   // Animation timeline: banner stamp → line → rotted → arrow → scavenged → hold → cross-fade.
+  // Runs once when loading finishes, so later phase changes don't cancel the remaining timers.
+  const started = phase !== "loading";
   useEffect(() => {
-    if (phase === "loading") return;
-    const timers = [];
-    if (phase === "banner") {
-      timers.push(setTimeout(() => setPhase("line"), 450));
-      timers.push(setTimeout(() => setPhase("rotted"), 950));
-      timers.push(setTimeout(() => setPhase("arrow"), 1450));
-      timers.push(setTimeout(() => setPhase("scavenged"), 1950));
-      timers.push(setTimeout(() => setPhase("outro"), HOLD_MS));
-    }
-    if (phase === "outro") {
-      timers.push(setTimeout(() => finish(), FADE_MS));
-    }
+    if (!started) return;
+    const timers = [
+      setTimeout(() => setPhase("line"), 450),
+      setTimeout(() => setPhase("rotted"), 950),
+      setTimeout(() => setPhase("arrow"), 1450),
+      setTimeout(() => setPhase("scavenged"), 1950),
+      setTimeout(() => setPhase("outro"), HOLD_MS),
+      setTimeout(() => finish(), HOLD_MS + FADE_MS),
+    ];
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [started]);
 
   const overlayOpacity =
     phase === "loading" || phase === "outro" ? 0 : 1;
