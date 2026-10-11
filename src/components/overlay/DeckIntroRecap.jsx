@@ -10,7 +10,7 @@ const SURVIVED = `${DPRE}158b6c909_survived.png`;
 const DEATH_RUN = `${DPRE}a1e57edaa_death-run.png`;
 // TDC Gaming shield (transparent PNG). Forges in at the centre, then docks
 // top-left as a channel badge while the recap plays. Leave "" to skip it.
-const LOGO_IMG = "";
+const LOGO_IMG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 const LOGO_MS = 2700; // recap starts this long after the logo begins
 const LOGO_H = 600;
 const LOGO_W = Math.round(LOGO_H * 0.782);
