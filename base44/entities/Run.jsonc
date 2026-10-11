@@ -74,6 +74,11 @@
       ],
       "default": "playing",
       "description": "Status of the current round"
+    },
+    "round_started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the current round started"
     }
   },
   "required": [
