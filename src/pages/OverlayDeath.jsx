@@ -12,7 +12,8 @@ const DEATH_VIGNETTE = `${PRE}be70dc153_death-vignette.png`;
 const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
 const DECK_VERIFIED = `${PRE}2b65f8dfa_deck-verified.png`;
 
-const INTRO_MS = 500;
+const INTRO_MS = 900;
+const FRESH_MS = 30 * 60 * 1000; // only play a death that happened in the last 30 minutes
 const COUNTDOWN_FROM = 5;
 const WHEEL_HOLD_MS = 2000;
 const CARDS_IN_MS = 600;
@@ -80,12 +81,22 @@ export default function OverlayDeath() {
     };
   }, []);
 
-  // Poll latest DecayEvent every second
+    // Poll the latest DecayEvent for the ACTIVE season only
   useEffect(() => {
     let active = true;
     const load = async () => {
       try {
-        const list = await base44.entities.DecayEvent.list("-updated_date", 1);
+        const seasons = await base44.entities.Season.filter({ status: "active" });
+        const s = seasons && seasons[0];
+        if (!s) {
+          if (active) setEvent(null);
+          return;
+        }
+        const list = await base44.entities.DecayEvent.filter(
+          { season_id: s.id },
+          "-updated_date",
+          1
+        );
         if (active) setEvent(list && list.length ? list[0] : null);
       } catch {
         // keep last event on error
@@ -129,7 +140,9 @@ export default function OverlayDeath() {
 
   // Start the sequence when a "death" event arrives
   useEffect(() => {
-    if (event && event.step === "death" && playedFor.current !== event.id) {
+    const fresh =
+      event && Date.now() - new Date(event.created_date || 0).getTime() < FRESH_MS;
+    if (event && event.step === "death" && fresh && playedFor.current !== event.id) {
       playedFor.current = event.id;
       eventIdRef.current = event.id;
       setSeq(event);
@@ -362,7 +375,7 @@ export default function OverlayDeath() {
     <div className="w-screen h-screen" style={{ background: "transparent" }}>
       <style>{`
         @keyframes odVignetteIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes odPanelRise { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+               @keyframes odPanelRise { 0% { transform: translate(-50%, 70vh); opacity: 0; } 25% { opacity: 1; } 70% { transform: translate(-50%, -54%); } 100% { transform: translate(-50%, -50%); opacity: 1; } }
         @keyframes odWheelShrink { from { transform: scale(1); opacity: 1; } to { transform: scale(0.55); opacity: 0; } }
         @keyframes odCardInLeft { from { transform: translateX(-120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes odCardInRight { from { transform: translateX(120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -403,7 +416,7 @@ export default function OverlayDeath() {
           opacity: fadingOut ? 0 : 1,
           animation: fadingOut
             ? "odFadeOut 0.6s ease forwards"
-            : "odPanelRise 0.5s ease",
+            : "odPanelRise 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both",
           transition: fadingOut ? "opacity 0.6s ease" : "none",
         }}
       >
