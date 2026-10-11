@@ -197,11 +197,10 @@ export default function DeckIntroRecap({ season, onDone }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
-  const overlayOpacity =
-    phase === "loading" || phase === "outro" ? 0 : 1;
+  const overlayOpacity = phase === "outro" ? 0 : 1;
 
   if (phase === "loading") {
-    // Transparent while deciding; deck grid stays visible behind.
+    // Solid cover while deciding, so the deck never shows loading in behind.
     return (
       <div
         style={{
@@ -209,7 +208,7 @@ export default function DeckIntroRecap({ season, onDone }) {
           inset: 0,
           zIndex: 60,
           pointerEvents: "none",
-          opacity: 0,
+          background: INTRO_BG_STYLE,
         }}
       />
     );
