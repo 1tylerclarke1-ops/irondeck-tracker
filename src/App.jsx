@@ -17,9 +17,17 @@ import OverlayDeck from './pages/OverlayDeck';
 import OverlayDeckIntro from './pages/OverlayDeckIntro';
 import OverlayDecay from './pages/OverlayDecay';
 import OverlayDeath from './pages/OverlayDeath';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+    const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const location = useLocation();
+  const isAuthPage = AUTH_PAGES.includes(location.pathname);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -30,8 +38,8 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
+  // Handle authentication errors (never on the login pages themselves, or it loops)
+  if (authError && !isAuthPage) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
@@ -50,6 +58,10 @@ const AuthenticatedApp = () => {
       <Route path="/overlay/deck-intro" element={<OverlayDeckIntro />} />
       <Route path="/overlay/decay" element={<OverlayDecay />} />
       <Route path="/overlay/death" element={<OverlayDeath />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/" element={<SeasonSetup />} />
         <Route path="/run-tracker" element={<RunTracker />} />
