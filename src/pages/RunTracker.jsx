@@ -11,6 +11,11 @@ import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 import { performDecay } from "@/lib/performDecay";
 import { createDayLog, deleteLatestDayLogForRun } from "@/lib/dayLog";
+import {
+  useArenaAutoResults,
+  useAutoResultsSetting,
+  ArenaAutoStatus,
+} from "@/components/run/ArenaAutoResults";
 
 export default function RunTracker() {
   const [season, setSeason] = useState(null);
@@ -123,10 +128,11 @@ export default function RunTracker() {
     try {
       if (inProgress) {
         const prev = snapshot(inProgress);
-        await base44.entities.Run.update(inProgress.id, {
+         await base44.entities.Run.update(inProgress.id, {
           round_wins: 0,
           round_losses: 0,
           round_status: "playing",
+          round_started_at: new Date().toISOString(),
         });
         setHistory((h) => [...h, prev]);
       } else {
@@ -143,6 +149,7 @@ export default function RunTracker() {
           round_wins: 0,
           round_losses: 0,
           round_status: "playing",
+          round_started_at: new Date().toISOString(),
           result: "in_progress",
         });
         setHistory([]);
@@ -276,6 +283,15 @@ export default function RunTracker() {
     }
   };
 
+  const [autoOn, setAutoOn] = useAutoResultsSetting();
+  const autoLast = useArenaAutoResults({
+    enabled: autoOn && !loading && Boolean(season),
+    run: inProgress,
+    busy,
+    onWin: recordWin,
+    onLoss: recordLoss,
+  });
+
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto p-6">
@@ -362,8 +378,9 @@ export default function RunTracker() {
           canStart={canStart}
           failingRules={failingRules}
           rulesLoading={rulesLoading}
-          decayDue={decayDue}
+                    decayDue={decayDue}
         />
+        <ArenaAutoStatus on={autoOn} setOn={setAutoOn} last={autoLast} />
         {decayApplying && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
