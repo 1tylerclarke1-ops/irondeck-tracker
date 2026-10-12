@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 // Matches that finished before the round started, or while no round is
 // playing, are marked "ignored" so they never count later.
 
-const CHECK_MS = 4000;
+const CHECK_MS = 2000;
 const SETTING_KEY = "irondeck-auto-results";
 const toMs = (v) => (v ? new Date(v).getTime() : 0);
 
