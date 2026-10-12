@@ -221,7 +221,7 @@ export default function Overlay() {
 
   return (
     <div
-      className="w-screen h-screen flex items-start justify-center pt-10"
+      className="w-screen h-screen flex items-start justify-center pt-0"
       style={{ background: "transparent" }}
     >
       <style>{`
@@ -240,7 +240,7 @@ export default function Overlay() {
           gap: "0.6rem",
         }}
       >
-        <span style={irondeckText(24)}>IRONDECK</span>
+
         <div
           style={{
             position: "relative",
