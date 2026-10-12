@@ -1,7 +1,10 @@
 import { base44 } from "@/api/base44Client";
 import { fetchRollCards } from "@/lib/decayRoll";
-import { fetchCardArtById } from "@/lib/scryfall";
 import { num } from "@/components/run/runHelpers";
+
+// Direct Scryfall image links (redirect to the image); no lookup needed.
+const scryImage = (id, version) =>
+  id ? `https://api.scryfall.com/cards/${id}?format=image&version=${version}` : "";
 
 // Run the full decay flow for a dead run and create a single "death" DecayEvent.
 export async function performDecay({ season, cards, run }) {
@@ -31,37 +34,32 @@ export async function performDecay({ season, cards, run }) {
     cardType: chosen.card_type,
   });
 
-  // 3. Fetch the removed card's image and every wheel card's art in parallel.
-  const fetches = [
-    chosen.scryfall_id
-      ? fetchCardArtById(chosen.scryfall_id)
-      : Promise.resolve(null),
-    ...uniqueCards.map((c) =>
-      c.scryfall_id ? fetchCardArtById(c.scryfall_id) : Promise.resolve(null)
-    ),
-  ];
-  const results = await Promise.all(fetches);
-  const removedImage = results[0]?.normal || "";
-  const wheelArt = results.slice(1).map((r) => r?.artCrop || "");
+  // 3. Image links for the removed card and the wheel (no extra requests).
+  const removedImage = scryImage(chosen.scryfall_id, "normal");
+  const wheelArt = uniqueCards.map((c) => scryImage(c.scryfall_id, "art_crop"));
 
   // 4. Apply the decay to the cards.
+  //    (the removal and the replacement are saved at the same time)
   const targetZone = chosen.zone || "main";
   const newCopies = Math.max(num(chosen.copies) - 1, 0);
-  await base44.entities.Card.update(chosen.id, { copies: newCopies });
   const now = new Date().toISOString();
   const existing = cards.find(
     (c) => c.name === replacement.name && (c.zone || "main") === targetZone
   );
   let replacementCardId;
+  const removeWrite = base44.entities.Card.update(chosen.id, { copies: newCopies });
   if (existing) {
     replacementCardId = existing.id;
-    await base44.entities.Card.update(existing.id, {
-      copies: num(existing.copies) + 1,
-      is_decay_replacement: true,
-      decayed_at: now,
-    });
+    await Promise.all([
+      removeWrite,
+      base44.entities.Card.update(existing.id, {
+        copies: num(existing.copies) + 1,
+        is_decay_replacement: true,
+        decayed_at: now,
+      }),
+    ]);
   } else {
-    const created = await base44.entities.Card.create({
+    const [, created] = await Promise.all([removeWrite, base44.entities.Card.create({
       season_id: season.id,
       name: replacement.name,
       copies: 1,
@@ -75,7 +73,7 @@ export async function performDecay({ season, cards, run }) {
       outside_the_game: Boolean(replacement.outside_the_game),
       is_decay_replacement: true,
       decayed_at: now,
-    });
+    })]);
     replacementCardId = created?.id || null;
   }
 
@@ -105,19 +103,16 @@ export async function performDecay({ season, cards, run }) {
   );
   const sideboardRotted = sideHasCopies && !mainHasOutside;
 
-  if (sideboardRotted) {
-    const toZero = postCards.filter(
-      (c) => (c.zone || "main") === "sideboard" && num(c.copies) > 0
-    );
-    if (toZero.length) {
-      await base44.entities.Card.bulkUpdate(
-        toZero.map((c) => ({ id: c.id, copies: 0 }))
-      );
-    }
-  }
+  const toZero = sideboardRotted
+    ? postCards.filter((c) => (c.zone || "main") === "sideboard" && num(c.copies) > 0)
+    : [];
 
-  // 6. Create the Decay record.
-  const decay = await base44.entities.Decay.create({
+  // 6. Clear the sideboard (if it rotted) and create the Decay record together.
+  const [, decay] = await Promise.all([
+    toZero.length
+      ? base44.entities.Card.bulkUpdate(toZero.map((c) => ({ id: c.id, copies: 0 })))
+      : Promise.resolve(null),
+    base44.entities.Decay.create({
     season_id: season.id,
     run_id: run.id,
     attempt_number: run.attempt_number,
@@ -130,7 +125,8 @@ export async function performDecay({ season, cards, run }) {
     sideboard_rotted: sideboardRotted,
     replacement_rule: replacementRule,
     date: now,
-  });
+    }),
+  ]);
 
   // 7. Create one DecayEvent with everything, step "death".
   const event = await base44.entities.DecayEvent.create({
