@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
+import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
 
 const RUST = "#cc5a3a";
@@ -75,9 +75,10 @@ export default function Overlay() {
           setData({ season: null });
           return;
         }
-        const [runs, climbs] = await Promise.all([
+        const [runs, climbs, logs] = await Promise.all([
           base44.entities.Run.filter({ season_id: season.id }),
           base44.entities.Climb.list(),
+          loadDayLogs(season.id),
         ]);
         if (!active) return;
         const sortedRuns = [...runs].sort(
@@ -91,18 +92,11 @@ export default function Overlay() {
           (a, b) => (b.number || 0) - (a.number || 0)
         );
         const latestClimb = sortedClimbs[0];
-        let day = null;
-        if (latestClimb) {
-          if (latestClimb.status === "active" && latestClimb.start_date) {
-            day =
-              differenceInCalendarDays(
-                new Date(),
-                new Date(latestClimb.start_date)
-              ) + 1;
-          } else if (latestClimb.status === "complete") {
-            day = latestClimb.days_taken || null;
-          }
-        }
+        const day = roundDay({
+          logs,
+          climb: latestClimb,
+          playing: currentRun?.round_status === "playing",
+        });
         const completed = climbs.filter(
           (c) => c.status === "complete" && c.days_taken != null
         );
