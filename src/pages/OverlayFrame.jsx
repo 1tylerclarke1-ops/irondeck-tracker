@@ -263,14 +263,14 @@ export default function OverlayFrame() {
             animation: "fr-pulse 3s ease-in-out infinite",
           }}
         >
-          <path d="M1912 270 C1892 232 1916 202 1898 162 S1916 104 1896 62" strokeOpacity="0.9" />
-          <path d="M1920 268 C1862 250 1822 274 1762 258 S1684 272 1612 256" strokeOpacity="0.85" />
-          <path d="M1904 272 C1880 246 1868 220 1846 236" strokeOpacity="0.6" strokeWidth="3.5" />
+          <path d="M1905 270 C1885 320 1915 360 1893 410 S1912 490 1880 550 S1905 610 1887 660" strokeOpacity="0.9" />
+          <path d="M1920 270 C1860 290 1820 265 1760 288 S1680 274 1610 290" strokeOpacity="0.85" />
+          <path d="M1912 280 C1896 318 1908 352 1890 380" strokeOpacity="0.6" strokeWidth="3.5" />
         </g>
         <g fill="#ffd38a" style={{ filter: "drop-shadow(0 0 8px rgba(255,140,40,1))" }}>
-          <circle cx="1896" cy="62" r="5" />
-          <circle cx="1612" cy="256" r="5" />
-          <circle cx="1846" cy="236" r="4" />
+          <circle cx="1880" cy="550" r="5" />
+          <circle cx="1610" cy="290" r="5" />
+          <circle cx="1887" cy="660" r="4" />
         </g>
       </svg>
 
