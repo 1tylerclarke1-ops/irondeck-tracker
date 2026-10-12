@@ -10,7 +10,7 @@ const RUST = "#a35a3d";
 
 const TOTAL_HEIGHT = 1080;
 const ROW_GAP = 4;
-const MAX_ROW = 74;
+const MAX_ROW = 34;
 const MIN_ROW = 22;
 const FRAME_W = 482;
 
@@ -271,7 +271,7 @@ export default function OverlayDeck({ outro } = {}) {
 
   const OUTER_PAD = 32;
   const PANEL_PAD_V = 28;
-  const HEADER_H = 56;
+  const HEADER_H = 0;
   const SECTION_H = 30;
   const SUB_H = 22;
   const outroReserve = isOutro && n > 0 ? 100 : isOutro && n === 0 ? 60 : 0;
@@ -324,7 +324,7 @@ export default function OverlayDeck({ outro } = {}) {
       <div style={{ display: "flex", justifyContent: "flex-start" }}>
         <div
           style={{
-            width: FRAME_W + 24,
+            width: "fit-content",
             background: "rgba(10,10,12,0.5)",
             border: "2px solid #5A462E",
             borderRadius: 12,
@@ -332,12 +332,6 @@ export default function OverlayDeck({ outro } = {}) {
             boxSizing: "border-box",
           }}
         >
-          <div style={{ textAlign: "center", marginBottom: 10 }}>
-            <div style={irondeckText(30)}>IRONDECK</div>
-            <div style={goldText(20)}>
-              SEASON {seasonNumber ?? "—"} · DAY {day ?? "—"}
-            </div>
-          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
             <SectionTitle title="MAIN DECK" count={mainCount} />
             {mainCards.map((c) => (
