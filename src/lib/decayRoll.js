@@ -14,8 +14,6 @@ const COLOUR_LAND = {
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const colourClause = (season) => `id<=${(season.colours || "").toLowerCase()}`;
-const randomUrl = (q) =>
-  `https://api.scryfall.com/cards/random?q=${encodeURIComponent(q)}`;
 
 const normalize = (data) => ({
   name: data.name,
@@ -93,26 +91,14 @@ const buildQueryList = (cardType, rarity, season) => {
       query: `${base} r:${rarity} ${f.q}`,
       label: f.label,
       fallback: idx > 0,
-      kind: "random",
     });
     list.push({
       query: `${base} r:${OTHER_RARITY[rarity]} ${f.q}`,
       label: f.label,
       fallback: idx > 0,
-      kind: "random",
     });
   });
   return list;
-};
-
-const fetchRandom = async (q) => {
-  try {
-    const res = await fetch(randomUrl(q));
-    if (!res.ok) return { status: res.status, data: null };
-    return { status: res.status, data: await res.json() };
-  } catch {
-    return { status: 0, data: null };
-  }
 };
 
 const fetchNamedExact = async (name) => {
@@ -127,73 +113,92 @@ const fetchNamedExact = async (name) => {
   }
 };
 
-// Fetch 13 cards (up to 12 decoys + replacement last) from Scryfall. The
-// replacement and decoys share one locked query (the first that returns
-// matches). Land decays fall back to a random season basic land. The
-// replacement (last slot) must resolve or this throws.
+const searchUrl = (q, page) =>
+  `https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&page=${page}`;
+
+const fetchSearch = async (q, page = 1) => {
+  try {
+    const res = await fetch(searchUrl(q, page));
+    if (!res.ok) return { status: res.status, data: null };
+    return { status: res.status, data: await res.json() };
+  } catch {
+    return { status: 0, data: null };
+  }
+};
+
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+// Fetch 13 cards (up to 12 decoys + replacement last) from Scryfall.
+// Fast version: one search per query (plus one random page when there is more
+// than one page of results), instead of one request per card. The first query
+// that has usable cards is locked; the replacement and decoys come from it.
+// Land decays fall back to a random season basic land. The replacement (last
+// slot) must resolve or this throws.
 export async function fetchRollCards({ rarity, season, deckCards, cardType }) {
-  const seen = new Set();
-  const decoys = [];
   const queryList = buildQueryList(cardType, rarity, season);
   const isLand = cardType === "land";
+  const usable = (data) => {
+    if (!isValid(data)) return false;
+    const existing = deckCards.find((c) => c.name === data.name);
+    return !(existing && num(existing.copies) >= 4);
+  };
 
-  // 1. Lock the first query that returns matches (non-404). Land falls back to basics.
   let locked = null;
+  let picked = [];
   for (const item of queryList) {
-    const { status } = await fetchRandom(item.query);
-    await delay(100);
-    if (status === 404) continue;
+    const first = await fetchSearch(item.query, 1);
+    if (!first.data) {
+      await delay(100);
+      continue; // 404 = no matches for this query; try the next one
+    }
+    let list = first.data.data || [];
+    const pages = Math.ceil((first.data.total_cards || list.length) / 175);
+    if (pages > 1) {
+      const page = 1 + Math.floor(Math.random() * pages);
+      if (page !== 1) {
+        await delay(100);
+        const other = await fetchSearch(item.query, page);
+        if (other.data?.data?.length) list = other.data.data;
+      }
+    }
+    const seen = new Set();
+    const pool = shuffle(list.filter(usable)).filter((d) => {
+      if (seen.has(d.name)) return false;
+      seen.add(d.name);
+      return true;
+    });
+    if (pool.length === 0) continue;
     locked = item;
+    picked = pool.slice(0, 13).map(normalize);
     break;
   }
+
   if (!locked && isLand) {
     locked = { kind: "basic", label: "basic land", fallback: true };
+    const seen = new Set();
+    for (let i = 0; i < 8 && picked.length < 5; i++) {
+      const data = await fetchNamedExact(pickBasicLand(season));
+      await delay(100);
+      if (!isValid(data) || seen.has(data.name)) continue;
+      seen.add(data.name);
+      picked.push(normalize(data));
+    }
   }
-  if (!locked) {
+  if (!locked || picked.length === 0) {
     throw new Error("Could not find a replacement card for the decay roll.");
   }
 
   const replacementRule = `${cardType} → ${locked.label}${
     locked.fallback ? " (fallback)" : ""
   }`;
-
-  // 2. Fetch one distinct, valid card from the locked query (or basic fallback).
-  const fetchOne = async () => {
-    if (locked.kind === "basic") {
-      const name = pickBasicLand(season);
-      const data = await fetchNamedExact(name);
-      await delay(100);
-      if (!isValid(data) || seen.has(data.name)) return null;
-      return normalize(data);
-    }
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const { status, data } = await fetchRandom(locked.query);
-      await delay(100);
-      if (status === 404) return null;
-      if (!data || !isValid(data)) continue;
-      if (seen.has(data.name)) continue;
-      const existing = deckCards.find((c) => c.name === data.name);
-      if (existing && num(existing.copies) >= 4) continue;
-      return normalize(data);
-    }
-    return null;
-  };
-
-  // 3. Replacement first (must resolve or throw).
-  const replacement = await fetchOne();
-  if (!replacement) {
-    throw new Error("Could not find a replacement card for the decay roll.");
-  }
-  seen.add(replacement.name);
-
-  // 4. Fill up to 12 decoys (skip when unavailable).
-  while (decoys.length < 12) {
-    const card = await fetchOne();
-    if (!card) break;
-    seen.add(card.name);
-    decoys.push(card);
-  }
-
+  const [replacement, ...decoys] = picked;
   const allCards = [...decoys, replacement];
   const rollCards = allCards.map((c) => ({ name: c.name, image_url: c.imageUrl }));
   return { cards: allCards, rollCards, replacement, replacementRule };
