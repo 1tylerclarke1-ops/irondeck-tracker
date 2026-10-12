@@ -386,8 +386,8 @@ export default function Overlay() {
                     alt=""
                     draggable={false}
                     style={{
-                      width: 46,
-                      height: 46,
+                      width: 72,
+                      height: 72,
                       objectFit: "contain",
                       filter: filled
                         ? `drop-shadow(0 0 8px ${RED_GLOW})`
