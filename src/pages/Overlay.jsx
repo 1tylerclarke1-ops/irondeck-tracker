@@ -33,6 +33,23 @@ const LOSS_2 = `${DPRE}0901a13ba_loss-2.png`;
 const SURVIVED = `${DPRE}158b6c909_survived.png`;
 const DEATH_RUN = `${DPRE}a1e57edaa_death-run.png`;
 
+// Arena constructed rank emblems: one image sheet, 4 columns (Tier 1 → 4, left
+// to right) × 6 rows (Bronze, Silver, Gold, Platinum, Diamond, Mythic).
+// Paste the uploaded rank-emblems.png link between the quotes. Leave "" for text only.
+const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/78b084191_rank-emblems.png";
+const RANK_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
+const RANK_ANIM_MS = 2600;
+
+// One number per rank position, so we can tell up from down.
+const rankScore = (r) =>
+  r
+    ? RANK_ROWS.indexOf(r.rank_class) * 100 +
+      (r.rank_class === "Mythic" ? 0 : (4 - (Number(r.tier) || 4)) * 10) +
+      (Number(r.step) || 0)
+    : null;
+const rankPos = (r) =>
+  r ? RANK_ROWS.indexOf(r.rank_class) * 10 + (r.rank_class === "Mythic" ? 0 : 4 - (Number(r.tier) || 4)) : null;
+
 const SLOT_W = 110;
 const SLOT_GAP = 6;
 
@@ -49,6 +66,9 @@ export default function Overlay() {
   const [igniteSlot, setIgniteSlot] = useState(null);
   const [pulseSlot, setPulseSlot] = useState(null);
   const [flashPip, setFlashPip] = useState(null);
+  const [rankAnim, setRankAnim] = useState(null); // { kind: "up" | "down" | "step", key }
+  const prevRank = useRef(null);
+  const rankTimer = useRef(null);
 
   const prevActive = useRef(null);
   const prevWins = useRef(null);
@@ -78,10 +98,13 @@ export default function Overlay() {
           setData({ season: null });
           return;
         }
-        const [runs, climbs, logs] = await Promise.all([
+        const [runs, climbs, logs, ranks] = await Promise.all([
           base44.entities.Run.filter({ season_id: season.id }),
           base44.entities.Climb.list(),
           loadDayLogs(season.id),
+          base44.entities.ArenaRank
+            ? base44.entities.ArenaRank.list("-created_date", 1).catch(() => [])
+            : Promise.resolve([]),
         ]);
         if (!active) return;
         const sortedRuns = [...runs].sort(
@@ -107,7 +130,7 @@ export default function Overlay() {
           ? Math.min(...completed.map((c) => c.days_taken))
           : null;
 
-        setData({ season, currentRun, bestRun, day, record });
+        setData({ season, currentRun, bestRun, day, record, rank: ranks[0] || null });
       } catch (e) {
         // keep last data on error
       }
@@ -119,6 +142,25 @@ export default function Overlay() {
       clearInterval(id);
     };
   }, []);
+
+  // Rank changes: rank up / rank down / step gained (not on first load)
+  useEffect(() => {
+    const r = data?.rank;
+    if (!r) return;
+    const before = prevRank.current;
+    prevRank.current = r;
+    if (!before) return;
+    const pos0 = rankPos(before);
+    const pos1 = rankPos(r);
+    let kind = null;
+    if (pos1 > pos0) kind = "up";
+    else if (pos1 < pos0) kind = "down";
+    else if (rankScore(r) > rankScore(before)) kind = "step";
+    if (!kind) return;
+    setRankAnim({ kind, key: Date.now(), fromStep: Number(before.step) || 0 });
+    if (rankTimer.current) clearTimeout(rankTimer.current);
+    rankTimer.current = setTimeout(() => setRankAnim(null), RANK_ANIM_MS);
+  }, [data?.rank]);
 
   // Animate only on value changes, not on every refresh.
   useEffect(() => {
@@ -294,14 +336,15 @@ export default function Overlay() {
           <div style={{ display: "flex", gap: SLOT_GAP }}>
             {WIN_SLOTS.map((slot) => {
               const isReached = slot <= wins;
+              // key includes the state so the label is redrawn cleanly when it
+              // changes (a background fade here broke the text clipping)
               return (
                 <div
-                  key={slot}
+                  key={`${slot}-${isReached ? "won" : "open"}`}
                   style={{
                     width: SLOT_W,
                     textAlign: "center",
                     ...(isReached ? goldText(17) : steelText(17, true)),
-                    transition: "background 0.3s ease",
                   }}
                 >
                   {slot === 1 ? "1 Win" : `${slot} Wins`}
@@ -384,6 +427,13 @@ export default function Overlay() {
           </div>
         </div>
 
+        {s?.rank && (
+          <>
+            <Divider />
+            <RankBlock key={rankAnim?.key || "rank"} rank={s.rank} anim={rankAnim} />
+          </>
+        )}
+
         </div>
       </div>
       {survived && (
@@ -403,6 +453,142 @@ export default function Overlay() {
             pointerEvents: "none",
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// Current Arena rank: emblem, rank + tier, and step pips (6 per tier).
+// Animates on rank up (burst + "RANK UP"), rank down (shake), and steps gained.
+function RankBlock({ rank, anim }) {
+  const cls = rank.rank_class || "";
+  const row = RANK_ROWS.indexOf(cls);
+  const isMythic = cls === "Mythic";
+  const tier = Math.min(4, Math.max(1, Number(rank.tier) || 4));
+  const col = isMythic ? 0 : tier - 1;
+  const size = 96;
+  const steps = Math.max(0, Math.min(6, Number(rank.step) || 0));
+  const label = isMythic
+    ? rank.leaderboard_place
+      ? `#${rank.leaderboard_place}`
+      : rank.percentile
+      ? `${Math.round(Number(rank.percentile))}%`
+      : ""
+    : `TIER ${tier}`;
+  const up = anim?.kind === "up";
+  const down = anim?.kind === "down";
+  const stepUp = anim?.kind === "step";
+  const emblemAnim = up
+    ? "ov-rankup 1.3s cubic-bezier(0.2, 0.8, 0.3, 1)"
+    : down
+    ? "ov-rankdown 0.6s ease-in-out"
+    : "none";
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "0.3rem",
+        minWidth: "130px",
+      }}
+    >
+      <style>{`
+        @keyframes ov-rankup {
+          0% { transform: scale(1); filter: brightness(1) drop-shadow(0 4px 8px rgba(0,0,0,0.8)); }
+          25% { transform: scale(1.45); filter: brightness(2) drop-shadow(0 0 26px rgba(255,190,90,1)); }
+          60% { transform: scale(0.94); filter: brightness(1.3) drop-shadow(0 0 14px rgba(255,170,60,0.8)); }
+          100% { transform: scale(1); filter: brightness(1) drop-shadow(0 4px 8px rgba(0,0,0,0.8)); }
+        }
+        @keyframes ov-rankring { 0% { transform: translate(-50%,-50%) scale(0.3); opacity: 0.95; } 100% { transform: translate(-50%,-50%) scale(2.4); opacity: 0; } }
+        @keyframes ov-rankdown {
+          0%,100% { transform: translateX(0); filter: none; }
+          20% { transform: translateX(-5px); filter: grayscale(0.6) brightness(0.7); }
+          40% { transform: translateX(5px); }
+          60% { transform: translateX(-3px); }
+          80% { transform: translateX(2px); filter: none; }
+        }
+        @keyframes ov-rankword { 0% { transform: translate(-50%, 10px) scale(0.6); opacity: 0; } 15% { transform: translate(-50%, 0) scale(1.1); opacity: 1; } 25% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%, -8px); opacity: 0; } }
+        @keyframes ov-stepin { 0% { transform: rotate(45deg) scale(1); } 40% { transform: rotate(45deg) scale(1.9); filter: brightness(2.2); } 100% { transform: rotate(45deg) scale(1); } }
+      `}</style>
+
+      {up && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: size / 2,
+              width: size * 1.2,
+              height: size * 1.2,
+              borderRadius: "50%",
+              border: "3px solid rgba(255,200,110,0.95)",
+              boxShadow: "0 0 24px 6px rgba(255,170,60,0.7)",
+              animation: "ov-rankring 1.1s ease-out forwards",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: -30,
+              whiteSpace: "nowrap",
+              ...goldText(24),
+              letterSpacing: "3px",
+              animation: `ov-rankword ${RANK_ANIM_MS}ms ease forwards`,
+              pointerEvents: "none",
+            }}
+          >
+            RANK UP!
+          </div>
+        </>
+      )}
+
+      {RANK_SPRITE && row >= 0 ? (
+        <div
+          style={{
+            width: size,
+            height: size,
+            backgroundImage: `url(${RANK_SPRITE})`,
+            backgroundSize: `${size * 4}px ${size * 6}px`,
+            backgroundPosition: `${-col * size}px ${-row * size}px`,
+            backgroundRepeat: "no-repeat",
+            filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.8))",
+            animation: emblemAnim,
+          }}
+        />
+      ) : null}
+      <span style={{ ...goldText(30), animation: RANK_SPRITE ? "none" : emblemAnim }}>
+        {cls.toUpperCase() || "—"}
+      </span>
+      {label && <span style={steelText(20)}>{label}</span>}
+      {!isMythic && (
+        <div style={{ display: "flex", gap: 5, marginTop: 2 }}>
+          {Array.from({ length: 6 }).map((_, i) => {
+            const filled = i < steps;
+            const fresh = stepUp && filled && i >= (anim?.fromStep || 0);
+            return (
+              <div
+                key={i}
+                style={{
+                  width: 11,
+                  height: 11,
+                  transform: "rotate(45deg)",
+                  borderRadius: 2,
+                  border: "1.5px solid #120d08",
+                  background: filled
+                    ? "linear-gradient(135deg,#FFF0CD,#D68C3C)"
+                    : "rgba(60,64,72,0.9)",
+                  boxShadow: filled ? "0 0 6px rgba(255,170,60,0.8)" : "none",
+                  animation: fresh ? `ov-stepin 0.6s ease-out ${(i - (anim?.fromStep || 0)) * 0.15}s both` : "none",
+                }}
+              />
+            );
+          })}
+        </div>
       )}
     </div>
   );
