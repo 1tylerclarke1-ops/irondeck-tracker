@@ -8,11 +8,30 @@ import useOutroAnimation from "@/hooks/useOutroAnimation";
 
 const RUST = "#a35a3d";
 
-const TOTAL_HEIGHT = 1080;
-const ROW_GAP = 4;
+const TOTAL_HEIGHT = 690; // the deck list fits in the top-left box, down to about y = 686
+const ROW_GAP = 2;
 const MAX_ROW = 34;
-const MIN_ROW = 22;
+const MIN_ROW = 14;
 const FRAME_W = 482;
+
+// Different printings of the same card (e.g. two Settle the Wreckage arts)
+// are shown as one row with the copies added together.
+function mergePrintings(list) {
+  const byKey = new Map();
+  for (const c of list) {
+    const key = `${(c.name || "").toLowerCase()}|${c.zone || "main"}`;
+    const m = byKey.get(key);
+    if (!m) {
+      byKey.set(key, { ...c });
+      continue;
+    }
+    m.copies = (Number(m.copies) || 0) + (Number(c.copies) || 0);
+    m.original_copies = (Number(m.original_copies) || 0) + (Number(c.original_copies) || 0);
+    m.is_decay_replacement = Boolean(m.is_decay_replacement || c.is_decay_replacement);
+    if (!m.scryfall_id) m.scryfall_id = c.scryfall_id;
+  }
+  return [...byKey.values()];
+}
 
 function sortDeck(cards) {
   const enriched = cards.map((c) => ({
@@ -91,9 +110,9 @@ export default function OverlayDeck({ outro } = {}) {
         );
         setDecays(decs);
         setDayLogs(logs);
-        setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main")));
+        setCards(sortDeck(mergePrintings(list.filter((c) => (c.zone || "main") === "main"))));
         setSideCards(
-          sortDeck(list.filter((c) => (c.zone || "main") === "sideboard"))
+          sortDeck(mergePrintings(list.filter((c) => (c.zone || "main") === "sideboard")))
         );
       } catch (e) {
         // keep last data on error
@@ -269,7 +288,7 @@ export default function OverlayDeck({ outro } = {}) {
     return o > 0 && o - cp > 0;
   });
 
-  const OUTER_PAD = 32;
+  const OUTER_PAD = 16;
   const PANEL_PAD_V = 28;
   const HEADER_H = 0;
   const SECTION_H = 30;
@@ -312,7 +331,7 @@ export default function OverlayDeck({ outro } = {}) {
       style={{
         background: "transparent",
         minHeight: "100vh",
-        padding: "16px 24px",
+        padding: "8px 8px",
         boxSizing: "border-box",
       }}
     >
