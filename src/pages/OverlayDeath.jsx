@@ -28,9 +28,9 @@ const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
 // away       nothing on screen; waits for the deck to be verified
 // verifiedNote  small "DECK VERIFIED · next round ready" notice, then done
 const FRESH_MS = 30 * 60 * 1000; // only play a death from the last 30 minutes
-const DEATH_DELAY_MS = 2500;
-const INTRO_MS = 900;
-const COUNTDOWN_FROM = 5;
+const DEATH_DELAY_MS = 1100; // banner slam + short hold; wheel is ready ~2s after the death
+const INTRO_MS = 1200; // panel rises, then the wheel grows in
+const COUNTDOWN_FROM = 3;
 const WHEEL_HOLD_MS = 2000;
 const HOSTAGE_MS = 1500;
 const RARITY_LOCK_MS = 1000; // pause after the rarity locks
@@ -39,7 +39,7 @@ const DRAIN_MS = 1500;
 const KNOCK_MS = 700;
 const SIDE_ROT_MS = 2000;
 const CENTERED_MS = 500;
-const RESULT_HOLD_MS = 8000; // how long the final result stays up
+const RESULT_HOLD_MS = 3500; // how long the final result stays up
 const OUTRO_MS = 800;
 const NOTE_MS = 5000; // how long the "deck verified" notice stays up
 
@@ -50,6 +50,8 @@ const PANEL_W = 920;
 const PANEL_H = 1020;
 const CARD_W = 240;
 const CARD_H = 336;
+const WHEEL_PX = 540; // on-screen wheel size (DeathWheel draws at 288px)
+const WHEEL_BASE = 288;
 const PLAYED_KEY = "irondeck-death-played";
 
 // Base44 timestamps can lack a time zone ("2026-10-11T20:35:12"); they are UTC.
@@ -373,6 +375,8 @@ export default function OverlayDeath() {
         @keyframes odKnockoff { from { transform: translateX(0) rotate(0); opacity: 1; } to { transform: translateX(-380px) rotate(-28deg); opacity: 0; } }
         @keyframes odPulse { 0%, 100% { transform: scale(1); opacity: 0.75; } 50% { transform: scale(1.08); opacity: 1; } }
         @keyframes odRarityPop { 0% { transform: scale(1.5); } 60% { transform: scale(0.94); } 100% { transform: scale(1); } }
+        @keyframes odWheelIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes odTextIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes odLandPop { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
       `}</style>
 
@@ -438,26 +442,45 @@ export default function OverlayDeath() {
               style={{ width: TITLE_W, height: "auto", marginTop: 46, opacity: 0, pointerEvents: "none" }}
             />
 
-            {/* Wheel */}
+            {/* Wheel: grows in once the panel has landed */}
             {showWheel && (
               <div
                 style={{
-                  marginTop: 24,
+                  marginTop: 14,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: 18,
+                  gap: 14,
                 }}
               >
-                <DeathWheel ref={wheelRef} cards={wheelCards} art={artMap} onLand={handleLand} />
-                {phase === "countdown" && (
-                  <div style={goldText(30)}>
-                    {countdown > 0 ? `AUTO-SPIN IN ${countdown}` : "SPINNING..."}
+                <div
+                  style={{
+                    width: WHEEL_PX,
+                    height: WHEEL_PX,
+                    animation: "odWheelIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: WHEEL_BASE,
+                      height: WHEEL_BASE,
+                      transform: `scale(${WHEEL_PX / WHEEL_BASE})`,
+                      transformOrigin: "0 0",
+                    }}
+                  >
+                    <DeathWheel ref={wheelRef} cards={wheelCards} art={artMap} onLand={handleLand} />
                   </div>
-                )}
-                {(phase === "spinning" || phase === "preloadHold") && (
-                  <div style={steelText(26)}>SPINNING...</div>
-                )}
+                </div>
+                <div style={{ height: 40, animation: "odTextIn 0.4s ease 0.9s both" }}>
+                  {phase === "countdown" && (
+                    <div style={goldText(34)}>
+                      {countdown > 0 ? `SPIN IN ${countdown}` : "SPIN!"}
+                    </div>
+                  )}
+                  {(phase === "spinning" || phase === "preloadHold") && (
+                    <div style={steelText(28)}>SPINNING...</div>
+                  )}
+                </div>
               </div>
             )}
 
