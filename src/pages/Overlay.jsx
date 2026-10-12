@@ -407,24 +407,6 @@ export default function Overlay() {
           }}
         />
       )}
-      {died && !survived && (
-        <img
-          src={DEATH_RUN}
-          alt="RUN DEATH"
-          draggable={false}
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            width: 520,
-            transform: "translate(-50%,-50%)",
-            animation:
-              "ov-titlestamp 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
-            zIndex: 50,
-            pointerEvents: "none",
-          }}
-        />
-      )}
     </div>
   );
 }
