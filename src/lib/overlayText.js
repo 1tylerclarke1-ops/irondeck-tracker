@@ -1,38 +1,45 @@
-const FONT_CINZEL = '"Cinzel", serif';
-const FONT_CINZEL_DEC = '"Cinzel Decorative", serif';
+// Text styles for every OBS overlay (HUD, death screen, deck intro, deck page).
+// Barlow Condensed with solid colours and a dark outline + shadow, so it stays
+// readable over busy card art. The IRONDECK logo keeps Cinzel Decorative.
 
-export const goldText = (fontSize) => ({
-  fontFamily: FONT_CINZEL,
-  fontWeight: 900,
-  fontSize,
-  lineHeight: 1,
-  background: "linear-gradient(180deg, #FFF0CD 0%, #D68C3C 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-  WebkitTextStroke: "1.5px #1A120C",
-  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
-});
+const FONT_TEXT = '"Barlow Condensed", "Arial Narrow", sans-serif';
+const FONT_LOGO = '"Cinzel Decorative", serif';
+const SIZE = 1.15; // Barlow is narrower than the old font, so it can be a touch bigger
 
-export const steelText = (fontSize, dark = false) => ({
-  fontFamily: FONT_CINZEL,
-  fontWeight: 700,
-  fontSize,
+// Load Barlow Condensed once, whichever overlay page uses these styles.
+if (typeof document !== "undefined" && !document.getElementById("irondeck-font")) {
+  const link = document.createElement("link");
+  link.id = "irondeck-font";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=swap";
+  document.head.appendChild(link);
+}
+
+// Dark outline behind the letters plus a soft drop shadow.
+const OUTLINE =
+  "0 0 2px #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 2px 0 #000, 0 3px 6px rgba(0,0,0,0.95)";
+
+const solid = (fontSize, color, fontWeight, extra = {}) => ({
+  fontFamily: FONT_TEXT,
+  fontWeight,
+  fontSize: typeof fontSize === "number" ? Math.round(fontSize * SIZE) : fontSize,
   lineHeight: 1,
-  textTransform: "uppercase",
   letterSpacing: "1px",
-  background: dark
-    ? "linear-gradient(180deg, #787E88 0%, #5A606A 100%)"
-    : "linear-gradient(180deg, #ECF0F6 0%, #8C94A0 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-  WebkitTextStroke: "1.5px #1A120C",
-  filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
+  color,
+  textShadow: OUTLINE,
+  ...extra,
 });
+
+export const goldText = (fontSize) => solid(fontSize, "#FFCF7A", 800);
+
+export const steelText = (fontSize, dark = false) =>
+  solid(fontSize, dark ? "#A3ABB7" : "#F1F4F8", 700, { textTransform: "uppercase" });
+
+export const purpleText = (fontSize) => solid(fontSize, "#E4D9FB", 800);
 
 export const irondeckText = (fontSize) => ({
-  fontFamily: FONT_CINZEL_DEC,
+  fontFamily: FONT_LOGO,
   fontWeight: 900,
   fontSize,
   lineHeight: 1,
@@ -42,17 +49,4 @@ export const irondeckText = (fontSize) => ({
   color: "transparent",
   WebkitTextStroke: "1.5px #1A120C",
   filter: "drop-shadow(0 3px 3px rgba(0,0,0,0.8))",
-});
-
-export const purpleText = (fontSize) => ({
-  fontFamily: FONT_CINZEL,
-  fontWeight: 900,
-  fontSize,
-  lineHeight: 1,
-  background: "linear-gradient(180deg, #E8E0F8 0%, #B8A8D8 100%)",
-  WebkitBackgroundClip: "text",
-  backgroundClip: "text",
-  color: "transparent",
-  WebkitTextStroke: "1px #2A2040",
-  filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.8))",
 });
