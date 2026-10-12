@@ -10,50 +10,30 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
-const findAppCard = (appList, arenaName, zone) => {
-  const n = (arenaName || "").toLowerCase().trim();
-  return appList.find((c) => {
-    if ((c.zone || "main") !== zone) return false;
-    const full = (c.name || "").toLowerCase().trim();
-    const front = full.split(" // ")[0];
-    return n === full || n === front;
-  });
-};
+// The same card in different printings (art/set) counts as one card:
+// compare total copies per card name, separately for main deck and sideboard.
+const nameKey = (name) =>
+  (name || "").toLowerCase().split(/\s+\/\/\/?\s+/)[0].trim();
 
 const compareDeck = (arenaEntries, appCards, expectEmptySideboard = false) => {
-  const appActive = appCards.filter(
-    (c) =>
-      (Number(c.copies) || 0) > 0 &&
-      (!expectEmptySideboard || (c.zone || "main") !== "sideboard")
-  );
-  const arenaSum = {};
-  const unmatched = [];
+  const skipSide = (zone) => expectEmptySideboard && zone === "sideboard";
+  const totals = {}; // "zone|name" -> { name, zone, arena, app }
+  const add = (zone, name, field, copies) => {
+    const key = `${zone}|${nameKey(name)}`;
+    if (!totals[key]) totals[key] = { name, zone, arena: 0, app: 0 };
+    totals[key][field] += copies;
+  };
+  for (const c of appCards) {
+    const zone = c.zone || "main";
+    const copies = Number(c.copies) || 0;
+    if (copies > 0 && !skipSide(zone)) add(zone, c.name, "app", copies);
+  }
   for (const e of arenaEntries) {
     if (e.zone !== "main" && e.zone !== "sideboard") continue;
-    if (expectEmptySideboard && e.zone === "sideboard") continue;
-    const appCard = findAppCard(appActive, e.name, e.zone);
-    if (appCard) {
-      arenaSum[appCard.id] = (arenaSum[appCard.id] || 0) + e.copies;
-    } else {
-      unmatched.push({ name: e.name, copies: e.copies, zone: e.zone });
-    }
+    if (skipSide(e.zone)) continue;
+    add(e.zone, e.name, "arena", Number(e.copies) || 0);
   }
-  const diffs = [];
-  for (const c of appActive) {
-    const arenaCp = arenaSum[c.id] || 0;
-    const appCp = Number(c.copies) || 0;
-    if (arenaCp !== appCp) {
-      diffs.push({
-        name: c.name,
-        arena: arenaCp,
-        app: appCp,
-        zone: c.zone || "main",
-      });
-    }
-  }
-  for (const u of unmatched) {
-    diffs.push({ name: u.name, arena: u.copies, app: 0, zone: u.zone });
-  }
+  const diffs = Object.values(totals).filter((t) => t.arena !== t.app);
   return { match: diffs.length === 0, diffs };
 };
 
