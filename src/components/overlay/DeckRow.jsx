@@ -2,12 +2,16 @@ import React, { useState } from "react";
 import ManaSymbols from "@/components/overlay/ManaSymbols";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { BADGE } from "@/lib/overlayAssets";
+import { usePlateImage } from "@/lib/plateImages";
 
 const FRAME_W = 482;
 const PLATE_RATIO = 11.85; // width / height of a card's name plate
 
 // The name plate sits at 6.2%–93.8% across and 5.1%–10.4% down a Scryfall card image.
 const PLATE_IMG = { width: "114.2%", marginLeft: "-7.1%", marginTop: "-8.1%" };
+// Planeswalker frames have their name plate higher up the card.
+// (If planeswalker names sit too high or low, nudge marginTop by 0.5% at a time.)
+const PLATE_IMG_PW = { width: "114.2%", marginLeft: "-7.1%", marginTop: "-5.4%" };
 
 // Scryfall card image (redirects to the picture). Only the name plate is shown.
 const scryCardImage = (id) =>
@@ -32,8 +36,16 @@ export default function DeckRow({
   glow = false,
   imageUrl,
 }) {
-  const [failed, setFailed] = useState(false);
-  const src = failed ? null : imageUrl !== undefined ? imageUrl : scryCardImage(card.scryfall_id);
+  // 1st choice: a clean standard printing found by name; 2nd: the imported
+  // printing; last: a plain text row.
+  const plate = usePlateImage(imageUrl === undefined ? card.name : null);
+  const [failed, setFailed] = useState(0); // 1 = clean image failed, 2 = both failed
+  const fallback = scryCardImage(card.scryfall_id);
+  let src = null;
+  if (imageUrl !== undefined) src = failed ? null : imageUrl;
+  else if (plate && plate.url && failed < 1) src = plate.url;
+  else if (plate && failed < 2) src = fallback;
+  const isPw = plate?.url && failed < 1 ? plate.pw : card.card_type === "planeswalker";
   const cp = Number(copies ?? card.copies) || 0;
   const original = Number(card.original_copies) || 0;
   const isRotted = variant === "rusted";
@@ -125,10 +137,10 @@ export default function DeckRow({
             src={src}
             alt={card.name}
             draggable={false}
-            onError={() => setFailed(true)}
+            onError={() => setFailed((f) => (plate?.url && f < 1 ? 1 : 2))}
             style={{
               display: "block",
-              ...PLATE_IMG,
+              ...(isPw ? PLATE_IMG_PW : PLATE_IMG),
               filter: isRotted ? "grayscale(1) brightness(0.75)" : "none",
             }}
           />
