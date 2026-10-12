@@ -28,6 +28,9 @@ const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
 // away       nothing on screen; waits for the deck to be verified
 // verifiedNote  small "DECK VERIFIED · next round ready" notice, then done
 const FRESH_MS = 30 * 60 * 1000; // only play a death from the last 30 minutes
+const RUN_FRESH_MS = 2 * 60 * 1000; // a run that died in the last 2 minutes shows the banner straight away
+const POLL_MS = 1500;
+const PENDING_GIVE_UP_MS = 45000; // banner gives up if the rot never arrives
 const DEATH_DELAY_MS = 1100; // banner slam + short hold; wheel is ready ~2s after the death
 const INTRO_MS = 1200; // panel rises, then the wheel grows in
 const COUNTDOWN_FROM = 3;
@@ -112,6 +115,7 @@ const BOTTOM_PHASES = ["centered", "holding", "outro"];
 
 export default function OverlayDeath() {
   const [event, setEvent] = useState(null);
+  const [deadRun, setDeadRun] = useState(null);
   const [seq, setSeq] = useState(null);
   const [phase, setPhase] = useState("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_FROM);
@@ -125,6 +129,8 @@ export default function OverlayDeath() {
   const wheelRef = useRef(null);
   const playedFor = useRef(readPlayed());
   const eventIdRef = useRef(null);
+  const bannerFor = useRef(null); // run id the banner was shown for
+  const bannerStart = useRef(0);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -148,23 +154,52 @@ export default function OverlayDeath() {
           if (active) setEvent(null);
           return;
         }
-        const list = await base44.entities.DecayEvent.filter(
-          { season_id: s.id },
-          "-updated_date",
-          1
+        const [list, runs] = await Promise.all([
+          base44.entities.DecayEvent.filter({ season_id: s.id }, "-updated_date", 1),
+          base44.entities.Run.filter({ season_id: s.id }),
+        ]);
+        if (!active) return;
+        setEvent(list && list.length ? list[0] : null);
+        // A run that has just died: show the banner while the rot is worked out
+        const died = (runs || [])
+          .filter((r) => r.round_status === "died")
+          .sort((a, b) => toMs(b.updated_date) - toMs(a.updated_date))[0];
+        setDeadRun(
+          died && Date.now() - toMs(died.updated_date) < RUN_FRESH_MS ? died : null
         );
-        if (active) setEvent(list && list.length ? list[0] : null);
       } catch {
         // keep last event on error
       }
     };
     load();
-    const id = setInterval(load, 3000);
+    const id = setInterval(load, POLL_MS);
     return () => {
       active = false;
       clearInterval(id);
     };
   }, []);
+
+  // Second loss saved: slam the banner in straight away
+  useEffect(() => {
+    if (!deadRun || bannerFor.current === deadRun.id) return;
+    if (phase !== "idle" && phase !== "done" && phase !== "away") return;
+    // its rot already played (e.g. after an OBS refresh)
+    if (event && event.run_id === deadRun.id && playedFor.current === event.id) {
+      bannerFor.current = deadRun.id;
+      return;
+    }
+    bannerFor.current = deadRun.id;
+    bannerStart.current = Date.now();
+    eventIdRef.current = null;
+    setSeq(null);
+    setPreloaded(false);
+    setPhase("waiting");
+  }, [deadRun, event, phase]);
+
+  // Loss undone while the banner waits: take it away again
+  useEffect(() => {
+    if (phase === "waiting" && !seq && !deadRun) setPhase("idle");
+  }, [phase, seq, deadRun]);
 
   // Start the sequence when a fresh "death" event arrives
   useEffect(() => {
@@ -174,6 +209,9 @@ export default function OverlayDeath() {
       playedFor.current = event.id;
       writePlayed(event.id);
       eventIdRef.current = event.id;
+      if (event.run_id) bannerFor.current = event.run_id;
+      const bannerUp = phase === "waiting" && !seq;
+      if (!bannerUp) bannerStart.current = Date.now();
       setSeq(event);
       setPreloaded(false);
       setRarityText("");
@@ -181,10 +219,10 @@ export default function OverlayDeath() {
       setRollImage(null);
       setRollBlur(false);
       setRollLanded(false);
-      setPhase("waiting");
+      if (!bannerUp) setPhase("waiting");
       preloadImages(collectUrls(event)).then(() => setPreloaded(true));
     }
-  }, [event]);
+  }, [event, phase, seq]);
 
   // After the result has gone: show the verified notice once the deck is verified
   useEffect(() => {
@@ -225,10 +263,19 @@ export default function OverlayDeath() {
 
   const handleLand = () => setPhase("wheelHold");
 
+  // Banner: dock once the rot has arrived and the banner has had its moment
+  useEffect(() => {
+    if (phase !== "waiting") return;
+    const wait = seq
+      ? Math.max(300, DEATH_DELAY_MS - (Date.now() - bannerStart.current))
+      : PENDING_GIVE_UP_MS;
+    const t = setTimeout(() => setPhase(seq ? "intro" : "idle"), wait);
+    return () => clearTimeout(t);
+  }, [phase, seq]);
+
   // Fixed-length phases
   useEffect(() => {
     const next = {
-      waiting: ["intro", DEATH_DELAY_MS],
       intro: ["countdown", INTRO_MS],
       wheelHold: ["hostage", WHEEL_HOLD_MS],
       hostage: ["rarity", HOSTAGE_MS],
