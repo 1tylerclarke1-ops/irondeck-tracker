@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import AppNav from "@/components/AppNav";
 import NoSeason from "@/components/run/NoSeason";
@@ -11,6 +10,7 @@ import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 import { performDecay } from "@/lib/performDecay";
 import { createDayLog, deleteLatestDayLogForRun } from "@/lib/dayLog";
+import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import {
   useArenaAutoResults,
   useAutoResultsSetting,
@@ -30,6 +30,7 @@ export default function RunTracker() {
   const [deathEvent, setDeathEvent] = useState(null);
   const [decayApplying, setDecayApplying] = useState(false);
   const [decayError, setDecayError] = useState(null);
+  const [dayLogs, setDayLogs] = useState([]);
 
   const loadSeason = useCallback(async () => {
     const active = await base44.entities.Season.filter({ status: "active" });
@@ -66,6 +67,10 @@ export default function RunTracker() {
     setDeathEvent(list && list.length ? list[0] : null);
   }, []);
 
+  const reloadDayLogs = useCallback(async (seasonId) => {
+    setDayLogs(await loadDayLogs(seasonId));
+  }, []);
+
   const loadClimb = useCallback(async () => {
     const all = await base44.entities.Climb.list();
     const sorted = [...all].sort((a, b) => (b.number || 0) - (a.number || 0));
@@ -83,17 +88,19 @@ export default function RunTracker() {
           loadCards(found.id),
           loadDecays(found.id),
           loadDeathEvent(found.id),
+          reloadDayLogs(found.id),
         ]);
       } else {
         setRuns([]);
         setCards([]);
         setDecays([]);
         setDeathEvent(null);
+        setDayLogs([]);
       }
     } finally {
       setLoading(false);
     }
-  }, [loadSeason, loadRuns, loadCards, loadDecays, loadDeathEvent, loadClimb]);
+  }, [loadSeason, loadRuns, loadCards, loadDecays, loadDeathEvent, loadClimb, reloadDayLogs]);
 
   useEffect(() => {
     loadAll();
@@ -104,6 +111,13 @@ export default function RunTracker() {
   );
   const inProgress = runs.find((r) => r.result === "in_progress");
   const latest = sortedRuns[0];
+
+  // DAY counts rounds played in this climb (see src/lib/roundDay.js)
+  const day = roundDay({
+    logs: dayLogs,
+    climb,
+    playing: inProgress?.round_status === "playing",
+  });
 
   const { rules, allPass } = useDeckRules(cards);
   const rulesLoading = rules.some((r) => r.pass === null || r.loading);
@@ -188,6 +202,7 @@ export default function RunTracker() {
           runWinsAfter: newRunWins,
           decayIds: [],
         });
+        await reloadDayLogs(season.id);
       }
     } finally {
       setBusy(false);
@@ -236,6 +251,7 @@ export default function RunTracker() {
           runWinsAfter: num(inProgress.total_wins),
           decayIds: decayId ? [decayId] : [],
         });
+        await reloadDayLogs(season.id);
       }
     } finally {
       setBusy(false);
@@ -255,6 +271,7 @@ export default function RunTracker() {
       await base44.entities.Run.update(target.id, prev);
       if (wasEnded && willBePlaying) {
         await deleteLatestDayLogForRun(target.id);
+        await reloadDayLogs(season.id);
       }
       setHistory((h) => h.slice(0, -1));
       await loadRuns(season.id);
@@ -268,10 +285,7 @@ export default function RunTracker() {
     setMythicBusy(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const start = climb.start_date ? new Date(climb.start_date) : null;
-      const days = start
-        ? differenceInCalendarDays(new Date(today), start) + 1
-        : 1;
+      const days = day || 1;
       await base44.entities.Climb.update(climb.id, {
         mythic_date: today,
         days_taken: days,
@@ -327,16 +341,6 @@ export default function RunTracker() {
   const runWins = num(displayRun?.total_wins);
   const best = runs.reduce((m, r) => Math.max(m, num(r.total_wins)), 0);
 
-  const day = (() => {
-    if (!climb) return null;
-    if (climb.status === "active" && climb.start_date) {
-      return differenceInCalendarDays(new Date(), new Date(climb.start_date)) + 1;
-    }
-    if (climb.status === "complete") {
-      return num(climb.days_taken) || null;
-    }
-    return null;
-  })();
 
   const showMythic = Boolean(climb && climb.status === "active");
   const survived = inProgress?.round_status === "survived";
