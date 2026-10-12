@@ -222,7 +222,8 @@ export default function Overlay() {
   return (
     <div
       className="w-screen h-screen flex items-start justify-center pt-0"
-      style={{ background: "transparent" }}
+      // centre the HUD in the space to the right of the deck list (left 400px)
+      style={{ background: "transparent", paddingLeft: 400, boxSizing: "border-box" }}
     >
       <style>{`
         @keyframes ov-ignite { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.25); filter: brightness(1.8) drop-shadow(0 0 10px rgba(255,140,40,0.9)); } 100% { transform: scale(1); filter: brightness(1); } }
