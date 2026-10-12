@@ -4,7 +4,7 @@ import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { BADGE } from "@/lib/overlayAssets";
 import { usePlateImage } from "@/lib/plateImages";
 
-const FRAME_W = 482;
+const FRAME_W = 340; // widest a row can get (keeps the deck list clear of the HUD)
 const PLATE_RATIO = 11.85; // width / height of a card's name plate
 
 // The name plate sits at 6.2%–93.8% across and 5.1%–10.4% down a Scryfall card image.
@@ -80,7 +80,7 @@ export default function DeckRow({
     <div
       style={{
         position: "relative",
-        width: FRAME_W,
+        width: badgeSize + 6 + plateW + 5, // hug the plate (+ room for its frame)
         height,
         animation: containerAnim,
         filter: glow ? "drop-shadow(0 0 8px rgba(180,140,240,0.8))" : "none",
@@ -140,6 +140,8 @@ export default function DeckRow({
             onError={() => setFailed((f) => (plate?.url && f < 1 ? 1 : 2))}
             style={{
               display: "block",
+              maxWidth: "none", // the app's base styles cap images at 100% width, which squashed the plate
+              height: "auto",
               ...(isPw ? PLATE_IMG_PW : PLATE_IMG),
               filter: isRotted ? "grayscale(1) brightness(0.75)" : "none",
             }}
