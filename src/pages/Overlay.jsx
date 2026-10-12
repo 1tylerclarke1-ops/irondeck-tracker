@@ -36,8 +36,11 @@ const DEATH_RUN = `${DPRE}a1e57edaa_death-run.png`;
 const SLOT_W = 110;
 const SLOT_GAP = 6;
 
-function activeKey(i, wins) {
-  return i < wins ? "won" : i === wins ? "current" : "future";
+// Win slots are 1-7: a slot fills once that many wins are reached.
+const WIN_SLOTS = [1, 2, 3, 4, 5, 6, 7];
+
+function activeKey(slot, wins) {
+  return slot <= wins ? "won" : "future";
 }
 
 export default function Overlay() {
@@ -127,8 +130,8 @@ export default function Overlay() {
       ? data.currentRun.round_status === "survived"
       : false;
 
-    const newActive = Array.from({ length: 8 }, (_, i) =>
-      survived ? "won" : activeKey(i, wins)
+    const newActive = WIN_SLOTS.map((slot) =>
+      survived ? "won" : activeKey(slot, wins)
     );
 
     if (prevActive.current === null) {
@@ -249,10 +252,10 @@ export default function Overlay() {
               alignItems: "center",
             }}
           >
-            {Array.from({ length: 8 }).map((_, i) => (
+            {WIN_SLOTS.map((slot, i) => (
               <Medallion
-                key={i}
-                index={i}
+                key={slot}
+                index={slot}
                 wins={wins}
                 survived={survived}
                 ignite={igniteSlot === i}
@@ -265,15 +268,15 @@ export default function Overlay() {
           <div
             style={{
               position: "relative",
-              width: 8 * SLOT_W + 7 * SLOT_GAP,
+              width: 7 * SLOT_W + 6 * SLOT_GAP,
               borderTop: `1px solid ${TIMELINE_COLOR}`,
               height: 8,
               marginTop: 2,
             }}
           >
-            {Array.from({ length: 8 }).map((_, i) => (
+            {WIN_SLOTS.map((slot, i) => (
               <div
-                key={i}
+                key={slot}
                 style={{
                   position: "absolute",
                   top: 0,
@@ -289,11 +292,11 @@ export default function Overlay() {
 
           {/* Labels row */}
           <div style={{ display: "flex", gap: SLOT_GAP }}>
-            {Array.from({ length: 8 }).map((_, i) => {
-              const isReached = i <= wins;
+            {WIN_SLOTS.map((slot) => {
+              const isReached = slot <= wins;
               return (
                 <div
-                  key={i}
+                  key={slot}
                   style={{
                     width: SLOT_W,
                     textAlign: "center",
@@ -301,7 +304,7 @@ export default function Overlay() {
                     transition: "background 0.3s ease",
                   }}
                 >
-                  {i === 1 ? "1 Win" : `${i} Wins`}
+                  {slot === 1 ? "1 Win" : `${slot} Wins`}
                 </div>
               );
             })}
