@@ -14,7 +14,10 @@ const DECK_VERIFIED = `${PRE}2b65f8dfa_deck-verified.png`;
 
 const INTRO_MS = 900;
 const FRESH_MS = 30 * 60 * 1000; // only play a death that happened in the last 30 minutes
-const DEATH_DELAY_MS = 2500; // let the HUD's DEATH RUN banner show before the wheel slides in
+const DEATH_DELAY_MS = 2500; // DEATH RUN banner holds at the centre before it docks
+const DOCK_EASE = "cubic-bezier(0.22, 1, 0.36, 1)"; // same glide as the intro badge
+const TITLE_W = 700; // banner width once docked as the panel title
+const STAMP_W = 520; // banner width at the centre (matches the HUD stamp size)
 // Base44 timestamps can lack a time zone ("2026-10-11T20:35:12"); they are UTC.
 const toMs = (v) => {
   if (!v) return 0;
@@ -380,7 +383,8 @@ export default function OverlayDeath() {
       )}:${pad(stampTime.getMinutes())}`
     : "";
 
-  if (phase === "idle" || phase === "waiting" || phase === "done") return null;
+  if (phase === "idle" || phase === "done") return null;
+  const docked = phase !== "waiting";
 
   return (
     <div className="w-screen h-screen" style={{ background: "transparent" }}>
@@ -393,6 +397,7 @@ export default function OverlayDeath() {
         @keyframes odKnockoff { from { transform: translateX(0) rotate(0); opacity: 1; } to { transform: translateX(-380px) rotate(-28deg); opacity: 0; } }
         @keyframes odStampIn { 0% { transform: translate(-50%,-50%) scale(2.4) rotate(-12deg); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1) rotate(-5deg); opacity: 1; } }
         @keyframes odFadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes odBannerSlam { 0% { transform: scale(2.5) rotate(-8deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
       `}</style>
 
       {/* Vignette */}
@@ -415,7 +420,8 @@ export default function OverlayDeath() {
         }}
       />
 
-      {/* Panel */}
+      {/* Panel (rises in as the banner docks) */}
+      {docked && (
       <div
         style={{
           position: "fixed",
@@ -457,9 +463,9 @@ export default function OverlayDeath() {
         {/* DEATH RUN title */}
         <img
           src={DEATH_RUN}
-          alt="DEATH RUN"
+          alt=""
           draggable={false}
-          style={{ width: 700, height: "auto", marginTop: 46, pointerEvents: "none" }}
+          style={{ width: TITLE_W, height: "auto", marginTop: 46, opacity: 0, pointerEvents: "none" }}
         />
 
         {/* Wheel area */}
@@ -616,6 +622,40 @@ export default function OverlayDeath() {
           </div>
         )}
         </div>
+      </div>
+      )}
+
+      {/* DEATH RUN banner: slams in at the centre, then glides up and docks
+          as the panel title (like the intro badge docking top-left) */}
+      <div
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: `calc(50% - ${PANEL_H / 2 - 46}px)`,
+          width: TITLE_W,
+          marginLeft: -TITLE_W / 2,
+          transform: docked
+            ? "translateY(0) scale(1) rotate(0deg)"
+            : `translateY(calc(${PANEL_H / 2 - 46}px - 50%)) scale(${STAMP_W / TITLE_W}) rotate(-4deg)`,
+          transition: `transform 1s ${DOCK_EASE}`,
+          opacity: fadingOut ? 0 : 1,
+          animation: fadingOut ? "odFadeOut 0.6s ease forwards" : "none",
+          zIndex: 5,
+          pointerEvents: "none",
+        }}
+      >
+        <img
+          src={DEATH_RUN}
+          alt="DEATH RUN"
+          draggable={false}
+          style={{
+            display: "block",
+            width: TITLE_W,
+            height: "auto",
+            animation: "odBannerSlam 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
+            pointerEvents: "none",
+          }}
+        />
       </div>
     </div>
   );
