@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { differenceInCalendarDays, isSameDay, parseISO } from "date-fns";
+import { isSameDay, parseISO } from "date-fns";
 import { base44 } from "@/api/base44Client";
+import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import DeckRow from "@/components/overlay/DeckRow";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
 import useOutroAnimation from "@/hooks/useOutroAnimation";
@@ -32,6 +33,7 @@ export default function OverlayDeck({ outro } = {}) {
   const [cards, setCards] = useState([]);
   const [sideCards, setSideCards] = useState([]);
   const [climb, setClimb] = useState(null);
+  const [dayLogs, setDayLogs] = useState([]);
   const [run, setRun] = useState(null);
   const [decays, setDecays] = useState([]);
 
@@ -68,11 +70,12 @@ export default function OverlayDeck({ outro } = {}) {
           setDecays([]);
           return;
         }
-        const [list, climbs, runs, decs] = await Promise.all([
+        const [list, climbs, runs, decs, logs] = await Promise.all([
           base44.entities.Card.filter({ season_id: s.id }),
           base44.entities.Climb.list(),
           base44.entities.Run.filter({ season_id: s.id }),
           base44.entities.Decay.filter({ season_id: s.id }),
+          loadDayLogs(s.id),
         ]);
         if (!active) return;
         const sortedClimbs = [...climbs].sort(
@@ -87,6 +90,7 @@ export default function OverlayDeck({ outro } = {}) {
           runs.find((r) => r.result === "in_progress") || sortedRuns[0] || null
         );
         setDecays(decs);
+        setDayLogs(logs);
         setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main")));
         setSideCards(
           sortDeck(list.filter((c) => (c.zone || "main") === "sideboard"))
@@ -103,13 +107,15 @@ export default function OverlayDeck({ outro } = {}) {
     };
   }, []);
 
-  const day = useMemo(() => {
-    if (!climb) return null;
-    if (climb.status === "active" && climb.start_date)
-      return differenceInCalendarDays(new Date(), new Date(climb.start_date)) + 1;
-    if (climb.status === "complete") return climb.days_taken || null;
-    return null;
-  }, [climb]);
+  const day = useMemo(
+    () =>
+      roundDay({
+        logs: dayLogs,
+        climb,
+        playing: run?.round_status === "playing",
+      }),
+    [dayLogs, climb, run]
+  );
 
   const seasonNumber = season?.season_number ?? null;
 
