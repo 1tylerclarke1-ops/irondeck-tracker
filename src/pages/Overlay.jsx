@@ -250,6 +250,10 @@ export default function Overlay() {
             padding: "0.7rem 1.4rem",
             color: "#fff",
             fontFamily: "sans-serif",
+            // light see-through panel: helps the text without hiding the board
+            background: "linear-gradient(180deg, rgba(8,9,14,0.5) 0%, rgba(8,9,14,0.3) 100%)",
+            borderRadius: 16,
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.07), 0 8px 24px rgba(0,0,0,0.25)",
             animation:
               survived || died
                 ? "ov-screenshake-sm 0.4s ease-in-out 0.35s"
