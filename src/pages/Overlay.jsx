@@ -60,7 +60,7 @@ function activeKey(slot, wins) {
   return slot <= wins ? "won" : "future";
 }
 
-export default function Overlay() {
+export default function Overlay({ embedded = false } = {}) {
   const [data, setData] = useState(null);
 
   const [igniteSlot, setIgniteSlot] = useState(null);
@@ -221,9 +221,12 @@ export default function Overlay() {
 
   return (
     <div
-      className="w-screen h-screen flex items-start justify-center pt-0"
-      // centre the HUD in the space to the right of the deck list (left 400px)
-      style={{ background: "transparent", paddingLeft: 400, boxSizing: "border-box" }}
+      className={embedded ? undefined : "w-screen h-screen flex items-start justify-center pt-0"}
+      style={
+        embedded
+          ? { width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent" }
+          : { background: "transparent", paddingLeft: 480, boxSizing: "border-box" }
+      }
     >
       <style>{`
         @keyframes ov-ignite { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.25); filter: brightness(1.8) drop-shadow(0 0 10px rgba(255,140,40,0.9)); } 100% { transform: scale(1); filter: brightness(1); } }
@@ -252,9 +255,9 @@ export default function Overlay() {
             color: "#fff",
             fontFamily: "sans-serif",
             // light see-through panel: helps the text without hiding the board
-            background: "linear-gradient(180deg, rgba(8,9,14,0.5) 0%, rgba(8,9,14,0.3) 100%)",
+            background: embedded ? "none" : "linear-gradient(180deg, rgba(8,9,14,0.5) 0%, rgba(8,9,14,0.3) 100%)",
             borderRadius: 16,
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.07), 0 8px 24px rgba(0,0,0,0.25)",
+            boxShadow: embedded ? "none" : "0 0 0 1px rgba(255,255,255,0.07), 0 8px 24px rgba(0,0,0,0.25)",
             animation:
               survived || died
                 ? "ov-screenshake-sm 0.4s ease-in-out 0.35s"
