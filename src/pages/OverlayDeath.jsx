@@ -1,79 +1,42 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { differenceInCalendarDays } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import DeathWheel from "@/components/overlay/DeathWheel";
 import DeathCardFrame from "@/components/overlay/DeathCardFrame";
-import { goldText, steelText, purpleText } from "@/lib/overlayText";
+import { goldText, steelText, irondeckText, purpleText } from "@/lib/overlayText";
 
 const PRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
 const DEATH_RUN = `${PRE}a1e57edaa_death-run.png`;
 const DEATH_VIGNETTE = `${PRE}be70dc153_death-vignette.png`;
 const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
+const DECK_VERIFIED = `${PRE}2b65f8dfa_deck-verified.png`;
 
-// ---- Timeline ---------------------------------------------------------------
-// waiting    DEATH RUN banner slams in at the centre
-// intro      banner docks as the panel title while the panel rises
-// countdown  wheel shows, "AUTO-SPIN IN 5"
-// spinning   wheel spins and lands on the rotted card
-// wheelHold  pause on the result
-// hostage    rotted card slides in on the left; the right slot is a mystery "?"
-// rarity     COMMON / UNCOMMON flips, slows down and locks
-// randomise  mystery fades into the randomiser (blurred while fast), lands on
-//            the scavenged card
-// drain      rotted card drains of colour
-// knock      rotted card is knocked off; scavenged card moves to the centre
-// sideRot    (only if the sideboard rotted)
-// centered / holding  result stays on screen for RESULT_HOLD_MS
-// outro      panel drops away
-// away       nothing on screen; waits for the deck to be verified
-// verifiedNote  small "DECK VERIFIED · next round ready" notice, then done
-const FRESH_MS = 30 * 60 * 1000; // only play a death from the last 30 minutes
-const DEATH_DELAY_MS = 2500;
 const INTRO_MS = 900;
-const COUNTDOWN_FROM = 5;
-const WHEEL_HOLD_MS = 2000;
-const HOSTAGE_MS = 1500;
-const RARITY_LOCK_MS = 1000; // pause after the rarity locks
-const RESULT_PAUSE_MS = 1500; // pause after the scavenged card lands
-const DRAIN_MS = 1500;
-const KNOCK_MS = 700;
-const SIDE_ROT_MS = 2000;
-const CENTERED_MS = 500;
-const RESULT_HOLD_MS = 8000; // how long the final result stays up
-const OUTRO_MS = 800;
-const NOTE_MS = 5000; // how long the "deck verified" notice stays up
-
+const FRESH_MS = 30 * 60 * 1000; // only play a death that happened in the last 30 minutes
+const DEATH_DELAY_MS = 2500; // DEATH RUN banner holds at the centre before it docks
 const DOCK_EASE = "cubic-bezier(0.22, 1, 0.36, 1)"; // same glide as the intro badge
-const TITLE_W = 700;
-const STAMP_W = 520;
-const PANEL_W = 920;
-const PANEL_H = 1020;
-const CARD_W = 240;
-const CARD_H = 336;
-const PLAYED_KEY = "irondeck-death-played";
-
+const TITLE_W = 700; // banner width once docked as the panel title
+const STAMP_W = 520; // banner width at the centre (matches the HUD stamp size)
 // Base44 timestamps can lack a time zone ("2026-10-11T20:35:12"); they are UTC.
 const toMs = (v) => {
   if (!v) return 0;
   const s = String(v);
   return new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(s) ? s : `${s}Z`).getTime();
 };
+const COUNTDOWN_FROM = 5;
+const WHEEL_HOLD_MS = 2000;
+const CARDS_IN_MS = 600;
+const ROLL_MS = 5000;
+const DRAIN_MS = 1500;
+const KNOCK_MS = 700;
+const SIDE_ROT_MS = 2000;
+const CENTERED_MS = 500;
+const VERIFIED_MS = 4000;
+const OUTRO_MS = 600;
 
-// Remember which deaths have played, so an OBS refresh doesn't replay one.
-const readPlayed = () => {
-  try {
-    return localStorage.getItem(PLAYED_KEY) || null;
-  } catch {
-    return null;
-  }
-};
-const writePlayed = (id) => {
-  try {
-    localStorage.setItem(PLAYED_KEY, id);
-  } catch {
-    // ignore
-  }
-};
+const PANEL_W = 920;
+const PANEL_H = 1020;
 
 const collectUrls = (ev) => {
   const urls = [];
@@ -81,7 +44,7 @@ const collectUrls = (ev) => {
   if (ev?.card_removed_image) urls.push(ev.card_removed_image);
   if (ev?.replacement_card_image) urls.push(ev.replacement_card_image);
   (ev?.roll_cards || []).forEach((c) => c?.image_url && urls.push(c.image_url));
-  urls.push(DEATH_RUN, DEATH_VIGNETTE, DEATH_PANEL);
+  urls.push(DEATH_RUN, DEATH_VIGNETTE, DEATH_PANEL, DECK_VERIFIED);
   return [...new Set(urls)];
 };
 
@@ -98,30 +61,23 @@ const preloadImages = (urls) =>
     )
   );
 
-const CARDS_PHASES = [
-  "hostage", "rarity", "randomise", "drain", "knock", "sideRot", "centered", "holding", "outro",
-];
-const WHEEL_PHASES = ["intro", "countdown", "preloadHold", "spinning", "wheelHold"];
-const MYSTERY_PHASES = ["hostage", "rarity"];
-const RIGHT_CENTRED = ["knock", "sideRot", "centered", "holding", "outro"];
-const LEFT_HIDDEN = ["sideRot", "centered", "holding", "outro"];
-const DRAINING = ["drain", "knock", "centered", "holding", "outro"];
-const BOTTOM_PHASES = ["centered", "holding", "outro"];
+const pad = (n) => String(n).padStart(2, "0");
 
 export default function OverlayDeath() {
   const [event, setEvent] = useState(null);
   const [seq, setSeq] = useState(null);
+  const [season, setSeason] = useState(null);
+  const [climb, setClimb] = useState(null);
   const [phase, setPhase] = useState("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_FROM);
   const [preloaded, setPreloaded] = useState(false);
+  const [rollIndex, setRollIndex] = useState(0);
+  const [rollGlow, setRollGlow] = useState(false);
   const [rarityText, setRarityText] = useState("");
-  const [rarityLocked, setRarityLocked] = useState(false);
-  const [rollImage, setRollImage] = useState(null);
-  const [rollBlur, setRollBlur] = useState(false);
-  const [rollLanded, setRollLanded] = useState(false);
+  const [stampTime, setStampTime] = useState(null);
 
   const wheelRef = useRef(null);
-  const playedFor = useRef(readPlayed());
+  const playedFor = useRef(null);
   const eventIdRef = useRef(null);
 
   useEffect(() => {
@@ -135,7 +91,7 @@ export default function OverlayDeath() {
     };
   }, []);
 
-  // Poll the latest DecayEvent for the ACTIVE season only
+    // Poll the latest DecayEvent for the ACTIVE season only
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -164,33 +120,50 @@ export default function OverlayDeath() {
     };
   }, []);
 
-  // Start the sequence when a fresh "death" event arrives
+  // Load season + climb for the verified stamp
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const seasons = await base44.entities.Season.filter({ status: "active" });
+        const climbs = await base44.entities.Climb.list();
+        if (!active) return;
+        setSeason(seasons && seasons[0] ? seasons[0] : null);
+        const sorted = [...climbs].sort(
+          (a, b) => (b.number || 0) - (a.number || 0)
+        );
+        setClimb(sorted[0] || null);
+      } catch {
+        // keep defaults
+      }
+    };
+    load();
+  }, []);
+
+  const day = useMemo(() => {
+    if (!climb) return null;
+    if (climb.status === "active" && climb.start_date)
+      return differenceInCalendarDays(new Date(), new Date(climb.start_date)) + 1;
+    if (climb.status === "complete") return climb.days_taken || null;
+    return null;
+  }, [climb]);
+
+  // Start the sequence when a "death" event arrives
   useEffect(() => {
     const born = toMs(event?.updated_at) || toMs(event?.created_date);
     const fresh = event && Date.now() - born < FRESH_MS;
     if (event && event.step === "death" && fresh && playedFor.current !== event.id) {
       playedFor.current = event.id;
-      writePlayed(event.id);
       eventIdRef.current = event.id;
       setSeq(event);
       setPreloaded(false);
+      setRollIndex(0);
+      setRollGlow(false);
       setRarityText("");
-      setRarityLocked(false);
-      setRollImage(null);
-      setRollBlur(false);
-      setRollLanded(false);
       setPhase("waiting");
       preloadImages(collectUrls(event)).then(() => setPreloaded(true));
     }
   }, [event]);
-
-  // After the result has gone: show the verified notice once the deck is verified
-  useEffect(() => {
-    if (phase !== "away" || !event) return;
-    if (event.id !== eventIdRef.current) return setPhase("done");
-    if (event.step === "verified") setPhase("verifiedNote");
-    else if (event.step !== "death") setPhase("done");
-  }, [phase, event]);
 
   // Countdown
   useEffect(() => {
@@ -208,6 +181,7 @@ export default function OverlayDeath() {
     return () => clearInterval(id);
   }, [phase]);
 
+  // Wait for preload if countdown finished early
   useEffect(() => {
     if (phase === "preloadHold" && preloaded) setPhase("spinning");
   }, [phase, preloaded]);
@@ -217,110 +191,120 @@ export default function OverlayDeath() {
     if (phase === "spinning" && wheelRef.current && seq) {
       const chosen = seq.chosen_card || seq.card_removed || null;
       if (chosen) wheelRef.current.spinTo({ name: chosen });
-      else setPhase("wheelHold");
     }
   }, [phase, seq]);
 
   const handleLand = () => setPhase("wheelHold");
 
-  // Fixed-length phases
+  // Phase timers
   useEffect(() => {
-    const next = {
-      waiting: ["intro", DEATH_DELAY_MS],
-      intro: ["countdown", INTRO_MS],
-      wheelHold: ["hostage", WHEEL_HOLD_MS],
-      hostage: ["rarity", HOSTAGE_MS],
-      drain: ["knock", DRAIN_MS],
-      knock: [seq?.sideboard_rotted ? "sideRot" : "centered", KNOCK_MS],
-      sideRot: ["centered", SIDE_ROT_MS],
-      centered: ["holding", CENTERED_MS],
-      holding: ["outro", RESULT_HOLD_MS],
-      outro: ["away", OUTRO_MS],
-      verifiedNote: ["done", NOTE_MS],
-    }[phase];
-    if (!next) return;
-    const t = setTimeout(() => setPhase(next[0]), next[1]);
-    return () => clearTimeout(t);
-  }, [phase, seq]);
-
-  // The verified notice marks the event done (so it never shows again)
-  useEffect(() => {
-    if (phase === "verifiedNote" && eventIdRef.current) {
-      base44.functions
-        .invoke("markDecayEventDone", { id: eventIdRef.current })
-        .catch(() => {});
+    if (phase === "waiting") {
+      const t = setTimeout(() => setPhase("intro"), DEATH_DELAY_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "intro") {
+      const t = setTimeout(() => setPhase("countdown"), INTRO_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "wheelHold") {
+      const t = setTimeout(() => setPhase("cardsIn"), WHEEL_HOLD_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "cardsIn") {
+      const t = setTimeout(() => setPhase("rolling"), CARDS_IN_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "drain") {
+      const t = setTimeout(() => setPhase("knock"), DRAIN_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "knock") {
+      const t = setTimeout(
+        () => setPhase(seq?.sideboard_rotted ? "sideRot" : "centered"),
+        KNOCK_MS
+      );
+      return () => clearTimeout(t);
+    }
+    if (phase === "sideRot") {
+      const t = setTimeout(() => setPhase("centered"), SIDE_ROT_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "centered") {
+      const t = setTimeout(() => setPhase("holding"), CENTERED_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "verified") {
+      setStampTime(new Date());
+      const t = setTimeout(() => setPhase("outro"), VERIFIED_MS);
+      return () => clearTimeout(t);
+    }
+    if (phase === "outro") {
+      if (eventIdRef.current) {
+        base44.functions
+          .invoke("markDecayEventDone", { id: eventIdRef.current })
+          .catch(() => {});
+      }
+      const t = setTimeout(() => setPhase("done"), OUTRO_MS);
+      return () => clearTimeout(t);
     }
   }, [phase]);
 
-  // Rarity: COMMON / UNCOMMON flips, slows down and locks on the result
+  // Rolling: rarity flip + decoy flicker
   useEffect(() => {
-    if (phase !== "rarity") return;
-    const target = String(seq?.rarity_roll || "").toUpperCase();
-    if (!target) {
-      setPhase("randomise");
-      return;
-    }
-    const other = target === "COMMON" ? "UNCOMMON" : "COMMON";
+    if (phase !== "rolling") return;
+    const cards = seq?.roll_cards || [];
+    const n = cards.length;
     const timers = [];
-    let d = 60;
-    let flips = 0;
-    const tick = () => {
-      flips += 1;
-      setRarityText(flips % 2 ? other : target);
-      if (d < 380 || flips % 2 === 0) {
-        d = Math.round(d * 1.2);
-        timers.push(setTimeout(tick, d));
-      } else {
-        timers.push(
-          setTimeout(() => {
-            setRarityText(target);
-            setRarityLocked(true);
-            timers.push(setTimeout(() => setPhase("randomise"), RARITY_LOCK_MS));
-          }, d)
-        );
-      }
-    };
-    tick();
-    return () => timers.forEach(clearTimeout);
-  }, [phase, seq]);
-
-  // Randomiser: cycles cards of that rarity (blurred while fast), then lands
-  // on the scavenged card
-  useEffect(() => {
-    if (phase !== "randomise") return;
-    const timers = [];
-    const finalImg = seq?.replacement_card_image || null;
-    const finalName = seq?.replacement_card || null;
-    const decoys = (seq?.roll_cards || []).filter(
-      (c) => c?.image_url && c.name !== finalName
-    );
-    const land = () => {
-      setRollImage(finalImg);
-      setRollBlur(false);
-      setRollLanded(true);
-      timers.push(setTimeout(() => setPhase("drain"), RESULT_PAUSE_MS));
-    };
-    if (decoys.length === 0) {
-      timers.push(setTimeout(land, 600));
+    if (n === 0) {
+      const t = setTimeout(() => setPhase("drain"), 100);
+      timers.push(t);
       return () => timers.forEach(clearTimeout);
     }
-    const TICKS = 22;
-    const FIRST = 45;
-    const LAST = 320;
-    let i = 0;
-    const tick = () => {
-      if (i >= TICKS) return land();
-      const delay = FIRST + ((LAST - FIRST) * i) / (TICKS - 1);
-      setRollImage(decoys[i % decoys.length].image_url);
-      setRollBlur(delay < 120);
-      i += 1;
-      timers.push(setTimeout(tick, delay));
+    const target = (seq?.rarity_roll || "uncommon").toUpperCase();
+    let toggle = 0;
+    let d = 70;
+    const rarityTick = () => {
+      setRarityText(toggle % 2 === 0 ? "UNCOMMON" : "COMMON");
+      toggle++;
+      if (d < 200) {
+        d += 14;
+        timers.push(setTimeout(rarityTick, d));
+      } else {
+        setRarityText(target);
+        startFlicker();
+      }
     };
-    // let the mystery card fade out before the first decoy shows
-    timers.push(setTimeout(tick, 350));
+    const startFlicker = () => {
+      setRollIndex(0);
+      setRollGlow(false);
+      const ticks = 22;
+      const gaps = ticks - 1;
+      const firstDelay = 40;
+      const lastDelay = 300;
+      let ti = 0;
+      const showTick = () => {
+        setRollIndex(ti % n);
+        setRollGlow(ti === ticks - 1);
+        if (ti < gaps) {
+          const dd = firstDelay + ((lastDelay - firstDelay) * ti) / (gaps - 1);
+          ti++;
+          timers.push(setTimeout(showTick, dd));
+        }
+      };
+      showTick();
+    };
+    rarityTick();
+    const to = setTimeout(() => setPhase("drain"), ROLL_MS);
+    timers.push(to);
     return () => timers.forEach(clearTimeout);
   }, [phase, seq]);
 
+  // Hold until the step becomes "verified"
+  useEffect(() => {
+    if (phase === "holding" && event?.step === "verified") setPhase("verified");
+  }, [phase, event]);
+
+  // Derived data from the captured sequence
   const wheelCards = useMemo(() => {
     const names = seq?.wheel_card_names || [];
     const ids = seq?.wheel_card_ids || [];
@@ -336,44 +320,84 @@ export default function OverlayDeath() {
     return map;
   }, [seq]);
 
-  if (phase === "idle" || phase === "done" || phase === "away") return null;
-
-  const removedName = seq?.card_removed || seq?.chosen_card || "";
+  const removedName = seq?.card_removed || seq?.chosen_card || null;
   const removedImg = seq?.card_removed_image || null;
-  const replacementName = seq?.replacement_card || "";
+  const replacementName =
+    seq?.replacement_card ||
+    (seq?.roll_cards && seq.roll_cards.length
+      ? seq.roll_cards[seq.roll_cards.length - 1].name
+      : null);
   const replacementImg = seq?.replacement_card_image || null;
+  const rollCards = seq?.roll_cards || [];
 
-  if (phase === "verifiedNote") {
-    return (
-      <VerifiedNote removedName={removedName} replacementName={replacementName} />
-    );
-  }
+  const showWheel = [
+    "intro",
+    "countdown",
+    "spinning",
+    "wheelHold",
+    "cardsIn",
+  ].includes(phase);
+  const showCards = [
+    "cardsIn",
+    "rolling",
+    "drain",
+    "knock",
+    "sideRot",
+    "centered",
+    "holding",
+    "verified",
+  ].includes(phase);
 
+  const rightCentered = [
+    "knock",
+    "sideRot",
+    "centered",
+    "holding",
+    "verified",
+  ].includes(phase);
+  const leftHidden = [
+    "sideRot",
+    "centered",
+    "holding",
+    "verified",
+    "outro",
+  ].includes(phase);
+  const leftKnock = phase === "knock";
+  const draining = ["drain", "knock", "centered", "holding", "verified"].includes(
+    phase
+  );
+
+  const rightImage =
+    phase === "rolling"
+      ? rollCards[rollIndex]?.image_url || replacementImg
+      : replacementImg;
+  const rightLabel =
+    phase === "rolling" ? (rollGlow ? "SCAVENGED" : null) : "SCAVENGED";
+
+  const showBottom = ["centered", "holding", "verified"].includes(phase);
+  const fadingOut = phase === "outro";
+
+  const stampLabel = stampTime
+    ? `SEASON ${season?.season_number ?? "—"} · DAY ${day ?? "—"} · ${pad(
+        stampTime.getHours()
+      )}:${pad(stampTime.getMinutes())}`
+    : "";
+
+  if (phase === "idle" || phase === "done") return null;
   const docked = phase !== "waiting";
-  const leaving = phase === "outro";
-  const showWheel = WHEEL_PHASES.includes(phase);
-  const showCards = CARDS_PHASES.includes(phase);
-  const mystery = MYSTERY_PHASES.includes(phase);
-  const rightCentred = RIGHT_CENTRED.includes(phase);
-  const resultShown = rollLanded || rightCentred;
-  const rightImg = resultShown ? replacementImg : rollImage;
-  const rightName = resultShown ? replacementName : "";
 
   return (
     <div className="w-screen h-screen" style={{ background: "transparent" }}>
       <style>{`
         @keyframes odVignetteIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes odFadeOut { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes odPanelRise { 0% { transform: translate(-50%, 70vh); opacity: 0; } 25% { opacity: 1; } 70% { transform: translate(-50%, -54%); } 100% { transform: translate(-50%, -50%); opacity: 1; } }
-        @keyframes odPanelDrop { 0% { transform: translate(-50%, -50%); opacity: 1; } 25% { transform: translate(-50%, -53%); } 100% { transform: translate(-50%, 70vh); opacity: 0; } }
-        @keyframes odBannerSlam { 0% { transform: scale(2.5) rotate(-8deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+               @keyframes odPanelRise { 0% { transform: translate(-50%, 70vh); opacity: 0; } 25% { opacity: 1; } 70% { transform: translate(-50%, -54%); } 100% { transform: translate(-50%, -50%); opacity: 1; } }
         @keyframes odWheelShrink { from { transform: scale(1); opacity: 1; } to { transform: scale(0.55); opacity: 0; } }
         @keyframes odCardInLeft { from { transform: translateX(-120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes odCardInRight { from { transform: translateX(120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes odKnockoff { from { transform: translateX(0) rotate(0); opacity: 1; } to { transform: translateX(-380px) rotate(-28deg); opacity: 0; } }
-        @keyframes odPulse { 0%, 100% { transform: scale(1); opacity: 0.75; } 50% { transform: scale(1.08); opacity: 1; } }
-        @keyframes odRarityPop { 0% { transform: scale(1.5); } 60% { transform: scale(0.94); } 100% { transform: scale(1); } }
-        @keyframes odLandPop { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
+        @keyframes odStampIn { 0% { transform: translate(-50%,-50%) scale(2.4) rotate(-12deg); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1) rotate(-5deg); opacity: 1; } }
+        @keyframes odFadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes odBannerSlam { 0% { transform: scale(2.5) rotate(-8deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
       `}</style>
 
       {/* Vignette */}
@@ -387,199 +411,222 @@ export default function OverlayDeath() {
           width: "100vw",
           height: "100vh",
           objectFit: "fill",
-          animation: leaving ? "odFadeOut 0.8s ease forwards" : "odVignetteIn 0.5s ease",
+          opacity: fadingOut ? 0 : 1,
+          animation: fadingOut
+            ? "odFadeOut 0.6s ease forwards"
+            : "odVignetteIn 0.5s ease",
+          transition: fadingOut ? "opacity 0.6s ease" : "none",
           pointerEvents: "none",
         }}
       />
 
-      {/* Panel (rises in as the banner docks, drops away at the end) */}
+      {/* Panel (rises in as the banner docks) */}
       {docked && (
-        <div
+      <div
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%,-50%)",
+          width: PANEL_W,
+          height: PANEL_H,
+          opacity: fadingOut ? 0 : 1,
+          animation: fadingOut
+            ? "odFadeOut 0.6s ease forwards"
+            : "odPanelRise 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both",
+          transition: fadingOut ? "opacity 0.6s ease" : "none",
+        }}
+      >
+        <img
+          src={DEATH_PANEL}
+          alt=""
+          draggable={false}
           style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%,-50%)",
+            position: "absolute",
+            inset: 0,
             width: PANEL_W,
             height: PANEL_H,
-            animation: leaving
-              ? "odPanelDrop 0.8s cubic-bezier(0.5, 0, 0.75, 0) forwards"
-              : "odPanelRise 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) both",
+            objectFit: "fill",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            position: "relative",
+            width: PANEL_W,
+            height: PANEL_H,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
-          <img
-            src={DEATH_PANEL}
-            alt=""
-            draggable={false}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: PANEL_W,
-              height: PANEL_H,
-              objectFit: "fill",
-              pointerEvents: "none",
-            }}
-          />
+        {/* DEATH RUN title */}
+        <img
+          src={DEATH_RUN}
+          alt=""
+          draggable={false}
+          style={{ width: TITLE_W, height: "auto", marginTop: 46, opacity: 0, pointerEvents: "none" }}
+        />
+
+        {/* Wheel area */}
+        {showWheel && (
           <div
             style={{
-              position: "relative",
-              width: PANEL_W,
-              height: PANEL_H,
+              marginTop: 24,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              gap: 18,
+              animation:
+                phase === "cardsIn" ? "odWheelShrink 0.6s ease forwards" : "none",
             }}
           >
-            {/* Spacer where the docked DEATH RUN banner sits */}
-            <img
-              src={DEATH_RUN}
-              alt=""
-              draggable={false}
-              style={{ width: TITLE_W, height: "auto", marginTop: 46, opacity: 0, pointerEvents: "none" }}
+            <DeathWheel
+              ref={wheelRef}
+              cards={wheelCards}
+              art={artMap}
+              onLand={handleLand}
             />
+            {phase === "countdown" && (
+              <div style={goldText(30)}>
+                {countdown > 0 ? `AUTO-SPIN IN ${countdown}` : "SPINNING..."}
+              </div>
+            )}
+            {phase === "spinning" && (
+              <div style={steelText(26)}>SPINNING...</div>
+            )}
+          </div>
+        )}
 
-            {/* Wheel */}
-            {showWheel && (
+        {/* Cards area */}
+        {showCards && (
+          <div
+            style={{
+              position: "relative",
+              width: 800,
+              height: 420,
+              marginTop: 18,
+            }}
+          >
+            {/* Rarity flip text */}
+            {phase === "rolling" && rarityText && (
               <div
                 style={{
-                  marginTop: 24,
+                  position: "absolute",
+                  top: -8,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  ...goldText(26),
+                }}
+              >
+                {rarityText}
+              </div>
+            )}
+
+            {/* Left (rotted) frame */}
+            <DeathCardFrame
+              image={removedImg}
+              name={removedName}
+              label="ROTTED"
+              tone="rot"
+              drained={draining}
+              style={{
+                position: "absolute",
+                left: 130,
+                top: 30,
+                opacity: leftHidden ? 0 : 1,
+                animation: leftKnock
+                  ? "odKnockoff 0.7s ease forwards"
+                  : phase === "cardsIn"
+                  ? "odCardInLeft 0.6s ease"
+                  : "none",
+              }}
+            />
+
+            {/* Right (replacement) frame */}
+            <DeathCardFrame
+              image={rightImage}
+              name={rightImage ? replacementName : rollCards[rollIndex]?.name || replacementName}
+              label={rightLabel}
+              tone="gold"
+              style={{
+                position: "absolute",
+                left: rightCentered ? 280 : 430,
+                top: 30,
+                transition: "left 0.7s cubic-bezier(0.2,0.8,0.3,1)",
+                animation:
+                  phase === "cardsIn" ? "odCardInRight 0.6s ease" : "none",
+              }}
+            />
+
+            {/* Bottom text */}
+            {phase === "sideRot" && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  textAlign: "center",
+                }}
+              >
+                <span style={purpleText(40)}>THE SIDEBOARD ROTS</span>
+              </div>
+            )}
+            {showBottom && (
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: 18,
+                  gap: 10,
                 }}
               >
-                <DeathWheel ref={wheelRef} cards={wheelCards} art={artMap} onLand={handleLand} />
-                {phase === "countdown" && (
-                  <div style={goldText(30)}>
-                    {countdown > 0 ? `AUTO-SPIN IN ${countdown}` : "SPINNING..."}
-                  </div>
-                )}
-                {(phase === "spinning" || phase === "preloadHold") && (
-                  <div style={steelText(26)}>SPINNING...</div>
-                )}
-              </div>
-            )}
-
-            {/* Cards */}
-            {showCards && (
-              <div style={{ position: "relative", width: 800, height: 470, marginTop: 30 }}>
-                {/* Rarity */}
-                {(phase === "rarity" || (rarityLocked && !rightCentred)) && rarityText && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: -14,
-                      left: 0,
-                      right: 0,
-                      display: "flex",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <div
-                      key={rarityLocked ? "locked" : "flip"}
-                      style={{
-                        ...(rarityLocked ? goldText(40) : steelText(34)),
-                        letterSpacing: "4px",
-                        animation: rarityLocked ? "odRarityPop 0.45s ease-out" : "none",
-                      }}
-                    >
-                      {rarityText}
-                    </div>
-                  </div>
-                )}
-
-                {/* Left: the rotted card, held hostage */}
-                <DeathCardFrame
-                  image={removedImg}
-                  name={removedName}
-                  label="ROTTED"
-                  tone="rot"
-                  drained={DRAINING.includes(phase)}
-                  style={{
-                    position: "absolute",
-                    left: 130,
-                    top: 70,
-                    opacity: LEFT_HIDDEN.includes(phase) ? 0 : 1,
-                    animation:
-                      phase === "knock"
-                        ? "odKnockoff 0.7s ease forwards"
-                        : phase === "hostage"
-                        ? "odCardInLeft 0.6s ease"
-                        : "none",
-                  }}
-                />
-
-                {/* Right: mystery card, then the randomiser, then the scavenged card */}
-                <div
-                  style={{
-                    position: "absolute",
-                    left: rightCentred ? 280 : 430,
-                    top: 70,
-                    width: CARD_W,
-                    height: CARD_H,
-                    transition: "left 0.7s cubic-bezier(0.2,0.8,0.3,1)",
-                    animation: phase === "hostage" ? "odCardInRight 0.6s ease 0.25s both" : "none",
-                  }}
-                >
-                  <MysteryCard visible={mystery} />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      opacity: mystery ? 0 : 1,
-                      transition: "opacity 0.35s ease",
-                    }}
-                  >
-                    <div
-                      key={rollLanded ? "landed" : "rolling"}
-                      style={{
-                        filter: rollBlur ? "blur(3px) brightness(1.15)" : "none",
-                        animation: rollLanded && !rightCentred ? "odLandPop 0.5s ease-out" : "none",
-                      }}
-                    >
-                      <DeathCardFrame
-                        image={rightImg}
-                        name={rightName}
-                        label={resultShown ? "SCAVENGED" : null}
-                        tone="gold"
-                      />
-                    </div>
-                  </div>
+                <div style={goldText(26)}>
+                  REMOVE 1 {removedName} · ADD 1 {replacementName}
+                  {seq?.sideboard_rotted ? " · Remove all sideboard cards" : ""}
                 </div>
-
-                {phase === "sideRot" && (
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, textAlign: "center" }}>
-                    <span style={purpleText(40)}>THE SIDEBOARD ROTS</span>
-                  </div>
-                )}
-                {BOTTOM_PHASES.includes(phase) && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 10,
-                    }}
-                  >
-                    <div style={goldText(26)}>
-                      REMOVE 1 {removedName} · ADD 1 {replacementName}
-                      {seq?.sideboard_rotted ? " · Remove all sideboard cards" : ""}
-                    </div>
-                    <div style={steelText(20)}>Update your deck in Arena</div>
-                  </div>
-                )}
+                <div style={steelText(20)}>Update your deck in Arena</div>
               </div>
             )}
           </div>
+        )}
+
+        {/* Verified stamp */}
+        {phase === "verified" && (
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%,-50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 14,
+              animation: "odStampIn 0.35s cubic-bezier(0.15,0.9,0.3,1) both",
+              pointerEvents: "none",
+            }}
+          >
+            <img
+              src={DECK_VERIFIED}
+              alt="DECK VERIFIED"
+              draggable={false}
+              style={{ width: 700, height: "auto", pointerEvents: "none" }}
+            />
+            <div style={steelText(22)}>{stampLabel}</div>
+          </div>
+        )}
         </div>
+      </div>
       )}
 
-      {/* DEATH RUN banner: slams in at the centre, then docks as the panel title */}
+      {/* DEATH RUN banner: slams in at the centre, then glides up and docks
+          as the panel title (like the intro badge docking top-left) */}
       <div
         style={{
           position: "fixed",
@@ -591,7 +638,8 @@ export default function OverlayDeath() {
             ? "translateY(0) scale(1) rotate(0deg)"
             : `translateY(calc(${PANEL_H / 2 - 46}px - 50%)) scale(${STAMP_W / TITLE_W}) rotate(-4deg)`,
           transition: `transform 1s ${DOCK_EASE}`,
-          animation: leaving ? "odFadeOut 0.5s ease forwards" : "none",
+          opacity: fadingOut ? 0 : 1,
+          animation: fadingOut ? "odFadeOut 0.6s ease forwards" : "none",
           zIndex: 5,
           pointerEvents: "none",
         }}
@@ -608,87 +656,6 @@ export default function OverlayDeath() {
             pointerEvents: "none",
           }}
         />
-      </div>
-    </div>
-  );
-}
-
-// Face-down card on the right while the rotted card is held hostage
-function MysteryCard({ visible }) {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        borderRadius: 14,
-        border: "3px dashed rgba(214,140,60,0.8)",
-        background:
-          "radial-gradient(circle at 50% 45%, rgba(120,80,40,0.35), rgba(11,11,18,0.95) 70%)",
-        boxShadow: "0 0 18px 4px rgba(214,140,60,0.25)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.35s ease",
-      }}
-    >
-      <div style={{ ...goldText(130), animation: "odPulse 1.4s ease-in-out infinite" }}>?</div>
-    </div>
-  );
-}
-
-// Small notice once the deck has been verified in the Run Tracker
-function VerifiedNote({ removedName, replacementName }) {
-  return (
-    <div className="w-screen h-screen" style={{ background: "transparent" }}>
-      <style>{`
-        @keyframes odNote {
-          0% { transform: translate(-50%, 40px); opacity: 0; }
-          10% { transform: translate(-50%, 0); opacity: 1; }
-          90% { transform: translate(-50%, 0); opacity: 1; }
-          100% { transform: translate(-50%, 20px); opacity: 0; }
-        }
-      `}</style>
-      <div
-        style={{
-          position: "fixed",
-          left: "50%",
-          bottom: "16%",
-          display: "flex",
-          alignItems: "center",
-          gap: 22,
-          padding: "18px 34px 18px 22px",
-          borderRadius: 16,
-          background: "rgba(11,11,18,0.94)",
-          border: "2px solid rgba(214,140,60,0.85)",
-          boxShadow: "0 0 26px 6px rgba(214,140,60,0.3), 0 10px 30px rgba(0,0,0,0.6)",
-          animation: `odNote ${NOTE_MS}ms ease both`,
-          whiteSpace: "nowrap",
-        }}
-      >
-        <div
-          style={{
-            width: 58,
-            height: 58,
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #FFF0CD, #D68C3C)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#1A120C",
-            fontSize: 34,
-            fontWeight: 900,
-            flexShrink: 0,
-          }}
-        >
-          ✓
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ ...goldText(34), letterSpacing: "3px" }}>DECK VERIFIED</div>
-          <div style={steelText(19)}>
-            −1 {removedName} · +1 {replacementName} · NEXT ROUND READY
-          </div>
-        </div>
       </div>
     </div>
   );
