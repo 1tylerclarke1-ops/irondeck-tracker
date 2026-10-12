@@ -8,9 +8,15 @@ import useOutroAnimation from "@/hooks/useOutroAnimation";
 
 const RUST = "#a35a3d";
 
-const TOTAL_HEIGHT = 690; // the deck list fits in the top-left box, down to about y = 686
+// Frame layout: the deck list fills the left column under the logo corner.
+const PANEL_LEFT = 12;
+const PANEL_TOP = 282; // under the logo, which caps the sidebar (top band is 270px)
+const PANEL_W = 456;
+const PANEL_H = 1080 - PANEL_TOP - 12; // 786
+const ROW_W = PANEL_W - 28; // each row fills the panel width
+const TOTAL_HEIGHT = PANEL_H + 16;
 const ROW_GAP = 2;
-const MAX_ROW = 34;
+const MAX_ROW = 30;
 const MIN_ROW = 14;
 const FRAME_W = 482;
 
@@ -300,8 +306,9 @@ export default function OverlayDeck({ outro } = {}) {
     1 +
     (finalSide.length ? 1 : 0) +
     (finalRustedMain.length || finalRustedSide.length ? 1 : 0);
-  const subsCount =
-    (finalRustedMain.length ? 1 : 0) + (finalRustedSide.length ? 1 : 0);
+  // MAIN / SIDEBOARD subheadings only when both have rotted cards
+  const bothRotted = finalRustedMain.length > 0 && finalRustedSide.length > 0;
+  const subsCount = bothRotted ? 2 : 0;
   const totalRows =
     finalMain.length +
     finalSide.length +
@@ -331,7 +338,7 @@ export default function OverlayDeck({ outro } = {}) {
       style={{
         background: "transparent",
         minHeight: "100vh",
-        padding: "8px 8px",
+        padding: `${PANEL_TOP}px 0 0 ${PANEL_LEFT}px`,
         boxSizing: "border-box",
       }}
     >
@@ -343,10 +350,14 @@ export default function OverlayDeck({ outro } = {}) {
       <div style={{ display: "flex", justifyContent: "flex-start" }}>
         <div
           style={{
-            width: "fit-content",
-            background: "rgba(10,10,12,0.5)",
-            border: "2px solid #5A462E",
-            borderRadius: 12,
+            width: PANEL_W,
+            height: PANEL_H,
+            // iron-to-rot border: ember at the top, steel, rot purple at the bottom
+            border: "2px solid transparent",
+            background:
+              "linear-gradient(rgba(8,9,13,0.72), rgba(8,9,13,0.72)) padding-box, linear-gradient(180deg, #E8892F, #c7ced8 45%, #8a5cf0) border-box",
+            boxShadow: "0 0 22px rgba(150,80,255,0.35)",
+            borderRadius: 14,
             padding: "14px 12px",
             boxSizing: "border-box",
           }}
@@ -360,6 +371,7 @@ export default function OverlayDeck({ outro } = {}) {
                 variant="current"
                 copies={animating ? dCopies(c) : undefined}
                 height={rowH}
+                rowWidth={ROW_W}
                 corroding={animating && isCorroding(c)}
                 entering={animating && isReplacementEntering(c)}
                 salvaged={animating ? salvagedVisible(c) : undefined}
@@ -375,6 +387,7 @@ export default function OverlayDeck({ outro } = {}) {
                     variant="current"
                     copies={animating ? dCopies(c) : undefined}
                     height={rowH}
+                rowWidth={ROW_W}
                     corroding={animating && isCorroding(c)}
                     entering={animating && isReplacementEntering(c)}
                     salvaged={animating ? salvagedVisible(c) : undefined}
@@ -387,7 +400,7 @@ export default function OverlayDeck({ outro } = {}) {
                 <SectionTitle title="ROTTED" count={rottedCount} />
                 {hasRustedMain && (
                   <>
-                    <SubHeading title="MAIN" count={rustedMainCount} />
+                    {hasRustedSide && <SubHeading title="MAIN" count={rustedMainCount} />}
                     {rustedMainCards.map((r) => (
                       <DeckRow
                         key={r.card.id}
@@ -395,6 +408,7 @@ export default function OverlayDeck({ outro } = {}) {
                         variant="rusted"
                         copies={animating ? dCopies(r.card) : undefined}
                         height={rowH}
+                rowWidth={ROW_W}
                         entering={animating && isRustedEntering(r.card)}
                         glow={isOutro && todayRustedNames.has(r.card.name)}
                       />
@@ -403,7 +417,7 @@ export default function OverlayDeck({ outro } = {}) {
                 )}
                 {hasRustedSide && (
                   <>
-                    <SubHeading title="SIDEBOARD" count={rustedSideCount} />
+                    {hasRustedMain && <SubHeading title="SIDEBOARD" count={rustedSideCount} />}
                     {rustedSideCards.map((r) => (
                       <DeckRow
                         key={r.card.id}
@@ -411,6 +425,7 @@ export default function OverlayDeck({ outro } = {}) {
                         variant="rusted"
                         copies={animating ? dCopies(r.card) : undefined}
                         height={rowH}
+                rowWidth={ROW_W}
                         entering={animating && isRustedEntering(r.card)}
                         glow={isOutro && todayRustedNames.has(r.card.name)}
                       />
