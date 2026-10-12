@@ -251,6 +251,27 @@ export default function OverlayFrame() {
           <circle cx="498" cy="690" r="4" />
           <circle cx="436" cy="860" r="4" />
         </g>
+
+        {/* Ember tendrils at the top-right corner (mirror of the rot vines) */}
+        <g
+          stroke="#ff9a3c"
+          strokeWidth="5"
+          fill="none"
+          strokeLinecap="round"
+          style={{
+            filter: "drop-shadow(0 0 6px rgba(255,140,40,0.9))",
+            animation: "fr-pulse 3s ease-in-out infinite",
+          }}
+        >
+          <path d="M1912 270 C1892 232 1916 202 1898 162 S1916 104 1896 62" strokeOpacity="0.9" />
+          <path d="M1920 268 C1862 250 1822 274 1762 258 S1684 272 1612 256" strokeOpacity="0.85" />
+          <path d="M1904 272 C1880 246 1868 220 1846 236" strokeOpacity="0.6" strokeWidth="3.5" />
+        </g>
+        <g fill="#ffd38a" style={{ filter: "drop-shadow(0 0 8px rgba(255,140,40,1))" }}>
+          <circle cx="1896" cy="62" r="5" />
+          <circle cx="1612" cy="256" r="5" />
+          <circle cx="1846" cy="236" r="4" />
+        </g>
       </svg>
 
       {/* Logo corner */}
