@@ -1,621 +1,202 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { isSameDay, parseISO } from "date-fns";
-import { base44 } from "@/api/base44Client";
-import { loadDayLogs, roundDay } from "@/lib/roundDay";
-import DeckRow from "@/components/overlay/DeckRow";
-import { goldText, steelText, irondeckText } from "@/lib/overlayText";
-import useOutroAnimation from "@/hooks/useOutroAnimation";
+import React, { useState } from "react";
+import ManaSymbols from "@/components/overlay/ManaSymbols";
+import { goldText, steelText, purpleText } from "@/lib/overlayText";
+import { BADGE } from "@/lib/overlayAssets";
 
-const RUST = "#a35a3d";
-
-const TOTAL_HEIGHT = 1080;
-const ROW_GAP = 4;
-const MAX_ROW = 74;
-const MIN_ROW = 22;
 const FRAME_W = 482;
+const PLATE_RATIO = 11.85; // width / height of a card's name plate
 
-function sortDeck(cards) {
-  const enriched = cards.map((c) => ({
-    ...c,
-    _land: c.card_type === "land" ? 1 : 0,
-    _mv: c.card_type === "land" ? 999 : Number(c.mana_value) || 0,
-  }));
-  enriched.sort((a, b) => {
-    if (a._land !== b._land) return a._land - b._land;
-    if (a._mv !== b._mv) return a._mv - b._mv;
-    return (a.name || "").localeCompare(b.name || "");
-  });
-  return enriched;
-}
+// The name plate sits at 6.2%–93.8% across and 5.1%–10.4% down a Scryfall card image.
+const PLATE_IMG = { width: "114.2%", marginLeft: "-7.1%", marginTop: "-8.1%" };
 
-export default function OverlayDeck({ outro } = {}) {
-  const [season, setSeason] = useState(null);
-  const [cards, setCards] = useState([]);
-  const [sideCards, setSideCards] = useState([]);
-  const [climb, setClimb] = useState(null);
-  const [dayLogs, setDayLogs] = useState([]);
-  const [run, setRun] = useState(null);
-  const [decays, setDecays] = useState([]);
+// Scryfall card image (redirects to the picture). Only the name plate is shown.
+const scryCardImage = (id) =>
+  id ? `https://api.scryfall.com/cards/${id}?format=image&version=normal` : null;
 
-  const isOutro = useMemo(() => {
-    if (outro !== undefined) return Boolean(outro);
-    const p = new URLSearchParams(window.location.search);
-    return p.get("mode") === "outro";
-  }, [outro]);
+// Metal frames drawn in CSS so they always sit exactly on the plate.
+const FRAMES = {
+  steel: "0 0 0 1px #0b0b0d, 0 0 0 3px #b9bfca, 0 0 0 4px #6b717c, 0 0 0 5px #0b0b0d",
+  scavenged:
+    "0 0 0 1px #120a04, 0 0 0 3px #ffd38a, 0 0 0 4px #a8621e, 0 0 0 5px #120a04, 0 0 12px 2px rgba(255,140,40,0.55)",
+  rot: "0 0 0 1px #0c0616, 0 0 0 3px #d4baff, 0 0 0 4px #5a2fa8, 0 0 0 5px #0c0616, 0 0 12px 2px rgba(150,70,255,0.55)",
+};
 
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    html.style.background = "transparent";
-    body.style.background = "transparent";
-    return () => {
-      html.style.background = "";
-      body.style.background = "";
-    };
-  }, []);
+export default function DeckRow({
+  card,
+  copies,
+  variant = "current",
+  height = 74,
+  corroding = false,
+  entering = false,
+  salvaged,
+  glow = false,
+  imageUrl,
+}) {
+  const [failed, setFailed] = useState(false);
+  const src = failed ? null : imageUrl !== undefined ? imageUrl : scryCardImage(card.scryfall_id);
+  const cp = Number(copies ?? card.copies) || 0;
+  const original = Number(card.original_copies) || 0;
+  const isRotted = variant === "rusted";
+  const showScavenged =
+    salvaged !== undefined ? salvaged : Boolean(card.is_decay_replacement);
+  const boxCount = isRotted ? (original > 0 ? original - cp : 0) : cp;
+  const state = isRotted ? "rot" : showScavenged ? "scavenged" : "steel";
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const seasons = await base44.entities.Season.filter({ status: "active" });
-        if (!active) return;
-        const s = seasons && seasons[0];
-        if (!s) {
-          setSeason(null);
-          setCards([]);
-          setSideCards([]);
-          setClimb(null);
-          setRun(null);
-          setDecays([]);
-          return;
-        }
-        const [list, climbs, runs, decs, logs] = await Promise.all([
-          base44.entities.Card.filter({ season_id: s.id }),
-          base44.entities.Climb.list(),
-          base44.entities.Run.filter({ season_id: s.id }),
-          base44.entities.Decay.filter({ season_id: s.id }),
-          loadDayLogs(s.id),
-        ]);
-        if (!active) return;
-        const sortedClimbs = [...climbs].sort(
-          (a, b) => (b.number || 0) - (a.number || 0)
-        );
-        const sortedRuns = [...runs].sort(
-          (a, b) => (b.attempt_number || 0) - (a.attempt_number || 0)
-        );
-        setSeason(s);
-        setClimb(sortedClimbs[0] || null);
-        setRun(
-          runs.find((r) => r.result === "in_progress") || sortedRuns[0] || null
-        );
-        setDecays(decs);
-        setDayLogs(logs);
-        setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main")));
-        setSideCards(
-          sortDeck(list.filter((c) => (c.zone || "main") === "sideboard"))
-        );
-      } catch (e) {
-        // keep last data on error
-      }
-    };
-    load();
-    const id = setInterval(load, 5000);
-    return () => {
-      active = false;
-      clearInterval(id);
-    };
-  }, []);
+  // Plate size: fill the space right of the badge, but never taller than the row.
+  const badgeSize = height;
+  const maxPlateW = FRAME_W - badgeSize - 10;
+  const plateH = Math.min(height - 6, maxPlateW / PLATE_RATIO);
+  const plateW = plateH * PLATE_RATIO;
 
-  const day = useMemo(
-    () =>
-      roundDay({
-        logs: dayLogs,
-        climb,
-        playing: run?.round_status === "playing",
-      }),
-    [dayLogs, climb, run]
-  );
+  const countFont = Math.max(11, badgeSize * 0.5);
+  const nameFont = Math.max(9, plateH * 0.5);
+  const tagFont = Math.max(7, plateH * 0.26);
+  const manaScale = Math.max(0.45, Math.min(1.1, plateH / 40));
 
-  const seasonNumber = season?.season_number ?? null;
+  const numberStyle = isRotted
+    ? purpleText(countFont)
+    : showScavenged
+    ? goldText(countFont)
+    : steelText(countFont);
 
-  const todayDecays = useMemo(() => {
-    const now = new Date();
-    return decays
-      .filter((d) => d.date && isSameDay(parseISO(d.date), now))
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [decays]);
-
-  const todayOldest = useMemo(
-    () => [...todayDecays].sort((a, b) => new Date(a.date) - new Date(b.date)),
-    [todayDecays]
-  );
-
-  const todayRustedNames = useMemo(
-    () => new Set(todayDecays.map((d) => d.card_removed)),
-    [todayDecays]
-  );
-
-  const n = todayOldest.length;
-  const animating = isOutro && n > 0;
-  const { appliedCount, activeIdx, ticked } = useOutroAnimation(
-    isOutro,
-    todayOldest
-  );
-
-  // Per (name, zone) counts of today's removals and replacements
-  const removedTodayCount = {};
-  const replacedTodayCount = {};
-  for (const d of todayOldest) {
-    const z = d.zone || "main";
-    const rk = `${d.card_removed}|${z}`;
-    const pk = `${d.replacement_card}|${z}`;
-    removedTodayCount[rk] = (removedTodayCount[rk] || 0) + 1;
-    replacedTodayCount[pk] = (replacedTodayCount[pk] || 0) + 1;
-  }
-
-  // Pre-decay copies: reverse all of today's decays from the current deck
-  const preCopiesMap = {};
-  for (const c of [...cards, ...sideCards]) {
-    const z = c.zone || "main";
-    const k = `${c.name}|${z}`;
-    let pre = Number(c.copies) || 0;
-    if (removedTodayCount[k]) pre += removedTodayCount[k];
-    if (replacedTodayCount[k]) pre -= replacedTodayCount[k];
-    preCopiesMap[c.id] = pre;
-  }
-
-  // Decays fully applied so far
-  const removedAppliedCount = {};
-  const replacedAppliedCount = {};
-  for (let j = 0; j < appliedCount; j++) {
-    const d = todayOldest[j];
-    const z = d.zone || "main";
-    const rk = `${d.card_removed}|${z}`;
-    const pk = `${d.replacement_card}|${z}`;
-    removedAppliedCount[rk] = (removedAppliedCount[rk] || 0) + 1;
-    replacedAppliedCount[pk] = (replacedAppliedCount[pk] || 0) + 1;
-  }
-
-  const active = activeIdx != null ? todayOldest[activeIdx] : null;
-  const activeZone = active?.zone || "main";
-  const activeRemovedKey = active ? `${active.card_removed}|${activeZone}` : null;
-  const activeReplacedKey = active
-    ? `${active.replacement_card}|${activeZone}`
-    : null;
-
-  const displayCopiesPreTick = (c) => {
-    const z = c.zone || "main";
-    const k = `${c.name}|${z}`;
-    let disp = preCopiesMap[c.id] ?? (Number(c.copies) || 0);
-    disp -= removedAppliedCount[k] || 0;
-    disp += replacedAppliedCount[k] || 0;
-    return Math.max(0, disp);
-  };
-
-  const displayCopies = (c) => {
-    let disp = displayCopiesPreTick(c);
-    if (active && ticked) {
-      const z = c.zone || "main";
-      const k = `${c.name}|${z}`;
-      if (activeRemovedKey === k) disp -= 1;
-      if (activeReplacedKey === k) disp += 1;
-    }
-    return Math.max(0, disp);
-  };
-
-  const dCopies = (c) => (animating ? displayCopies(c) : Number(c.copies) || 0);
-
-  const preTickRusted = (c) => {
-    const o = Number(c.original_copies) || 0;
-    return o > 0 ? Math.max(0, o - displayCopiesPreTick(c)) : 0;
-  };
-
-  const isCorroding = (c) => {
-    if (!active || ticked) return false;
-    return activeRemovedKey === `${c.name}|${c.zone || "main"}`;
-  };
-  const isReplacementEntering = (c) => {
-    if (!active || !ticked) return false;
-    if (activeReplacedKey !== `${c.name}|${c.zone || "main"}`) return false;
-    return displayCopiesPreTick(c) === 0;
-  };
-  const isRustedEntering = (c) => {
-    if (!active || !ticked) return false;
-    if (activeRemovedKey !== `${c.name}|${c.zone || "main"}`) return false;
-    return preTickRusted(c) === 0;
-  };
-  const salvagedVisible = (c) => {
-    if (!c.is_decay_replacement) return false;
-    if (!animating) return true;
-    const z = c.zone || "main";
-    const k = `${c.name}|${z}`;
-    if (!replacedTodayCount[k]) return true;
-    let applied = replacedAppliedCount[k] || 0;
-    if (active && ticked && activeReplacedKey === k) applied += 1;
-    return applied > 0;
-  };
-
-  const mainCards = cards.filter((c) => dCopies(c) > 0);
-  const sideMain = sideCards.filter((c) => dCopies(c) > 0);
-  const rustedCards = [...cards, ...sideCards]
-    .map((c) => {
-      const o = Number(c.original_copies) || 0;
-      const d = dCopies(c);
-      return { card: c, rusted: o > 0 ? Math.max(0, o - d) : 0 };
-    })
-    .filter((r) => r.rusted > 0)
-    .sort((a, b) => b.rusted - a.rusted);
-  const rustedMainCards = rustedCards.filter(
-    (r) => (r.card.zone || "main") === "main"
-  );
-  const rustedSideCards = rustedCards.filter(
-    (r) => (r.card.zone || "main") === "sideboard"
-  );
-  const rustedMainCount = rustedMainCards.reduce((s, r) => s + r.rusted, 0);
-  const rustedSideCount = rustedSideCards.reduce((s, r) => s + r.rusted, 0);
-
-  // Final-state counts for stable row height
-  const finalMain = cards.filter((c) => (Number(c.copies) || 0) > 0);
-  const finalSide = sideCards.filter((c) => (Number(c.copies) || 0) > 0);
-  const finalRustedMain = cards.filter((c) => {
-    const o = Number(c.original_copies) || 0;
-    const cp = Number(c.copies) || 0;
-    return (c.zone || "main") === "main" && o > 0 && o - cp > 0;
-  });
-  const finalRustedSide = sideCards.filter((c) => {
-    const o = Number(c.original_copies) || 0;
-    const cp = Number(c.copies) || 0;
-    return o > 0 && o - cp > 0;
-  });
-
-  const OUTER_PAD = 32;
-  const PANEL_PAD_V = 28;
-  const HEADER_H = 56;
-  const SECTION_H = 30;
-  const SUB_H = 22;
-  const outroReserve = isOutro && n > 0 ? 100 : isOutro && n === 0 ? 60 : 0;
-  const avail = TOTAL_HEIGHT - OUTER_PAD - PANEL_PAD_V - HEADER_H - outroReserve;
-
-  const sectionsCount =
-    1 +
-    (finalSide.length ? 1 : 0) +
-    (finalRustedMain.length || finalRustedSide.length ? 1 : 0);
-  const subsCount =
-    (finalRustedMain.length ? 1 : 0) + (finalRustedSide.length ? 1 : 0);
-  const totalRows =
-    finalMain.length +
-    finalSide.length +
-    finalRustedMain.length +
-    finalRustedSide.length;
-  const totalItems = totalRows + sectionsCount + subsCount;
-  const headingsH = sectionsCount * SECTION_H + subsCount * SUB_H;
-  const gaps = totalItems > 1 ? (totalItems - 1) * ROW_GAP : 0;
-  const rowH =
-    totalRows > 0
-      ? Math.max(
-          MIN_ROW,
-          Math.min(MAX_ROW, (avail - headingsH - gaps) / totalRows)
-        )
-      : MAX_ROW;
-
-  const hasSide = sideMain.length > 0;
-  const hasRustedMain = rustedMainCards.length > 0;
-  const hasRustedSide = rustedSideCards.length > 0;
-
-  const mainCount = mainCards.reduce((s, c) => s + dCopies(c), 0);
-  const sideCount = sideMain.reduce((s, c) => s + dCopies(c), 0);
-  const rottedCount = rustedMainCount + rustedSideCount;
+  let containerAnim = "none";
+  if (corroding) containerAnim = "ovd-shake 0.5s ease-in-out infinite";
+  else if (entering)
+    containerAnim = isRotted ? "ovd-slidein 0.4s ease-out" : "ovd-dropin 0.4s ease-out";
 
   return (
     <div
       style={{
-        background: "transparent",
-        minHeight: "100vh",
-        padding: "16px 24px",
-        boxSizing: "border-box",
+        position: "relative",
+        width: FRAME_W,
+        height,
+        animation: containerAnim,
+        filter: glow ? "drop-shadow(0 0 8px rgba(180,140,240,0.8))" : "none",
       }}
     >
-      <style>{`
-        @keyframes ovd-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
-        @keyframes ovd-slidein { from { transform: translateX(-24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes ovd-dropin { from { transform: translateY(-18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      `}</style>
-      <div style={{ display: "flex", justifyContent: "flex-start" }}>
-        <div
-          style={{
-            width: FRAME_W + 24,
-            background: "rgba(10,10,12,0.88)",
-            border: "2px solid #5A462E",
-            borderRadius: 12,
-            padding: "14px 12px",
-            boxSizing: "border-box",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: 10 }}>
-            <div style={irondeckText(30)}>IRONDECK</div>
-            <div style={goldText(20)}>
-              SEASON {seasonNumber ?? "—"} · DAY {day ?? "—"}
-            </div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
-            <SectionTitle title="MAIN DECK" count={mainCount} />
-            {mainCards.map((c) => (
-              <DeckRow
-                key={c.id}
-                card={c}
-                variant="current"
-                copies={animating ? dCopies(c) : undefined}
-                height={rowH}
-                corroding={animating && isCorroding(c)}
-                entering={animating && isReplacementEntering(c)}
-                salvaged={animating ? salvagedVisible(c) : undefined}
-              />
-            ))}
-            {hasSide && (
-              <>
-                <SectionTitle title="SIDEBOARD" count={sideCount} />
-                {sideMain.map((c) => (
-                  <DeckRow
-                    key={c.id}
-                    card={c}
-                    variant="current"
-                    copies={animating ? dCopies(c) : undefined}
-                    height={rowH}
-                    corroding={animating && isCorroding(c)}
-                    entering={animating && isReplacementEntering(c)}
-                    salvaged={animating ? salvagedVisible(c) : undefined}
-                  />
-                ))}
-              </>
-            )}
-            {(hasRustedMain || hasRustedSide) && (
-              <>
-                <SectionTitle title="ROTTED" count={rottedCount} />
-                {hasRustedMain && (
-                  <>
-                    <SubHeading title="MAIN" count={rustedMainCount} />
-                    {rustedMainCards.map((r) => (
-                      <DeckRow
-                        key={r.card.id}
-                        card={r.card}
-                        variant="rusted"
-                        copies={animating ? dCopies(r.card) : undefined}
-                        height={rowH}
-                        entering={animating && isRustedEntering(r.card)}
-                        glow={isOutro && todayRustedNames.has(r.card.name)}
-                      />
-                    ))}
-                  </>
-                )}
-                {hasRustedSide && (
-                  <>
-                    <SubHeading title="SIDEBOARD" count={rustedSideCount} />
-                    {rustedSideCards.map((r) => (
-                      <DeckRow
-                        key={r.card.id}
-                        card={r.card}
-                        variant="rusted"
-                        copies={animating ? dCopies(r.card) : undefined}
-                        height={rowH}
-                        entering={animating && isRustedEntering(r.card)}
-                        glow={isOutro && todayRustedNames.has(r.card.name)}
-                      />
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-      {isOutro && n === 0 && <DaySurvivedBanner />}
-      {isOutro && n > 0 && <OutroPanel run={run} decays={todayDecays} />}
-    </div>
-  );
-}
-
-function SectionTitle({ title, count }) {
-  return (
-    <div
-      style={{
-        height: 30,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-end",
-      }}
-    >
-      <div
+      {/* Diamond copies badge */}
+      <img
+        src={BADGE[state]}
+        alt=""
+        draggable={false}
         style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          padding: "0 4px",
-        }}
-      >
-        <span style={{ ...steelText(18), fontWeight: 900, letterSpacing: "2px" }}>
-          {title}
-        </span>
-        <span style={{ ...goldText(16) }}>{count}</span>
-      </div>
-      <div
-        style={{
-          height: 1,
-          background: "#5A462E",
-          marginTop: 3,
-          opacity: 0.85,
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: badgeSize,
+          height: badgeSize,
+          objectFit: "contain",
+          pointerEvents: "none",
         }}
       />
-    </div>
-  );
-}
-
-function SubHeading({ title, count }) {
-  return (
-    <div
-      style={{
-        height: 22,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 12px",
-      }}
-    >
-      <span style={{ ...steelText(13), fontWeight: 900, letterSpacing: "1.5px" }}>
-        {title}
-      </span>
-      <span style={{ ...goldText(12) }}>{count}</span>
-    </div>
-  );
-}
-
-function DaySurvivedBanner() {
-  return (
-    <div style={{ marginTop: "14px", display: "flex", justifyContent: "center" }}>
-      <div
+      <span
         style={{
-          padding: "10px 28px",
-          borderRadius: "8px",
-          background: "rgba(20,23,29,0.82)",
-          border: "1px solid #2d8a4e",
-          color: "#fff",
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          fontSize: "1.2rem",
-          textShadow: "0 1px 3px rgba(0,0,0,0.8)",
-        }}
-      >
-        DAY SURVIVED
-      </div>
-    </div>
-  );
-}
-
-function OutroPanel({ run, decays }) {
-  const status = run?.round_status;
-  const wins = run?.round_wins ?? 0;
-  const losses = run?.round_losses ?? 0;
-  const resultLabel =
-    status === "survived"
-      ? "DAY SURVIVED"
-      : status === "died"
-      ? "RUN DIED"
-      : "IN PROGRESS";
-  const resultColor =
-    status === "survived"
-      ? "#2d8a4e"
-      : status === "died"
-      ? "#c0392b"
-      : RUST;
-
-  return (
-    <div
-      style={{
-        marginTop: "14px",
-        display: "flex",
-        gap: "16px",
-        alignItems: "stretch",
-      }}
-    >
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "10px 18px",
-          borderRadius: "8px",
-          background: "rgba(20,23,29,0.82)",
-          border: `1px solid ${resultColor}`,
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: badgeSize,
+          height: badgeSize,
           display: "flex",
-          flexDirection: "column",
+          alignItems: "center",
           justifyContent: "center",
-          minWidth: 200,
+          ...numberStyle,
+          WebkitTextStroke: "1px #0A0806",
         }}
       >
-        <span
-          style={{
-            fontSize: "0.6rem",
-            letterSpacing: "0.18em",
-            fontWeight: 700,
-            color: resultColor,
-          }}
-        >
-          TODAY
-        </span>
-        <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#fff" }}>
-          {resultLabel}
-        </span>
-        <span
-          style={{
-            fontSize: "0.85rem",
-            fontWeight: 700,
-            color: "rgba(255,255,255,0.7)",
-          }}
-        >
-          {wins}–{losses}
-        </span>
-      </div>
+        {boxCount}
+      </span>
+
+      {/* Card name plate, framed */}
       <div
         style={{
-          flex: 1,
-          padding: "10px 16px",
-          borderRadius: "8px",
-          background: "rgba(20,23,29,0.82)",
-          border: "1px solid rgba(255,255,255,0.12)",
+          position: "absolute",
+          left: badgeSize + 6,
+          top: (height - plateH) / 2,
+          width: plateW,
+          height: plateH,
+          borderRadius: plateH * 0.22,
+          overflow: "hidden",
+          background: "#1b1c21",
+          boxShadow: FRAMES[state],
         }}
       >
-        <div
-          style={{
-            fontSize: "0.6rem",
-            letterSpacing: "0.18em",
-            fontWeight: 700,
-            color: RUST,
-            marginBottom: "6px",
-          }}
-        >
-          CARDS RUSTED TODAY
-        </div>
-        {decays.length === 0 ? (
-          <div
+        {src ? (
+          <img
+            src={src}
+            alt={card.name}
+            draggable={false}
+            onError={() => setFailed(true)}
             style={{
-              fontSize: "0.85rem",
-              color: "rgba(255,255,255,0.55)",
+              display: "block",
+              ...PLATE_IMG,
+              filter: isRotted ? "grayscale(1) brightness(0.75)" : "none",
             }}
-          >
-            No decay today.
-          </div>
+          />
         ) : (
+          // No image (loading or blocked): readable name + mana cost on a dark plate
           <div
             style={{
+              height: "100%",
               display: "flex",
-              flexWrap: "wrap",
-              gap: "6px 18px",
+              alignItems: "center",
+              gap: 8,
+              padding: `0 ${plateH * 0.3}px`,
+              background: "linear-gradient(180deg, #2a2b31, #17181c)",
             }}
           >
-            {decays.map((d, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.82rem",
-                  color: "#fff",
-                }}
-              >
-                <span
-                  style={{
-                    textDecoration: "line-through",
-                    color: "rgba(255,255,255,0.6)",
-                  }}
-                >
-                  {d.card_removed}
-                </span>
-                <span style={{ color: RUST, fontWeight: 800 }}>→</span>
-                <span style={{ fontWeight: 700 }}>{d.replacement_card}</span>
-              </div>
-            ))}
+            <span
+              style={{
+                flex: 1,
+                fontFamily: '"Barlow Condensed", "Arial Narrow", sans-serif',
+                fontWeight: 700,
+                fontSize: nameFont,
+                color: isRotted ? "#cbbbe6" : "#ece6d8",
+                textShadow: "0 1px 2px #000",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {card.name}
+            </span>
+            <div style={{ transform: `scale(${manaScale})`, transformOrigin: "right center" }}>
+              <ManaSymbols cost={card.mana_cost} />
+            </div>
           </div>
         )}
+        {isRotted && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(90,40,170,0.45)",
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+            }}
+          />
+        )}
       </div>
+      {showScavenged && !isRotted && (
+          <span
+            style={{
+              position: "absolute",
+              left: badgeSize + 6 + plateW - plateH * 2.2,
+              top: (height - plateH) / 2,
+              transform: "translate(-100%, -55%)",
+              padding: "2px 5px",
+              borderRadius: 4,
+              background: "linear-gradient(180deg,#FFF0CD,#D68C3C)",
+              color: "#1A120C",
+              fontSize: tagFont,
+              fontWeight: 800,
+              letterSpacing: "0.05em",
+              lineHeight: 1,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.6)",
+            }}
+          >
+            SCAVENGED
+          </span>
+        )}
     </div>
   );
 }
