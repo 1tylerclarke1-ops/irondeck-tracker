@@ -35,6 +35,7 @@ export default function DeckRow({
   salvaged,
   glow = false,
   imageUrl,
+  rowWidth, // when set: the plate zooms to fill this row width (frame layout)
 }) {
   // 1st choice: a clean standard printing found by name; 2nd: the imported
   // printing; last: a plain text row.
@@ -56,11 +57,26 @@ export default function DeckRow({
 
   // Plate size: fill the space right of the badge, but never taller than the row.
   const badgeSize = height;
+  const fill = Boolean(rowWidth);
   const maxPlateW = FRAME_W - badgeSize - 10;
-  const plateH = Math.min(height - 6, maxPlateW / PLATE_RATIO);
-  const plateW = plateH * PLATE_RATIO;
+  // Fill mode: the plate is as wide as the row allows; the name bar is zoomed
+  // to that width and centred, trimming a little off its top and bottom.
+  const plateH = fill ? height - 4 : Math.min(height - 6, maxPlateW / PLATE_RATIO);
+  // Zoom no further than showing 66% of the name bar's height: the card name
+  // and mana symbols use about 60% of it, so they never clip.
+  const plateW = fill
+    ? Math.min(rowWidth - badgeSize - 6 - 5, (plateH * PLATE_RATIO) / 0.66)
+    : plateH * PLATE_RATIO;
+  // Name-bar centre on a Scryfall image, as a fraction of the image WIDTH:
+  // standard cards 7.75% down the card, planeswalkers 6.05% (image is 1.393x taller than wide).
+  const barCentre = (isPw ? 0.0605 : 0.0775) * 1.3934 * 1.142;
+  const fillImg = {
+    width: plateW * 1.142,
+    marginLeft: -0.071 * plateW,
+    marginTop: plateH / 2 - barCentre * plateW,
+  };
 
-  const countFont = Math.max(11, badgeSize * 0.5);
+  const countFont = Math.max(11, badgeSize * (fill ? 0.64 : 0.5));
   const nameFont = Math.max(9, plateH * 0.5);
   const tagFont = Math.max(7, plateH * 0.26);
   const manaScale = Math.max(0.45, Math.min(1.1, plateH / 40));
@@ -81,6 +97,7 @@ export default function DeckRow({
       style={{
         position: "relative",
         width: badgeSize + 6 + plateW + 5, // hug the plate (+ room for its frame)
+        margin: fill ? "0 auto" : undefined, // centred in the deck column
         height,
         animation: containerAnim,
         filter: glow ? "drop-shadow(0 0 8px rgba(180,140,240,0.8))" : "none",
@@ -142,7 +159,7 @@ export default function DeckRow({
               display: "block",
               maxWidth: "none", // the app's base styles cap images at 100% width, which squashed the plate
               height: "auto",
-              ...(isPw ? PLATE_IMG_PW : PLATE_IMG),
+              ...(fill ? fillImg : isPw ? PLATE_IMG_PW : PLATE_IMG),
               filter: isRotted ? "grayscale(1) brightness(0.75)" : "none",
             }}
           />
