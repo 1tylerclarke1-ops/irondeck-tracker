@@ -4,6 +4,7 @@ import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import IntroLayout from "@/components/overlay/IntroLayout";
 import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
 import Sentencing from "@/components/overlay/Sentencing";
+const LOGO_IMG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 import useCardImagesById from "@/hooks/useCardImagesById";
 
 function sortDeck(list) {
@@ -21,6 +22,14 @@ export default function OverlayDeckIntro() {
   const [dayLogs, setDayLogs] = useState([]);
   const [recapDone, setRecapDone] = useState(false);
   const [sentenceDone, setSentenceDone] = useState(false);
+  const [badgeOn, setBadgeOn] = useState(false);
+  const [stageScale, setStageScale] = useState(1);
+  useEffect(() => {
+    const fit = () => setStageScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
   const recapOff = useMemo(
     () => new URLSearchParams(window.location.search).get("recap") === "off",
     []
@@ -142,10 +151,18 @@ export default function OverlayDeckIntro() {
         images={images}
       />
       {!recapDone && !recapOff && (
-        <DeckIntroRecap season={season} onDone={() => setRecapDone(true)} />
+        <DeckIntroRecap season={season} onBadge={() => setBadgeOn(true)} onDone={() => setRecapDone(true)} />
       )}
-      {(recapDone || recapOff) && !sentenceDone && (
-        <Sentencing season={season} cards={allCards} onDone={() => setSentenceDone(true)} />
+      {!sentenceDone && (
+        <Sentencing season={season} cards={allCards} active={recapDone || recapOff} onDone={() => setSentenceDone(true)} />
+      )}
+      {(badgeOn || recapDone || recapOff) && (
+        <div style={{ position: "fixed", left: "50%", top: "50%", width: 1920, height: 1080, zIndex: 70, pointerEvents: "none",
+          transform: `translate(-50%, -50%) scale(${stageScale})` }}>
+          <img src={LOGO_IMG} alt="" draggable={false}
+            style={{ position: "absolute", left: 17, top: 40, height: 190, width: "auto", maxWidth: "none",
+              filter: "drop-shadow(0 0 18px rgba(255,110,20,0.55)) drop-shadow(0 6px 10px #000)" }} />
+        </div>
       )}
     </>
   );
