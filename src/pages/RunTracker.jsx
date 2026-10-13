@@ -9,6 +9,7 @@ import VerifyDeck from "@/components/run/VerifyDeck";
 import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 import { performDecay } from "@/lib/performDecay";
+import { ensureCondemned, serveBlockDay, clearCondemned } from "@/lib/condemned";
 import { createDayLog, deleteLatestDayLogForRun } from "@/lib/dayLog";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import {
@@ -140,6 +141,7 @@ export default function RunTracker() {
   const startRound = async () => {
     setBusy(true);
     try {
+      await ensureCondemned({ season, cards });
       if (inProgress) {
         const prev = snapshot(inProgress);
          await base44.entities.Run.update(inProgress.id, {
@@ -168,7 +170,7 @@ export default function RunTracker() {
         });
         setHistory([]);
       }
-      await loadRuns(season.id);
+      await Promise.all([loadRuns(season.id), loadSeason()]);
     } finally {
       setBusy(false);
     }
@@ -203,6 +205,8 @@ export default function RunTracker() {
           decayIds: [],
         });
         await reloadDayLogs(season.id);
+        await serveBlockDay(season);
+        await loadSeason();
       }
     } finally {
       setBusy(false);
@@ -228,8 +232,10 @@ export default function RunTracker() {
         setDecayApplying(true);
         let decayId = null;
         try {
-          const decayResult = await performDecay({ season, cards, run: inProgress });
+          const decayResult = await performDecay({ season, cards, run: inProgress, condemned: season.condemned_card });
           decayId = decayResult?.decayId || null;
+          await clearCondemned(season);
+          loadSeason();
           await Promise.all([
             loadCards(season.id),
             loadDecays(season.id),
