@@ -10,6 +10,9 @@ import { goldText, steelText, purpleText } from "@/lib/overlayText";
 // Plays once each time the page loads.
 
 const SHIELD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
+// Same rank emblem sheet as the HUD: 4 columns (tiers 1-4), 6 rows (Bronze..Mythic).
+const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/78b084191_rank-emblems.png";
+const RANK_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
 const T = { result: 400, block: 4500, climb: 10500, tomorrow: 14000, end: 17500 };
 const n = (v) => Number(v) || 0;
 const toMs = (v) => {
@@ -41,7 +44,7 @@ function rankText(r) {
     if (r.percentile != null) return `MYTHIC ${r.percentile}%`;
     return "MYTHIC";
   }
-  const lvl = r.level ?? r.tier;
+  const lvl = r.tier ?? r.level;
   return lvl != null ? `${cls} ${lvl}` : cls || "—";
 }
 
@@ -104,6 +107,7 @@ async function loadStory() {
     best: runs.reduce((m, r) => Math.max(m, n(r.total_wins)), 0),
     rotted,
     rank: rankText(rank),
+    rankRaw: rank || null,
     block,
   };
 }
@@ -229,7 +233,9 @@ export default function OverlayOutro() {
           <div style={{ position: "absolute", left: 0, right: 0, top: 380, display: "flex", justifyContent: "center", gap: 70 }}>
             {[["RUN WINS", story.runWins], ["BEST RUN", story.best], ["ROTTED", story.rotted], ["RANK", story.rank]].map(([k, v], i) => (
               <div key={k} style={{ minWidth: 300, animation: `ooIn .6s ease-out ${i * 0.25}s both` }}>
-                <div style={{ ...goldText(110), lineHeight: 1 }}>{v}</div>
+                {k === "RANK" && story.rankRaw
+                  ? <RankEmblem rank={story.rankRaw} label={v} />
+                  : <div style={{ ...goldText(110), lineHeight: 1 }}>{v}</div>}
                 <div style={{ ...steelText(38), marginTop: 14, letterSpacing: 4 }}>{k}</div>
               </div>
             ))}
@@ -268,6 +274,24 @@ export default function OverlayOutro() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// The rank emblem (as on the HUD) with the rank and tier under it.
+function RankEmblem({ rank, label }) {
+  const row = RANK_ROWS.indexOf(rank.rank_class || "");
+  const tier = Math.min(4, Math.max(1, Number(rank.tier) || 4));
+  const col = rank.rank_class === "Mythic" ? 0 : tier - 1;
+  const size = 150;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      {row >= 0 && (
+        <div style={{ width: size, height: size, backgroundImage: `url(${RANK_SPRITE})`,
+          backgroundSize: `${size * 4}px ${size * 6}px`, backgroundPosition: `${-col * size}px ${-row * size}px`,
+          filter: "drop-shadow(0 0 18px rgba(255,190,90,.6)) drop-shadow(0 6px 10px #000)" }} />
+      )}
+      <div style={{ ...goldText(44), lineHeight: 1, marginTop: 6 }}>{label}</div>
     </div>
   );
 }
