@@ -5,6 +5,8 @@ import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import DeckRow from "@/components/overlay/DeckRow";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
 import useOutroAnimation from "@/hooks/useOutroAnimation";
+import ChoppingBlock from "@/components/overlay/ChoppingBlock";
+import { blockState } from "@/lib/condemned";
 
 const RUST = "#a35a3d";
 
@@ -63,6 +65,7 @@ const toMs = (v) => {
   return new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}Z`).getTime();
 };
 const sameName = (a, b) => (a || "").toLowerCase() === (b || "").toLowerCase();
+const scryNormal = (id) => (id ? `https://api.scryfall.com/cards/${id}?format=image&version=normal` : "");
 // Put back the card the rot removed and take out the card it scavenged.
 function undoRot(list, ev, zone) {
   if (!ev || (ev.zone || "main") !== zone) return list;
@@ -189,6 +192,23 @@ export default function OverlayDeck({ outro } = {}) {
     [rawSideCards, deathEv, holding]
   );
 
+  // Chopping block: the sidebar alternates deck list (20s) and condemned card (8s).
+  // While the death screen plays, the deck fades out and the condemned card is executed.
+  const block = blockState(season);
+  const condemnedRow = block
+    ? [...rawCards, ...rawSideCards].find((c) => sameName(c.name, block.name))
+    : null;
+  const [blockTurn, setBlockTurn] = useState(false);
+  useEffect(() => {
+    if (!block || isOutro) {
+      setBlockTurn(false);
+      return undefined;
+    }
+    const t = setTimeout(() => setBlockTurn((b) => !b), blockTurn ? 8000 : 20000);
+    return () => clearTimeout(t);
+  }, [blockTurn, !!block, isOutro]);
+  const rotMode = Boolean(holding && deathEv && !isOutro);
+  const sideMode = rotMode ? "rot" : blockTurn && block ? "block" : "deck";
   const day = useMemo(
     () =>
       roundDay({
@@ -408,6 +428,7 @@ export default function OverlayDeck({ outro } = {}) {
         <div
           style={{
             width: PANEL_W,
+            position: "relative",
             height: PANEL_H,
             // iron-to-rot border: ember at the top, steel, rot purple at the bottom
             border: "2px solid transparent",
