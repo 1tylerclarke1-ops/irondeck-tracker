@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import DeathWheel from "@/components/overlay/DeathWheel";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
+import { base44 } from "@/api/base44Client";
 
 // The Sentencing: plays after the "previously on" recap in the Overlay Intro.
 // - A newly condemned card (not yet shown): wheel spins to it, then the verdict.
@@ -25,6 +26,23 @@ export default function Sentencing({ season, cards, active, onDone }) {
   doneRef.current = onDone; // the intro re-renders every 5s; keep timers stable
   const replay = useMemo(() => new URLSearchParams(window.location.search).get("sentence") === "replay", []);
 
+  // No card condemned yet (round started before the wheel)? Ask the server to
+  // pick one now, so the wheel spins instead of waiting.
+  const [picked, setPicked] = useState(null);
+  const asked = useRef(false);
+  const s0 = picked && season && !season.condemned_card ? { ...season, ...picked } : season;
+  useEffect(() => {
+    if (!active || phase !== "wait" || asked.current || !season || season.condemned_card || wheelCards.length === 0) return;
+    asked.current = true;
+    base44.functions
+      .invoke("ensureCondemned", {})
+      .then((r) => {
+        const d = r?.data || r;
+        if (d?.condemned_card) setPicked(d);
+      })
+      .catch(() => { asked.current = false; });
+  }, [active, phase, season, wheelCards.length]);
+
   // Wheel slices: unique rares/mythics still in the deck.
   const wheelCards = useMemo(() => {
     const seen = new Map();
@@ -42,13 +60,13 @@ export default function Sentencing({ season, cards, active, onDone }) {
 
   // Wait until a card is condemned, then decide: spin or "still on the block".
   useEffect(() => {
-    if (!active || phase !== "wait" || !season?.condemned_card || wheelCards.length === 0) return;
-    locked.current = season;
-    const key = `${season.condemned_card}|${season.condemned_since || ""}`;
+    if (!active || phase !== "wait" || !s0?.condemned_card || wheelCards.length === 0) return;
+    locked.current = s0;
+    const key = `${s0.condemned_card}|${s0.condemned_since || ""}`;
     const fresh = replay || getPlayed() !== key;
     if (fresh) setPlayed(key);
-    setPhase(fresh ? (n(season.block_capture) > 1 ? "banner" : "wheel") : "block");
-  }, [active, phase, season, wheelCards.length, replay]);
+    setPhase(fresh ? (n(s0.block_capture) > 1 ? "banner" : "wheel") : "block");
+  }, [active, phase, s0, wheelCards.length, replay]);
 
   // Timed steps.
   useEffect(() => {
