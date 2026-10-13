@@ -21,7 +21,7 @@ const newestFirst = (a, b) =>
 const DAY_MILESTONES = [10, 25, 50, 75, 100, 150, 200, 250, 300, 365];
 
 export function planIntro({ seasonNumber, logs, season, today, rulesParam }) {
-  const earlier = (logs || []).filter((l) => (l.date || "") < today).sort(newestFirst);
+  const earlier = [...(logs || [])].sort(newestFirst); // every finished round (the Run Tracker counts rounds, not dates)
   const missed = [];
   for (const l of earlier) {
     if (l.result === "missed") missed.push(l);
