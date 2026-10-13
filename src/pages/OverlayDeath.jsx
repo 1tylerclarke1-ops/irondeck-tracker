@@ -33,6 +33,10 @@ const POLL_MS = 1500;
 const PENDING_GIVE_UP_MS = 45000; // banner gives up if the rot never arrives
 const DEATH_DELAY_MS = 1100; // banner slam + short hold; wheel is ready ~2s after the death
 const SIDEBAR_MS = 18500; // the sidebar's execution and scavenge (ChoppingBlock); the result shows after it
+// New flow: purple blanket + DEATH RUN while the sidebar executes the card, then the
+// scavenged card flies out of the sidebar and expands into the middle of the game.
+const FLY_AT_MS = 18800; // sidebar lead-in (OverlayDeck ROT_LEAD_MS 2000) + its scavenged card landing (ChoppingBlock T_LAND + 600)
+const SCAV_HOLD_MS = 6000; // the scavenged card stays big in the middle
 const INTRO_MS = 1200; // panel rises, then the wheel grows in
 const COUNTDOWN_FROM = 3;
 const WHEEL_HOLD_MS = 2000;
@@ -271,12 +275,9 @@ export default function OverlayDeath() {
     // straight to the result (no wheel, rarity flip or randomiser here).
     const born = seq ? Date.parse(seq.updated_at || "") : NaN;
     const wait = seq
-      ? Math.max(300, (Number.isFinite(born) ? born : bannerStart.current) + SIDEBAR_MS - Date.now())
+      ? Math.max(300, (Number.isFinite(born) ? born : bannerStart.current) + FLY_AT_MS - Date.now())
       : PENDING_GIVE_UP_MS;
-    const t = setTimeout(
-      () => setPhase(seq ? (seq.sideboard_rotted ? "sideRot" : "centered") : "idle"),
-      wait
-    );
+    const t = setTimeout(() => setPhase(seq ? "scavenge" : "idle"), wait);
     return () => clearTimeout(t);
   }, [phase, seq]);
 
@@ -291,6 +292,7 @@ export default function OverlayDeath() {
       sideRot: ["centered", SIDE_ROT_MS],
       centered: ["holding", CENTERED_MS],
       holding: ["outro", RESULT_HOLD_MS],
+      scavenge: ["outro", SCAV_HOLD_MS],
       outro: ["away", OUTRO_MS],
       verifiedNote: ["done", NOTE_MS],
     }[phase];
@@ -405,7 +407,8 @@ export default function OverlayDeath() {
     );
   }
 
-  const docked = phase !== "waiting";
+  const docked = !["waiting", "scavenge", "outro"].includes(phase); // the old result panel is no longer used
+  const raised = phase === "scavenge" || phase === "outro";
   const leaving = phase === "outro";
   const showWheel = WHEEL_PHASES.includes(phase);
   const showCards = CARDS_PHASES.includes(phase);
@@ -431,24 +434,34 @@ export default function OverlayDeath() {
         @keyframes odRarityPop { 0% { transform: scale(1.5); } 60% { transform: scale(0.94); } 100% { transform: scale(1); } }
         @keyframes odWheelIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes odTextIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes odSeep { 0% { clip-path: inset(0 100% 0 0); opacity: .4 } 100% { clip-path: inset(0 0 0 0); opacity: 1 } }
+        @keyframes odVeins { from { transform: scale(1) } to { transform: scale(1.15) translate(-2%, 1%) } }
+        @keyframes odSpore { 0% { opacity: 0; transform: translateY(0) } 20% { opacity: 1 } 100% { opacity: 0; transform: translateY(-240px) } }
+        @keyframes odFly { 0% { transform: translate(-960px, 22px) scale(.625); opacity: .9 } 100% { transform: none; opacity: 1 } }
+        @keyframes odGold { 0%,100% { box-shadow: 0 0 30px 8px rgba(255,170,60,.6) } 50% { box-shadow: 0 0 70px 22px rgba(255,190,90,1) } }
+        @keyframes odLost { 0% { transform: translate(-720px, 60px) scale(.4); opacity: 0 } 12% { transform: none; opacity: 1 }
+          16% { transform: scale(1.05) } 20%,84% { transform: none; opacity: 1 } 100% { transform: translate(-720px, 60px) scale(.45); opacity: 0 } }
+        @keyframes odLostGlow { 0%,100% { box-shadow: 0 0 40px 10px rgba(150,80,255,.6) } 50% { box-shadow: 0 0 80px 26px rgba(150,80,255,1) } }
+        @keyframes odLostShake { 0%,100% { margin-left: 0 } 25% { margin-left: -4px } 75% { margin-left: 4px } }
+        @keyframes odLostText { 0%,10% { opacity: 0 } 18%,84% { opacity: 1 } 92%,100% { opacity: 0 } }
         @keyframes odLandPop { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
       `}</style>
 
-      {/* Vignette */}
-      <img
-        src={DEATH_VIGNETTE}
-        alt=""
-        draggable={false}
-        style={{
-          position: "fixed",
-          inset: 0,
-          width: "100vw",
-          height: "100vh",
-          objectFit: "fill",
-          animation: leaving ? "odFadeOut 0.8s ease forwards" : "odVignetteIn 0.5s ease",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Purple blanket: the rot seeps over the game window from the sidebar side.
+          (Game window: x 480, y 270, 1440×810 of 1920×1080; the HUD and sidebar stay bright.) */}
+      <div style={{ position: "fixed", left: "25vw", top: "25vh", width: "75vw", height: "75vh", pointerEvents: "none", overflow: "hidden",
+        animation: leaving ? "odFadeOut 0.8s ease forwards" : "odSeep 1.6s cubic-bezier(.3,.6,.3,1) both" }}>
+        <div style={{ position: "absolute", inset: 0,
+          background: "radial-gradient(ellipse at 50% 50%, rgba(95,45,180,.55), rgba(40,12,80,.82) 70%, rgba(20,6,40,.92))" }} />
+        <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", opacity: 0.5, animation: "odVeins 6s ease-in-out infinite alternate",
+          background: "radial-gradient(circle at 12% 30%, rgba(200,150,255,.35), transparent 30%), radial-gradient(circle at 80% 75%, rgba(200,150,255,.25), transparent 35%), radial-gradient(circle at 45% 90%, rgba(170,110,255,.3), transparent 30%)" }} />
+        {Array.from({ length: 22 }, (_, i) => (
+          <div key={i} style={{ position: "absolute", left: `${(i * 37) % 100}%`, top: `${40 + ((i * 53) % 60)}%`,
+            width: 4 + (i % 3) * 3, height: 4 + (i % 3) * 3, borderRadius: "50%", background: "#d4baff",
+            boxShadow: "0 0 10px 3px rgba(150,90,255,.9)", opacity: 0,
+            animation: `odSpore ${4 + (i % 4)}s ease-out ${(i * 0.37) % 4}s infinite` }} />
+        ))}
+      </div>
 
       {/* Panel (rises in as the banner docks, drops away at the end) */}
       {docked && (
@@ -656,6 +669,26 @@ export default function OverlayDeath() {
         </div>
       )}
 
+      {/* The scavenged card flies out of the sidebar and expands into the middle of the game */}
+      {raised && seq?.replacement_card_image && (
+        <div key={"scav-" + (seq.id || "")} style={{ position: "fixed", left: 1000, top: 352, width: 400, zIndex: 4, pointerEvents: "none",
+          textAlign: "center", animation: leaving ? "odFadeOut 0.8s ease forwards" : "none" }}>
+          <div style={{ animation: "odFly 0.9s cubic-bezier(.2,.8,.3,1) both" }}>
+            <div style={{ width: 400, height: 558, borderRadius: 20, overflow: "hidden", background: "#120a20",
+              animation: "odGold 2.4s ease-in-out .9s infinite" }}>
+              <img src={seq.replacement_card_image} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
+            </div>
+          </div>
+          <div style={{ width: 1000, marginLeft: -300, marginTop: 14, animation: "odTextIn .6s ease .8s both" }}>
+            <div style={{ ...goldText(34), letterSpacing: 6 }}>SCAVENGED</div>
+            <div style={{ ...goldText(54), lineHeight: 1.05 }}>{(seq.replacement_card || "").toUpperCase()}</div>
+            <div style={{ ...steelText(28) }}>
+              {seq.rarity_roll ? `AN ${String(seq.rarity_roll).toUpperCase()} JOINS THE DECK` : "JOINS THE DECK"}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DEATH RUN banner: slams in at the centre, then docks as the panel title */}
       <div
         style={{
@@ -666,6 +699,8 @@ export default function OverlayDeath() {
           marginLeft: -TITLE_W / 2,
           transform: docked
             ? "translateY(0) scale(1) rotate(0deg)"
+            : raised
+            ? `translateY(-20px) scale(${(STAMP_W / TITLE_W) * 0.8}) rotate(-2deg)` // raised: the scavenged card takes the centre
             : `translateY(calc(${PANEL_H / 2 - 46}px - 50%)) scale(${STAMP_W / TITLE_W}) rotate(-4deg)`,
           transition: `transform 1s ${DOCK_EASE}`,
           animation: leaving ? "odFadeOut 0.5s ease forwards" : "none",
