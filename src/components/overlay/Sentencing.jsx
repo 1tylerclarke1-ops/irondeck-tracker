@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import DeathWheel from "@/components/overlay/DeathWheel";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { base44 } from "@/api/base44Client";
+import { captureTitle, poolFor } from "@/lib/condemned";
 
 // The Sentencing: plays after the "previously on" recap in the Overlay Intro.
 // - A newly condemned card (not yet shown): wheel spins to it, then the verdict.
@@ -17,7 +18,7 @@ const n = (v) => Number(v) || 0;
 const getPlayed = () => { try { return localStorage.getItem(PLAYED_KEY); } catch { return null; } };
 const setPlayed = (v) => { try { localStorage.setItem(PLAYED_KEY, v); } catch {} };
 
-export default function Sentencing({ season, cards, active, onDone }) {
+export default function Sentencing({ season, cards, active, fadeIn = false, onDone }) {
   const [phase, setPhase] = useState("wait"); // wait, banner, wheel, countdown, spinning, verdict, block, out
   const [count, setCount] = useState(3);
   const locked = useRef(null); // the season snapshot we play from
@@ -26,15 +27,18 @@ export default function Sentencing({ season, cards, active, onDone }) {
   doneRef.current = onDone; // the intro re-renders every 5s; keep timers stable
   const replay = useMemo(() => new URLSearchParams(window.location.search).get("sentence") === "replay", []);
 
-  // Wheel slices: unique rares/mythics still in the deck.
+  // Wheel slices: the pool still in the deck (rares/mythics, or uncommons, then
+  // commons, if none are left), always including the condemned card.
+  const condemnedName = season?.condemned_card || "";
   const wheelCards = useMemo(() => {
+    const { names } = poolFor(cards);
     const seen = new Map();
     for (const c of cards || []) {
-      if (n(c.copies) > 0 && (c.rarity === "rare" || c.rarity === "mythic") && !seen.has(c.name))
+      if (n(c.copies) > 0 && (names.includes(c.name) || c.name === condemnedName) && !seen.has(c.name))
         seen.set(c.name, { name: c.name, scryfall_id: c.scryfall_id || "" });
     }
     return [...seen.values()];
-  }, [cards]);
+  }, [cards, condemnedName]);
   const artMap = useMemo(() => {
     const m = {};
     wheelCards.forEach((c) => { if (c.scryfall_id) m[c.scryfall_id] = { artCrop: scry(c.scryfall_id, "art_crop") }; });
@@ -65,9 +69,10 @@ export default function Sentencing({ season, cards, active, onDone }) {
     const key = `${s0.condemned_card}|${s0.condemned_since || ""}`;
     // First day of a sentence (new season, or after a rot or a pardon): always spin,
     // so the wheel can be recorded whenever the intro is shown. Day 2+ shows "still on the block".
-    const fresh = replay || n(s0.block_days) === 0 || getPlayed() !== key;
+    const fresh = replay || n(s0.block_days) === 0;
     if (fresh) setPlayed(key);
-    setPhase(fresh ? (n(s0.block_capture) > 1 ? "banner" : "wheel") : "block");
+    const lowered = s0.block_pool && s0.block_pool !== "rare";
+    setPhase(fresh ? (n(s0.block_capture) > 1 || lowered ? "banner" : "wheel") : "block");
   }, [active, phase, s0, wheelCards.length, replay]);
 
   // Timed steps.
@@ -101,14 +106,20 @@ export default function Sentencing({ season, cards, active, onDone }) {
   const dayOn = Math.min(n(s?.block_days) + 1, sentence);
   const lastDay = dayOn === sentence;
   const showWheel = ["wheel", "countdown", "spinning"].includes(phase);
+  // While fading out, keep the wording of what was on screen (CONDEMNED vs STILL ON THE BLOCK).
+  const shownRef = useRef("verdict");
+  if (phase === "verdict" || phase === "block") shownRef.current = phase;
+  const view = phase === "out" ? shownRef.current : phase;
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 59, pointerEvents: "none", overflow: "hidden",
       background: "radial-gradient(circle at 50% 45%, #3c1d6e, #08060e 70%)",
       opacity: phase === "out" ? 0 : 1, transition: "opacity 0.7s ease",
+      animation: fadeIn ? "snFade 0.8s ease backwards" : "none",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       fontFamily: "'Barlow Condensed', sans-serif" }}>
       <style>{`
+        @keyframes snFade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes snIn { from { transform: scale(0.6); opacity: 0 } to { transform: scale(1); opacity: 1 } }
         @keyframes snSlam { 0% { transform: scale(2.2); opacity: 0 } 60% { transform: scale(0.95); opacity: 1 } 100% { transform: scale(1) } }
         @keyframes snGlow { 0%,100% { box-shadow: 0 0 40px 8px rgba(150,80,255,.55) } 50% { box-shadow: 0 0 70px 18px rgba(150,80,255,.9) } }
@@ -118,8 +129,17 @@ export default function Sentencing({ season, cards, active, onDone }) {
 
       {phase === "banner" && (
         <div style={{ textAlign: "center", animation: "snSlam 0.7s ease-out both" }}>
-          <div style={{ ...purpleText(96), letterSpacing: 6 }}>THE EXECUTIONER REMEMBERS</div>
-          <div style={{ ...goldText(44), marginTop: 12 }}>CAPTURE {n(s?.block_capture)} · SENTENCE {sentence} {sentence === 1 ? "DAY" : "DAYS"}</div>
+          <div style={{ ...purpleText(96), letterSpacing: 6 }}>
+            {captureTitle(n(s?.block_capture)) || "THE EXECUTIONER LOWERS HIS SIGHTS"}
+          </div>
+          {n(s?.block_capture) > 1 && (
+            <div style={{ ...goldText(44), marginTop: 12 }}>CAPTURE {n(s?.block_capture)} · SENTENCE {sentence} {sentence === 1 ? "DAY" : "DAYS"}</div>
+          )}
+          {s?.block_pool && s.block_pool !== "rare" && (
+            <div style={{ ...steelText(40), marginTop: 12 }}>
+              {n(s?.block_capture) > 1 ? "THE EXECUTIONER LOWERS HIS SIGHTS · " : "NO RARES LEFT · "}THE {String(s.block_pool).toUpperCase()}S STAND TRIAL
+            </div>
+          )}
         </div>
       )}
 
@@ -145,16 +165,16 @@ export default function Sentencing({ season, cards, active, onDone }) {
           )}
           <div style={{ maxWidth: 820 }}>
             <div style={{ ...purpleText(52), letterSpacing: 6 }}>
-              {phase === "verdict" ? "CONDEMNED" : lastDay ? "ONE DAY FROM FREEDOM" : "STILL ON THE BLOCK"}
+              {view === "verdict" ? "CONDEMNED" : lastDay ? "ONE DAY FROM FREEDOM" : "STILL ON THE BLOCK"}
             </div>
             <div style={{ ...goldText(92), lineHeight: 1, margin: "10px 0 18px" }}>{name.toUpperCase()}</div>
             <div style={{ ...steelText(46) }}>
-              {phase === "verdict" ? `LOSE TODAY, AND IT ROTS.` : `DAY ${dayOn} OF ${sentence}. LOSE TODAY, AND IT ROTS.`}
+              {view === "verdict" ? `LOSE TODAY, AND IT ROTS.` : `DAY ${dayOn} OF ${sentence}. LOSE TODAY, AND IT ROTS.`}
             </div>
             <div style={{ display: "flex", gap: 14, marginTop: 22 }}>
               {Array.from({ length: sentence }).map((_, i) => (
                 <div key={i} style={{ width: 54, height: 18, borderRadius: 9, border: "3px solid #c9a8ff",
-                  background: phase !== "verdict" && i < dayOn - 1 ? "#c9a8ff" : phase !== "verdict" && i === dayOn - 1 ? "rgba(201,168,255,.45)" : "transparent" }} />
+                  background: view !== "verdict" && i < dayOn - 1 ? "#c9a8ff" : view !== "verdict" && i === dayOn - 1 ? "rgba(201,168,255,.45)" : "transparent" }} />
               ))}
             </div>
             <div style={{ ...steelText(30), marginTop: 10, opacity: 0.85 }}>
