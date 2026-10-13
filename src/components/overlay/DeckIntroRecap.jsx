@@ -523,7 +523,7 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
         });
         if (!active) return;
         const earlier = logs
-          .filter((l) => (l.date || "") < today)
+          .slice()
           .sort(
             (a, b) =>
               (b.date || "").localeCompare(a.date || "") ||
