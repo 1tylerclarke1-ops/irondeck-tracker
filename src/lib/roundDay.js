@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { ukDate } from "@/lib/ukDay";
 
 // DAY counts ROUNDS played in the current climb, not calendar days.
 // - while a round is being played: rounds finished + 1
@@ -15,7 +16,7 @@ export async function loadDayLogs(seasonId) {
   }
 }
 
-const todayUtc = () => new Date().toISOString().slice(0, 10);
+const todayUtc = () => ukDate(); // UK calendar day (name kept for older code)
 
 export function roundDay({ logs, climb, playing }) {
   if (climb?.status === "complete" && climb.days_taken) return climb.days_taken;
