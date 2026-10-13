@@ -115,8 +115,6 @@ export default function RunTracker() {
       loadAll();
     }, [loadAll]);
 
-    const sortedRuns = [...runs].sort(
-
   const sortedRuns = [...runs].sort(
     (a, b) => (b.attempt_number || 0) - (a.attempt_number || 0)
   );
