@@ -16,7 +16,7 @@ const n = (v) => Number(v) || 0;
 const getPlayed = () => { try { return localStorage.getItem(PLAYED_KEY); } catch { return null; } };
 const setPlayed = (v) => { try { localStorage.setItem(PLAYED_KEY, v); } catch {} };
 
-export default function Sentencing({ season, cards, onDone }) {
+export default function Sentencing({ season, cards, active, onDone }) {
   const [phase, setPhase] = useState("wait"); // wait, banner, wheel, countdown, spinning, verdict, block, out
   const [count, setCount] = useState(3);
   const locked = useRef(null); // the season snapshot we play from
@@ -42,13 +42,13 @@ export default function Sentencing({ season, cards, onDone }) {
 
   // Wait until a card is condemned, then decide: spin or "still on the block".
   useEffect(() => {
-    if (phase !== "wait" || !season?.condemned_card || wheelCards.length === 0) return;
+    if (!active || phase !== "wait" || !season?.condemned_card || wheelCards.length === 0) return;
     locked.current = season;
     const key = `${season.condemned_card}|${season.condemned_since || ""}`;
     const fresh = replay || getPlayed() !== key;
     if (fresh) setPlayed(key);
     setPhase(fresh ? (n(season.block_capture) > 1 ? "banner" : "wheel") : "block");
-  }, [phase, season, wheelCards.length, replay]);
+  }, [active, phase, season, wheelCards.length, replay]);
 
   // Timed steps.
   useEffect(() => {
@@ -83,8 +83,8 @@ export default function Sentencing({ season, cards, onDone }) {
   const showWheel = ["wheel", "countdown", "spinning"].includes(phase);
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 61, pointerEvents: "none", overflow: "hidden",
-      background: "radial-gradient(circle at 50% 45%, rgba(60,25,110,0.92), rgba(8,6,14,0.97) 70%)",
+    <div style={{ position: "fixed", inset: 0, zIndex: 59, pointerEvents: "none", overflow: "hidden",
+      background: "radial-gradient(circle at 50% 45%, #3c1d6e, #08060e 70%)",
       opacity: phase === "out" ? 0 : 1, transition: "opacity 0.7s ease",
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       fontFamily: "'Barlow Condensed', sans-serif" }}>
@@ -94,7 +94,7 @@ export default function Sentencing({ season, cards, onDone }) {
         @keyframes snGlow { 0%,100% { box-shadow: 0 0 40px 8px rgba(150,80,255,.55) } 50% { box-shadow: 0 0 70px 18px rgba(150,80,255,.9) } }
       `}</style>
 
-      {phase === "wait" && <div style={{ ...steelText(40), letterSpacing: 6, opacity: 0.8 }}>THE WHEEL AWAITS…</div>}
+      {active && phase === "wait" && <div style={{ ...steelText(40), letterSpacing: 6, opacity: 0.8 }}>THE WHEEL AWAITS…</div>}
 
       {phase === "banner" && (
         <div style={{ textAlign: "center", animation: "snSlam 0.7s ease-out both" }}>
