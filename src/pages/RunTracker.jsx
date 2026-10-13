@@ -10,6 +10,7 @@ import { useDeckRules } from "@/lib/useDeckRules";
 import { num } from "@/components/run/runHelpers";
 import { performDecay } from "@/lib/performDecay";
 import { ensureCondemned, serveBlockDay, clearCondemned } from "@/lib/condemned";
+import { ukDate, missedDates } from "@/lib/ukDay";
 import { createDayLog, deleteLatestDayLogForRun } from "@/lib/dayLog";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import {
@@ -138,10 +139,57 @@ export default function RunTracker() {
     result: r.result,
   });
 
+  // Missed days (UK calendar days with no round, plus a round started on an
+  // earlier day and never finished): each one rots a card before today's round,
+  // the condemned card first, then a fresh pick per extra day. Each gets a
+  // "missed" DayLog and a "missed" DecayEvent, which the next intro plays.
+  const handleMissedDays = async () => {
+    const lastPlayed = dayLogs.reduce((m, l) => (l.date && l.date > m ? l.date : m), "");
+    const unfinished =
+      inProgress?.round_status === "playing" && inProgress.round_started_at
+        ? ukDate(inProgress.round_started_at)
+        : "";
+    const missed = missedDates({ lastPlayed, unfinished, today: ukDate() });
+    let s = season;
+    let fresh = cards;
+    if (!missed.length) return { ok: true, season: s, cards: fresh };
+    const ok = window.confirm(
+      `${missed.length} missed day${missed.length > 1 ? "s" : ""} (${missed.join(", ")}).\n` +
+        `Each one rots a card, starting with the condemned card. Continue?`
+    );
+    if (!ok) return { ok: false };
+    const runForDecay = inProgress || latest;
+    let dayNo = dayLogs.filter((l) => !climb?.id || l.climb_id === climb.id).length;
+    for (const date of missed) {
+      fresh = await base44.entities.Card.filter({ season_id: season.id });
+      if (!s.condemned_card || !fresh.some((c) => c.name === s.condemned_card && num(c.copies) > 0)) {
+        s = await ensureCondemned({ season: { ...s, condemned_card: "" }, cards: fresh });
+      }
+      const res = await performDecay({
+        season: s, cards: fresh, run: runForDecay, condemned: s.condemned_card, step: "missed",
+      });
+      await clearCondemned(s);
+      s = { ...s, condemned_card: "", block_days: 0 };
+      dayNo += 1;
+      await createDayLog({
+        season, run: runForDecay, climb, day: dayNo,
+        roundWins: 0, roundLosses: 0, result: "missed",
+        runWinsAfter: num(runForDecay?.total_wins),
+        decayIds: res?.decayId ? [res.decayId] : [],
+        date,
+      });
+    }
+    fresh = await base44.entities.Card.filter({ season_id: season.id });
+    await Promise.all([loadCards(season.id), loadDecays(season.id), reloadDayLogs(season.id)]);
+    return { ok: true, season: s, cards: fresh };
+  };
+
   const startRound = async () => {
     setBusy(true);
     try {
-      await ensureCondemned({ season, cards });
+      const m = await handleMissedDays();
+      if (!m.ok) return;
+      await ensureCondemned({ season: m.season, cards: m.cards });
       if (inProgress) {
         const prev = snapshot(inProgress);
          await base44.entities.Run.update(inProgress.id, {
