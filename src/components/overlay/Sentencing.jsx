@@ -63,7 +63,9 @@ export default function Sentencing({ season, cards, active, onDone }) {
     if (!active || phase !== "wait" || !s0?.condemned_card || wheelCards.length === 0) return;
     locked.current = s0;
     const key = `${s0.condemned_card}|${s0.condemned_since || ""}`;
-    const fresh = replay || getPlayed() !== key;
+    // First day of a sentence (new season, or after a rot or a pardon): always spin,
+    // so the wheel can be recorded whenever the intro is shown. Day 2+ shows "still on the block".
+    const fresh = replay || n(s0.block_days) === 0 || getPlayed() !== key;
     if (fresh) setPlayed(key);
     setPhase(fresh ? (n(s0.block_capture) > 1 ? "banner" : "wheel") : "block");
   }, [active, phase, s0, wheelCards.length, replay]);
