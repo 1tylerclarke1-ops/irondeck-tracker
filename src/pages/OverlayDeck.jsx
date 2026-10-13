@@ -419,7 +419,7 @@ export default function OverlayDeck({ outro } = {}) {
             boxSizing: "border-box",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, opacity: sideMode === "deck" ? 1 : 0, transition: "opacity 0.8s ease" }}>
             <SectionTitle title="MAIN DECK" count={mainCount} />
             {mainCards.map((c) => (
               <DeckRow
@@ -432,6 +432,7 @@ export default function OverlayDeck({ outro } = {}) {
                 corroding={animating && isCorroding(c)}
                 entering={animating && isReplacementEntering(c)}
                 salvaged={animating ? salvagedVisible(c) : undefined}
+                glow={!!block && sameName(c.name, block.name)}
               />
             ))}
             {hasSide && (
@@ -448,6 +449,7 @@ export default function OverlayDeck({ outro } = {}) {
                     corroding={animating && isCorroding(c)}
                     entering={animating && isReplacementEntering(c)}
                     salvaged={animating ? salvagedVisible(c) : undefined}
+                    glow={!!block && sameName(c.name, block.name)}
                   />
                 ))}
               </>
@@ -492,6 +494,23 @@ export default function OverlayDeck({ outro } = {}) {
               </>
             )}
           </div>
+          {(block || rotMode) && (
+            <div style={{ position: "absolute", inset: 0, opacity: sideMode === "deck" ? 0 : 1, transition: "opacity 0.8s ease" }}>
+              <ChoppingBlock
+                key={rotMode ? "rot" : "block"}
+                mode={rotMode ? "rot" : "block"}
+                name={rotMode ? deathEv.card_removed : block.name}
+                image={rotMode ? deathEv.card_removed_image : scryNormal(condemnedRow?.scryfall_id)}
+                day={block?.day}
+                sentence={block?.sentence}
+                recapture={block?.recapture}
+                newName={rotMode ? deathEv.replacement_card : undefined}
+                newImage={rotMode ? deathEv.replacement_card_image : undefined}
+                rarity={rotMode ? deathEv.rarity_roll : undefined}
+                rollCards={rotMode ? deathEv.roll_cards : undefined}
+              />
+            </div>
+          )}
         </div>
       </div>
       {isOutro && n === 0 && <DaySurvivedBanner />}
