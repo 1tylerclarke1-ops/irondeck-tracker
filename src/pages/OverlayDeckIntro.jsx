@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import IntroLayout from "@/components/overlay/IntroLayout";
 import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
 import Sentencing from "@/components/overlay/Sentencing";
 import RulesIntro from "@/components/overlay/RulesIntro";
+import { RulesCard, PardonMoment, MilestoneBanner, SeasonReview } from "@/components/overlay/IntroStages";
+import { planIntro } from "@/lib/introRoute";
+import { ukDate } from "@/lib/ukDay";
 const LOGO_IMG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 import useCardImagesById from "@/hooks/useCardImagesById";
 
@@ -21,10 +24,10 @@ export default function OverlayDeckIntro() {
   const [climbs, setClimbs] = useState([]);
   const [climb, setClimb] = useState(null);
   const [dayLogs, setDayLogs] = useState([]);
-  const [recapDone, setRecapDone] = useState(false);
-  const [sentenceDone, setSentenceDone] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [plan, setPlan] = useState(null); // which opening plays (decided once, from the data)
+  const [idx, setIdx] = useState(0); // current stage
   const [badgeOn, setBadgeOn] = useState(false);
-  const [rulesDone, setRulesDone] = useState(false);
   const rulesParam = useMemo(() => new URLSearchParams(window.location.search).get("rules"), []);
   const [stageScale, setStageScale] = useState(1);
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function OverlayDeckIntro() {
         setDayLogs(logs);
         setAllCards(list);
         setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main" && (Number(c.copies) || 0) > 0)));
+        setLoaded(true);
       } catch (e) {
         // keep last data on error
       }
@@ -105,8 +109,24 @@ export default function OverlayDeckIntro() {
   );
 
   const seasonNumber = season?.season_number ?? null;
-  // Rules play on Season 1, Day 1 (or force with ?rules=on, skip with ?rules=off)
-  const showRules = rulesParam === "on" || (rulesParam !== "off" && seasonNumber === 1 && day === 1);
+
+  // Decide the opening once, when the data first arrives, so it never changes
+  // mid-play (e.g. when Start Round is pressed while the intro runs).
+  useEffect(() => {
+    if (!loaded || plan || !season) return;
+    setPlan(planIntro({ seasonNumber, logs: dayLogs, season, today: ukDate(), rulesParam }));
+  }, [loaded, plan, season, seasonNumber, dayLogs, rulesParam]);
+
+  const stages = plan?.stages || ["recap"];
+  const cur = stages[idx];
+  const next = useCallback((i) => setIdx((x) => (x === i ? x + 1 : x)), []);
+
+  // The "deck" stage just shows the deck for a while before the wheel.
+  useEffect(() => {
+    if (cur !== "deck") return undefined;
+    const t = setTimeout(() => next(idx), 9000);
+    return () => clearTimeout(t);
+  }, [cur, idx, next]);
 
   const scryfallIds = useMemo(() => {
     const ids = Array.from(
@@ -155,18 +175,40 @@ export default function OverlayDeckIntro() {
         rottedCards={rottedCards}
         images={images}
       />
-      {showRules && !rulesDone && (
-        <RulesIntro active={recapDone || recapOff} onDone={() => setRulesDone(true)} />
-      )}
-      {!recapDone && !recapOff && (
-        <DeckIntroRecap season={season} onBadge={() => setBadgeOn(true)} onDone={() => setRecapDone(true)} />
-      )}
-      {!sentenceDone && (
-        <Sentencing season={season} cards={allCards}
-          active={(recapDone || recapOff) && (!showRules || rulesDone)}
-          onDone={() => setSentenceDone(true)} />
-      )}
-      {(badgeOn || recapDone || recapOff) && (
+      {/* The current stage, with the next one already mounted underneath, so
+          stages hand over without the deck flashing in between. */}
+      {[idx, idx + 1].map((i) => {
+        const key = stages[i];
+        if (!key || key === "deck" || key === "end") return null;
+        if (i === idx + 1 && (cur === "deck" || !plan)) return null;
+        const active = i === idx;
+        const done = () => next(i);
+        let el = null;
+        if (key === "recap")
+          el = recapOff ? null : <DeckIntroRecap season={season} onBadge={() => setBadgeOn(true)} onDone={done} />;
+        if (key === "rules") el = <RulesIntro active={active} onDone={done} />;
+        if (key === "rulesCard") el = <RulesCard active={active} seasonNumber={seasonNumber} onDone={done} />;
+        if (key === "review")
+          el = <SeasonReview active={active} season={season} seasonNumber={seasonNumber} allCards={allCards} cardImages={images} onDone={done} />;
+        if (key === "milestone") el = <MilestoneBanner active={active} items={plan?.milestones} onDone={done} />;
+        if (key === "pardon") {
+          const pName = season?.last_pardoned || "";
+          const pCard = allCards.find((c) => c.name === pName);
+          let times = 1;
+          try { times = Number(JSON.parse(season?.pardon_counts || "{}")[pName]) || 1; } catch { times = 1; }
+          el = <PardonMoment active={active} name={pName} times={times}
+            image={pCard?.scryfall_id ? `https://api.scryfall.com/cards/${pCard.scryfall_id}?format=image&version=normal` : ""} onDone={done} />;
+        }
+        if (key === "wheel")
+          el = <Sentencing season={season} cards={allCards} active={active} fadeIn={stages[i - 1] === "deck"} onDone={done} />;
+        return (
+          <div key={`${i}-${key}`} style={{ position: "fixed", inset: 0, zIndex: active ? 62 : 61, pointerEvents: "none" }}>
+            {el}
+          </div>
+        );
+      })}
+      {recapOff && cur === "recap" && <SkipRecap onSkip={() => next(0)} />}
+      {(badgeOn || idx > 0 || recapOff) && (
         <div style={{ position: "fixed", left: "50%", top: "50%", width: 1920, height: 1080, zIndex: 70, pointerEvents: "none",
           transform: `translate(-50%, -50%) scale(${stageScale})` }}>
           <img src={LOGO_IMG} alt="" draggable={false}
@@ -176,4 +218,10 @@ export default function OverlayDeckIntro() {
       )}
     </>
   );
+}
+
+// ?recap=off: skip the shield and recap straight to the next stage.
+function SkipRecap({ onSkip }) {
+  useEffect(() => { onSkip(); }, [onSkip]);
+  return null;
 }
