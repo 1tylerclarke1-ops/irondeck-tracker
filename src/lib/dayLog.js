@@ -1,6 +1,8 @@
 import { base44 } from "@/api/base44Client";
+import { ukDate } from "@/lib/ukDay";
 
-// Create a DayLog record for a finished round (survived or died).
+// Create a DayLog record for a finished round (survived or died) or a missed day.
+// date: the UK calendar day (defaults to today).
 export async function createDayLog({
   season,
   run,
@@ -11,13 +13,14 @@ export async function createDayLog({
   result,
   runWinsAfter,
   decayIds,
+  date,
 }) {
   return base44.entities.DayLog.create({
     season_id: season?.id || "",
     run_id: run?.id || "",
     climb_id: climb?.id || null,
     day: day ?? null,
-    date: new Date().toISOString().slice(0, 10),
+    date: date || ukDate(),
     wins: roundWins,
     losses: roundLosses,
     result,
