@@ -26,6 +26,21 @@ export default function Sentencing({ season, cards, active, onDone }) {
   doneRef.current = onDone; // the intro re-renders every 5s; keep timers stable
   const replay = useMemo(() => new URLSearchParams(window.location.search).get("sentence") === "replay", []);
 
+  // Wheel slices: unique rares/mythics still in the deck.
+  const wheelCards = useMemo(() => {
+    const seen = new Map();
+    for (const c of cards || []) {
+      if (n(c.copies) > 0 && (c.rarity === "rare" || c.rarity === "mythic") && !seen.has(c.name))
+        seen.set(c.name, { name: c.name, scryfall_id: c.scryfall_id || "" });
+    }
+    return [...seen.values()];
+  }, [cards]);
+  const artMap = useMemo(() => {
+    const m = {};
+    wheelCards.forEach((c) => { if (c.scryfall_id) m[c.scryfall_id] = { artCrop: scry(c.scryfall_id, "art_crop") }; });
+    return m;
+  }, [wheelCards]);
+
   // No card condemned yet (round started before the wheel)? Ask the server to
   // pick one now, so the wheel spins instead of waiting.
   const [picked, setPicked] = useState(null);
