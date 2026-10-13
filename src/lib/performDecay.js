@@ -1,20 +1,23 @@
 import { base44 } from "@/api/base44Client";
 import { fetchRollCards } from "@/lib/decayRoll";
 import { num } from "@/components/run/runHelpers";
+import { poolFor } from "@/lib/condemned";
 
 // Direct Scryfall image links (redirect to the image); no lookup needed.
 const scryImage = (id, version) =>
   id ? `https://api.scryfall.com/cards/${id}?format=image&version=${version}` : "";
 
-// Run the full decay flow for a dead run and create a single "death" DecayEvent.
-export async function performDecay({ season, cards, run, condemned }) {
+// Run the full decay flow and create a single DecayEvent.
+// - condemned: the card on the block (rots first); any rarity.
+// - step: "death" for a Death Run (plays the death screen), "missed" for a
+//   missed day (shown in the next intro instead).
+export async function performDecay({ season, cards, run, condemned, step = "death" }) {
   if (!season || !run) throw new Error("Missing season or run");
 
-  // 1. Pick a random unique mythic/rare card with copies > 0 (main or sideboard).
-  const eligible = cards.filter(
-    (c) => num(c.copies) > 0 && (c.rarity === "mythic" || c.rarity === "rare")
-  );
-  if (eligible.length === 0) throw new Error("No eligible cards to decay");
+  // 1. The condemned card rots. Without one, pick a random card from the wheel's
+  //    pool (rares/mythics, or uncommons, then commons, if none are left).
+  const { names: poolNames } = poolFor(cards);
+  const eligible = cards.filter((c) => num(c.copies) > 0 && poolNames.includes(c.name));
   const seen = new Set();
   const uniqueCards = [];
   for (const c of eligible) {
@@ -23,7 +26,10 @@ export async function performDecay({ season, cards, run, condemned }) {
       uniqueCards.push(c);
     }
   }
-  const condemnedCard = condemned && uniqueCards.find((c) => c.name === condemned);
+  const condemnedCard = condemned
+    ? cards.find((c) => c.name === condemned && num(c.copies) > 0) || null
+    : null;
+  if (!condemnedCard && uniqueCards.length === 0) throw new Error("No cards left to decay");
   const chosen = condemnedCard || uniqueCards[Math.floor(Math.random() * uniqueCards.length)];
 
   // 2. Roll uncommon or common 50/50, then fetch replacement + decoys.
@@ -134,7 +140,7 @@ export async function performDecay({ season, cards, run, condemned }) {
     season_id: season.id,
     run_id: run.id,
     decay_id: decay.id,
-    step: "death",
+    step,
     wheel_card_names: uniqueCards.map((c) => c.name),
     wheel_card_ids: uniqueCards.map((c) => c.scryfall_id || ""),
     wheel_card_art: wheelArt,
