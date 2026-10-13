@@ -4,6 +4,7 @@ import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import IntroLayout from "@/components/overlay/IntroLayout";
 import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
 import Sentencing from "@/components/overlay/Sentencing";
+import RulesIntro from "@/components/overlay/RulesIntro";
 const LOGO_IMG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 import useCardImagesById from "@/hooks/useCardImagesById";
 
@@ -23,6 +24,8 @@ export default function OverlayDeckIntro() {
   const [recapDone, setRecapDone] = useState(false);
   const [sentenceDone, setSentenceDone] = useState(false);
   const [badgeOn, setBadgeOn] = useState(false);
+  const [rulesDone, setRulesDone] = useState(false);
+  const rulesParam = useMemo(() => new URLSearchParams(window.location.search).get("rules"), []);
   const [stageScale, setStageScale] = useState(1);
   useEffect(() => {
     const fit = () => setStageScale(Math.min(window.innerWidth / 1920, window.innerHeight / 1080));
@@ -102,6 +105,8 @@ export default function OverlayDeckIntro() {
   );
 
   const seasonNumber = season?.season_number ?? null;
+  // Rules play on Season 1, Day 1 (or force with ?rules=on, skip with ?rules=off)
+  const showRules = rulesParam === "on" || (rulesParam !== "off" && seasonNumber === 1 && day === 1);
 
   const scryfallIds = useMemo(() => {
     const ids = Array.from(
@@ -150,11 +155,16 @@ export default function OverlayDeckIntro() {
         rottedCards={rottedCards}
         images={images}
       />
+      {showRules && !rulesDone && (
+        <RulesIntro active={recapDone || recapOff} onDone={() => setRulesDone(true)} />
+      )}
       {!recapDone && !recapOff && (
         <DeckIntroRecap season={season} onBadge={() => setBadgeOn(true)} onDone={() => setRecapDone(true)} />
       )}
       {!sentenceDone && (
-        <Sentencing season={season} cards={allCards} active={recapDone || recapOff} onDone={() => setSentenceDone(true)} />
+        <Sentencing season={season} cards={allCards}
+          active={(recapDone || recapOff) && (!showRules || rulesDone)}
+          onDone={() => setSentenceDone(true)} />
       )}
       {(badgeOn || recapDone || recapOff) && (
         <div style={{ position: "fixed", left: "50%", top: "50%", width: 1920, height: 1080, zIndex: 70, pointerEvents: "none",
