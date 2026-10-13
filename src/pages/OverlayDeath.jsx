@@ -32,6 +32,7 @@ const RUN_FRESH_MS = 2 * 60 * 1000; // a run that died in the last 2 minutes sho
 const POLL_MS = 1500;
 const PENDING_GIVE_UP_MS = 45000; // banner gives up if the rot never arrives
 const DEATH_DELAY_MS = 1100; // banner slam + short hold; wheel is ready ~2s after the death
+const SIDEBAR_MS = 18500; // the sidebar's execution and scavenge (ChoppingBlock); the result shows after it
 const INTRO_MS = 1200; // panel rises, then the wheel grows in
 const COUNTDOWN_FROM = 3;
 const WHEEL_HOLD_MS = 2000;
@@ -266,10 +267,16 @@ export default function OverlayDeath() {
   // Banner: dock once the rot has arrived and the banner has had its moment
   useEffect(() => {
     if (phase !== "waiting") return;
+    // The banner holds while the sidebar plays the execution, then goes
+    // straight to the result (no wheel, rarity flip or randomiser here).
+    const born = seq ? Date.parse(seq.updated_at || "") : NaN;
     const wait = seq
-      ? Math.max(300, DEATH_DELAY_MS - (Date.now() - bannerStart.current))
+      ? Math.max(300, (Number.isFinite(born) ? born : bannerStart.current) + SIDEBAR_MS - Date.now())
       : PENDING_GIVE_UP_MS;
-    const t = setTimeout(() => setPhase(seq ? "intro" : "idle"), wait);
+    const t = setTimeout(
+      () => setPhase(seq ? (seq.sideboard_rotted ? "sideRot" : "centered") : "idle"),
+      wait
+    );
     return () => clearTimeout(t);
   }, [phase, seq]);
 
