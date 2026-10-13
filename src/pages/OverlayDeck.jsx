@@ -58,7 +58,8 @@ function sortDeck(cards) {
 // Don't spoil the death screen: while a fresh death plays out, show the deck
 // as it was BEFORE the rot, and switch to the new deck once the death
 // screen's result has been shown (it takes about 30 seconds).
-const DEATH_REVEAL_MS = 24000; // sidebar execution (18.5s) + death screen result, then the deck returns
+const DEATH_REVEAL_MS = 26000; // lead-in (2s) + sidebar execution (16.8s) + scavenged card in the middle (6.9s), then the deck returns
+const ROT_LEAD_MS = 2000; // the execution starts exactly 2s after the death, so it stays in step with the death screen
 const toMs = (v) => {
   if (!v) return 0;
   const t = String(v);
@@ -167,7 +168,7 @@ export default function OverlayDeck({ outro } = {}) {
       }
     };
     load();
-    const id = setInterval(load, 3000);
+    const id = setInterval(load, 1500);
     return () => {
       active = false;
       clearInterval(id);
@@ -208,6 +209,15 @@ export default function OverlayDeck({ outro } = {}) {
     return () => clearTimeout(t);
   }, [blockTurn, !!block, isOutro]);
   const rotMode = Boolean(holding && deathEv && !isOutro);
+  // While the death screen shows the card over the game, the block waits empty.
+  const rotAt = deathBorn + ROT_LEAD_MS;
+  const [, setLeadTick] = useState(0);
+  useEffect(() => {
+    if (!rotMode || Date.now() >= rotAt) return undefined;
+    const t = setTimeout(() => setLeadTick((x) => x + 1), rotAt - Date.now() + 30);
+    return () => clearTimeout(t);
+  }, [rotMode, rotAt]);
+  const rotLive = rotMode && Date.now() >= rotAt;
   const sideMode = rotMode ? "rot" : blockTurn && block ? "block" : "deck";
   const day = useMemo(
     () =>
@@ -518,8 +528,8 @@ export default function OverlayDeck({ outro } = {}) {
           {(block || rotMode) && (
             <div style={{ position: "absolute", inset: 0, opacity: sideMode === "deck" ? 0 : 1, transition: "opacity 0.8s ease" }}>
               <ChoppingBlock
-                key={rotMode ? "rot" : "block"}
-                mode={rotMode ? "rot" : "block"}
+                key={rotMode ? (rotLive ? "rot" : "wait") : "block"}
+                mode={rotMode ? (rotLive ? "rot" : "wait") : "block"}
                 name={rotMode ? deathEv.card_removed : block.name}
                 image={rotMode ? deathEv.card_removed_image : scryNormal(condemnedRow?.scryfall_id)}
                 day={block?.day}
