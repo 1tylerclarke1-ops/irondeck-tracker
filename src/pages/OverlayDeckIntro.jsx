@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import IntroLayout from "@/components/overlay/IntroLayout";
 import DeckIntroRecap from "@/components/overlay/DeckIntroRecap";
+import Sentencing from "@/components/overlay/Sentencing";
 import useCardImagesById from "@/hooks/useCardImagesById";
 
 function sortDeck(list) {
@@ -19,6 +20,7 @@ export default function OverlayDeckIntro() {
   const [climb, setClimb] = useState(null);
   const [dayLogs, setDayLogs] = useState([]);
   const [recapDone, setRecapDone] = useState(false);
+  const [sentenceDone, setSentenceDone] = useState(false);
   const recapOff = useMemo(
     () => new URLSearchParams(window.location.search).get("recap") === "off",
     []
@@ -141,6 +143,9 @@ export default function OverlayDeckIntro() {
       />
       {!recapDone && !recapOff && (
         <DeckIntroRecap season={season} onDone={() => setRecapDone(true)} />
+      )}
+      {(recapDone || recapOff) && !sentenceDone && (
+        <Sentencing season={season} cards={allCards} onDone={() => setSentenceDone(true)} />
       )}
     </>
   );
