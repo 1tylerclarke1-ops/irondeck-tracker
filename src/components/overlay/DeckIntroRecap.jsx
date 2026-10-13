@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { ukDate } from "@/lib/ukDay";
 import { postCollection } from "@/lib/scryfall";
 import { irondeckText } from "@/lib/overlayText";
 import { INTRO_BG_STYLE } from "@/lib/overlayAssets";
@@ -513,7 +514,7 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
   // Load the most recent DayLog dated before today, then its Decay records.
   useEffect(() => {
     let active = true;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = ukDate(); // UK calendar day
     (async () => {
       try {
         if (!season?.id) return;
@@ -532,10 +533,23 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
           setNoRecap(true);
           return;
         }
-        const found = earlier[0];
+        // Missed days since the last round played: recap them together.
+        const missedRun = [];
+        for (const l of earlier) {
+          if (l.result === "missed") missedRun.push(l);
+          else break;
+        }
+        const found = missedRun.length
+          ? {
+              ...missedRun[0],
+              result: "missed",
+              missed_count: missedRun.length,
+              decay_ids: missedRun.flatMap((l) => l.decay_ids || []),
+            }
+          : earlier[0];
         const ids = (found.decay_ids || []).filter(Boolean);
         let list = [];
-        if (found.result === "died" && ids.length) {
+        if ((found.result === "died" || found.result === "missed") && ids.length) {
           const ds = await base44.entities.Decay.filter({
             season_id: season.id,
           });
@@ -644,7 +658,8 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
-  const died = log?.result === "died";
+  const missed = log?.result === "missed";
+  const died = log?.result === "died" || missed; // a missed day shows its rot like a death
   const fadingOut = at(t, T_OUT);
   const headIn = at(t, T_HEAD_IN);
   const headUp = at(t, T_HEAD_UP);
@@ -652,8 +667,11 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
   const lineIn = at(t, T_LINE);
 
   const wl = log ? `${log.wins ?? 0}–${log.losses ?? 0}` : "";
+  const missedN = log?.missed_count || 1;
   const line = !log
     ? ""
+    : missed
+    ? `${missedN} missed day${missedN > 1 ? "s" : ""} · the condemned card rotted anyway`
     : died
     ? `Day ${log.day ?? "—"} · Lost ${wl} · Run ended at ${
         log.run_wins_after ?? 0
@@ -759,12 +777,18 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
               transition: `opacity 0.8s ease, transform 0.9s ${EASE}, filter 0.8s ease`,
             }}
           >
-            <img
-              src={died ? DEATH_RUN : SURVIVED}
-              alt={died ? "Death run" : "Survived"}
-              draggable={false}
-              style={{ width: "100%", height: "auto", display: "block" }}
-            />
+            {missed ? (
+              <div style={{ ...solid(118, "#D9C6FF"), textAlign: "center", padding: "40px 0" }}>
+                {missedN > 1 ? `${missedN} MISSED DAYS` : "MISSED DAY"}
+              </div>
+            ) : (
+              <img
+                src={died ? DEATH_RUN : SURVIVED}
+                alt={died ? "Death run" : "Survived"}
+                draggable={false}
+                style={{ width: "100%", height: "auto", display: "block" }}
+              />
+            )}
             {!died && bannerIn && (
               <div
                 style={{
