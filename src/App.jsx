@@ -21,7 +21,6 @@ import OverlayFrame from './pages/OverlayFrame';
 import OverlayLayout from './pages/OverlayLayout';
 import OverlayOutro from './pages/OverlayOutro';
 import LiveTest from './pages/LiveTest';
-import LiveTest from './pages/LiveTest';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
@@ -64,8 +63,7 @@ const AuthenticatedApp = () => {
       <Route path="/overlay/decay" element={<OverlayDecay />} />
       <Route path="/overlay/death" element={<OverlayDeath />} />
       <Route path="/overlay/frame" element={<OverlayFrame />} />
-      <Route path="/overlay/layout" element={<OverlayLayout />} />
-      <Route path="/overlay/live-test" element={<LiveTest />} />      
+      <Route path="/overlay/layout" element={<OverlayLayout />} />    
       <Route path="/overlay/outro" element={<OverlayOutro />} />
       <Route path="/overlay/live-test" element={<LiveTest />} />
       <Route path="/login" element={<Login />} />
