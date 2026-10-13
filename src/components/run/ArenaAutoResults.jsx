@@ -9,6 +9,21 @@ import { Card, CardContent } from "@/components/ui/card";
 // playing, are marked "ignored" so they never count later.
 
 const CHECK_MS = 2000;
+
+// Browsers slow down timers in background tabs (down to once a minute), which
+// delayed results while Arena was in front. A worker's timer isn't throttled
+// that way, so the check keeps running every 2s. Falls back to a normal timer.
+function workerTimeout(fn, ms) {
+  try {
+    const url = URL.createObjectURL(new Blob([`setTimeout(() => postMessage(1), ${ms});`], { type: "text/javascript" }));
+    const w = new Worker(url);
+    w.onmessage = () => { w.terminate(); URL.revokeObjectURL(url); fn(); };
+    return () => { w.terminate(); URL.revokeObjectURL(url); };
+  } catch {
+    const id = setTimeout(fn, ms);
+    return () => clearTimeout(id);
+  }
+}
 const SETTING_KEY = "irondeck-auto-results";
 const toMs = (v) => (v ? new Date(v).getTime() : 0);
 
@@ -42,7 +57,7 @@ export function useArenaAutoResults({ enabled, run, busy, onWin, onLoss }) {
   useEffect(() => {
     if (!enabled || busy || !base44.entities.ArenaMatch) return;
     let cancelled = false;
-    const id = setTimeout(async () => {
+    const cancelTimer = workerTimeout(async () => {
       try {
         const pending = await base44.entities.ArenaMatch.filter(
           { applied: false },
@@ -74,7 +89,7 @@ export function useArenaAutoResults({ enabled, run, busy, onWin, onLoss }) {
     }, CHECK_MS);
     return () => {
       cancelled = true;
-      clearTimeout(id);
+      cancelTimer();
     };
   }, [enabled, busy, runKey, tick]);
 
