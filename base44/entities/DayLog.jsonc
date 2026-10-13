@@ -37,7 +37,8 @@
       "type": "string",
       "enum": [
         "survived",
-        "died"
+        "died",
+        "missed"
       ],
       "description": "Round outcome"
     },

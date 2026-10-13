@@ -23,7 +23,8 @@
         "reveal",
         "death",
         "verified",
-        "done"
+        "done",
+        "missed"
       ],
       "default": "spinning",
       "description": "Current phase of the decay event shown on the overlay"

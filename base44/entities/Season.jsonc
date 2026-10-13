@@ -58,6 +58,15 @@
     "last_pardoned": {
       "type": "string",
       "description": "Card most recently pardoned from a block"
+    },
+    "block_pool": {
+      "type": "string",
+      "description": "Optional pool of card names eligible for the condemned-card block"
+    },
+    "pardoned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the current card was most recently pardoned"
     }
   },
   "required": [
