@@ -16,9 +16,9 @@ const LOGO_H = 600;
 const LOGO_W = Math.round(LOGO_H * 0.782);
 const LOGO_CX = 960;
 const LOGO_CY = 520;
-const BADGE_H = 150; // docked size
-const BADGE_CX = 118;
-const BADGE_CY = 108;
+const BADGE_H = 190; // docked size: matches the Game scene logo corner
+const BADGE_CX = 92;
+const BADGE_CY = 135;
 
 // ---- Timeline (ms from start) ----
 const T_HEAD_IN = 150; // "Previously on IronDeck" fades in, centred
@@ -487,7 +487,7 @@ function LogoIntro({ tl }) {
   );
 }
 
-export default function DeckIntroRecap({ season, onDone }) {
+export default function DeckIntroRecap({ season, onDone, onBadge }) {
   const [log, setLog] = useState(null);
   const [decays, setDecays] = useState([]);
   const [images, setImages] = useState({});
@@ -499,6 +499,8 @@ export default function DeckIntroRecap({ season, onDone }) {
   const scale = useStageScale();
   const tl = useElapsed(!!LOGO_IMG && logoLoaded && !logoFailed);
   const logoDone = !LOGO_IMG || logoFailed || tl >= LOGO_MS;
+  const badgeDocked = !LOGO_IMG || logoFailed || tl >= 3500;
+  useEffect(() => { if (badgeDocked) onBadge?.(); }, [badgeDocked]);
   const t = useElapsed(ready && logoDone);
   const doneRef = useRef(false);
 
@@ -630,12 +632,12 @@ export default function DeckIntroRecap({ season, onDone }) {
 
   // Nothing to recap: after the logo, fade straight to the deck.
   useEffect(() => {
-    if (!logoDone || !noRecap) return;
+    if (!logoDone || !noRecap || !badgeDocked) return;
     setClosing(true);
     const id = setTimeout(() => finish(), FADE_OUT_MS);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logoDone, noRecap]);
+  }, [logoDone, noRecap, badgeDocked]);
 
   useEffect(() => {
     if (t >= T_OUT + FADE_OUT_MS) finish();
