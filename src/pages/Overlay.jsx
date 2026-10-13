@@ -1,80 +1,96 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { isSameDay, parseISO } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
+import DeckRow from "@/components/overlay/DeckRow";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
+import useOutroAnimation from "@/hooks/useOutroAnimation";
 
-const RUST = "#cc5a3a";
-const RUST_GLOW = "rgba(204,90,58,0.9)";
-const RED = "#c0392b";
-const RED_GLOW = "rgba(192,57,43,0.9)";
-const PANEL_BG =
-  "linear-gradient(180deg, rgba(43,47,55,0.82) 0%, rgba(20,23,29,0.82) 100%)";
-const PANEL_BORDER = "rgba(204,90,58,0.4)";
-const SUBPANEL_BG =
-  "linear-gradient(180deg, rgba(15,18,24,0.92) 0%, rgba(8,10,14,0.92) 100%)";
-const TIMELINE_COLOR = "rgba(255,255,255,0.35)";
-const SMOKE =
-  "0 0 2px rgba(0,0,0,0.6), 0 1px 1px rgba(0,0,0,0.7)";
+const RUST = "#a35a3d";
 
-const DPRE =
-  "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
-const DIAMONDS = {
-  won: ["d00d35fc6", "4a1fe34b6", "894562e97", "8e4c0cdf4", "f6c98f779", "c22df9ff5", "6b3cea327", "2aa7c4fa9"]
-    .map((h, i) => `${DPRE}${h}_win-won-${i}.png`),
-  current: ["abbc514ab", "248774feb", "13521630d", "d393fb7e4", "cbb512916", "3c510e6c7", "249c5eccb", "f64736e5a"]
-    .map((h, i) => `${DPRE}${h}_win-current-${i}.png`),
-  future: ["ae065396e", "72347b8a9", "866337c2f", "0c3e97da6", "32d047d90", "881388982", "be6471094", "d034996f4"]
-    .map((h, i) => `${DPRE}${h}_win-future-${i}.png`),
-};
+// Frame layout: the deck list fills the left column under the logo corner.
+const PANEL_LEFT = 12;
+const PANEL_TOP = 282; // under the logo, which caps the sidebar (top band is 270px)
+const PANEL_W = 456;
+const PANEL_H = 1080 - PANEL_TOP - 12; // 786
+const ROW_W = PANEL_W - 28; // each row fills the panel width
+const TOTAL_HEIGHT = PANEL_H + 16;
+const ROW_GAP = 2;
+const MAX_ROW = 30;
+const MIN_ROW = 14;
+const FRAME_W = 482;
 
-const LOSS_EMPTY = `${DPRE}43bd79795_loss-empty.png`;
-const LOSS_1 = `${DPRE}04f5808d9_loss-1.png`;
-const LOSS_2 = `${DPRE}0901a13ba_loss-2.png`;
-const SURVIVED = `${DPRE}158b6c909_survived.png`;
-const DEATH_RUN = `${DPRE}a1e57edaa_death-run.png`;
-
-// Arena constructed rank emblems: one image sheet, 4 columns (Tier 1 → 4, left
-// to right) × 6 rows (Bronze, Silver, Gold, Platinum, Diamond, Mythic).
-// Paste the uploaded rank-emblems.png link between the quotes. Leave "" for text only.
-const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/78b084191_rank-emblems.png";
-const RANK_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
-const RANK_ANIM_MS = 2600;
-
-// One number per rank position, so we can tell up from down.
-const rankScore = (r) =>
-  r
-    ? RANK_ROWS.indexOf(r.rank_class) * 100 +
-      (r.rank_class === "Mythic" ? 0 : (4 - (Number(r.tier) || 4)) * 10) +
-      (Number(r.step) || 0)
-    : null;
-const rankPos = (r) =>
-  r ? RANK_ROWS.indexOf(r.rank_class) * 10 + (r.rank_class === "Mythic" ? 0 : 4 - (Number(r.tier) || 4)) : null;
-
-const SLOT_W = 110;
-const SLOT_GAP = 6;
-
-// Win slots are 1-7: a slot fills once that many wins are reached.
-const WIN_SLOTS = [1, 2, 3, 4, 5, 6, 7];
-
-function activeKey(slot, wins) {
-  return slot <= wins ? "won" : "future";
+// Different printings of the same card (e.g. two Settle the Wreckage arts)
+// are shown as one row with the copies added together.
+function mergePrintings(list) {
+  const byKey = new Map();
+  for (const c of list) {
+    const key = `${(c.name || "").toLowerCase()}|${c.zone || "main"}`;
+    const m = byKey.get(key);
+    if (!m) {
+      byKey.set(key, { ...c });
+      continue;
+    }
+    m.copies = (Number(m.copies) || 0) + (Number(c.copies) || 0);
+    m.original_copies = (Number(m.original_copies) || 0) + (Number(c.original_copies) || 0);
+    m.is_decay_replacement = Boolean(m.is_decay_replacement || c.is_decay_replacement);
+    if (!m.scryfall_id) m.scryfall_id = c.scryfall_id;
+  }
+  return [...byKey.values()];
 }
 
-export default function Overlay({ embedded = false } = {}) {
-  const [data, setData] = useState(null);
+function sortDeck(cards) {
+  const enriched = cards.map((c) => ({
+    ...c,
+    _land: c.card_type === "land" ? 1 : 0,
+    _mv: c.card_type === "land" ? 999 : Number(c.mana_value) || 0,
+  }));
+  enriched.sort((a, b) => {
+    if (a._land !== b._land) return a._land - b._land;
+    if (a._mv !== b._mv) return a._mv - b._mv;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+  return enriched;
+}
 
-  const [igniteSlot, setIgniteSlot] = useState(null);
-  const [pulseSlot, setPulseSlot] = useState(null);
-  const [flashPip, setFlashPip] = useState(null);
-  const [rankAnim, setRankAnim] = useState(null); // { kind: "up" | "down" | "step", key }
-  const prevRank = useRef(null);
-  const rankTimer = useRef(null);
+// Don't spoil the death screen: while a fresh death plays out, show the deck
+// as it was BEFORE the rot, and switch to the new deck once the death
+// screen's result has been shown (it takes about 30 seconds).
+const DEATH_REVEAL_MS = 31000;
+const toMs = (v) => {
+  if (!v) return 0;
+  const t = String(v);
+  return new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(t) ? t : `${t}Z`).getTime();
+};
+const sameName = (a, b) => (a || "").toLowerCase() === (b || "").toLowerCase();
+// Put back the card the rot removed and take out the card it scavenged.
+function undoRot(list, ev, zone) {
+  if (!ev || (ev.zone || "main") !== zone) return list;
+  return list.map((c) => {
+    let copies = Number(c.copies) || 0;
+    if (sameName(c.name, ev.card_removed)) copies += 1;
+    if (sameName(c.name, ev.replacement_card)) copies = Math.max(0, copies - 1);
+    return copies === (Number(c.copies) || 0) ? c : { ...c, copies };
+  });
+}
 
-  const prevActive = useRef(null);
-  const prevWins = useRef(null);
-  const prevLosses = useRef(null);
-  const igniteTimer = useRef(null);
-  const flashTimer = useRef(null);
+export default function OverlayDeck({ outro } = {}) {
+  const [season, setSeason] = useState(null);
+  const [rawCards, setCards] = useState([]);
+  const [rawSideCards, setSideCards] = useState([]);
+  const [deathEv, setDeathEv] = useState(null);
+  const [, setRevealTick] = useState(0);
+  const loadedOnce = useRef(false);
+  const [climb, setClimb] = useState(null);
+  const [dayLogs, setDayLogs] = useState([]);
+  const [run, setRun] = useState(null);
+  const [decays, setDecays] = useState([]);
+
+  const isOutro = useMemo(() => {
+    if (outro !== undefined) return Boolean(outro);
+    const p = new URLSearchParams(window.location.search);
+    return p.get("mode") === "outro";
+  }, [outro]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -93,573 +109,598 @@ export default function Overlay({ embedded = false } = {}) {
       try {
         const seasons = await base44.entities.Season.filter({ status: "active" });
         if (!active) return;
-        const season = seasons && seasons[0];
-        if (!season) {
-          setData({ season: null });
+        const s = seasons && seasons[0];
+        if (!s) {
+          setSeason(null);
+          setCards([]);
+          setSideCards([]);
+          setClimb(null);
+          setRun(null);
+          setDecays([]);
           return;
         }
-        const [runs, climbs, logs, ranks] = await Promise.all([
-          base44.entities.Run.filter({ season_id: season.id }),
+        const [list, climbs, runs, decs, logs, evs] = await Promise.all([
+          base44.entities.Card.filter({ season_id: s.id }),
           base44.entities.Climb.list(),
-          loadDayLogs(season.id),
-          base44.entities.ArenaRank
-            ? base44.entities.ArenaRank.list("-created_date", 1).catch(() => [])
-            : Promise.resolve([]),
+          base44.entities.Run.filter({ season_id: s.id }),
+          base44.entities.Decay.filter({ season_id: s.id }),
+          loadDayLogs(s.id),
+          base44.entities.DecayEvent.filter({ season_id: s.id }, "-updated_date", 1).catch(() => []),
         ]);
         if (!active) return;
-        const sortedRuns = [...runs].sort(
-          (a, b) => (b.attempt_number || 0) - (a.attempt_number || 0)
-        );
-        const currentRun =
-          runs.find((r) => r.result === "in_progress") || sortedRuns[0] || null;
-        const bestRun = runs.reduce((m, r) => Math.max(m, r.total_wins || 0), 0);
-
         const sortedClimbs = [...climbs].sort(
           (a, b) => (b.number || 0) - (a.number || 0)
         );
-        const latestClimb = sortedClimbs[0];
-        const day = roundDay({
-          logs,
-          climb: latestClimb,
-          playing: currentRun?.round_status === "playing",
-        });
-        const completed = climbs.filter(
-          (c) => c.status === "complete" && c.days_taken != null
+        const sortedRuns = [...runs].sort(
+          (a, b) => (b.attempt_number || 0) - (a.attempt_number || 0)
         );
-        const record = completed.length
-          ? Math.min(...completed.map((c) => c.days_taken))
-          : null;
-
-        setData({ season, currentRun, bestRun, day, record, rank: ranks[0] || null });
+        setSeason(s);
+        setClimb(sortedClimbs[0] || null);
+        setRun(
+          runs.find((r) => r.result === "in_progress") || sortedRuns[0] || null
+        );
+        setDecays(decs);
+        setDayLogs(logs);
+        const ev = (evs && evs[0]) || null;
+        setDeathEv(ev);
+        // A run that died moments ago whose death isn't recorded yet: the rot
+        // may already have changed the cards, so keep showing the old deck.
+        const justDied = runs
+          .filter((r) => r.round_status === "died")
+          .sort((a, b) => toMs(b.updated_date) - toMs(a.updated_date))[0];
+        const deathPending =
+          justDied &&
+          Date.now() - toMs(justDied.updated_date) < 60000 &&
+          !(ev && ev.run_id === justDied.id);
+        if (!deathPending || !loadedOnce.current) {
+          loadedOnce.current = true;
+          setCards(sortDeck(mergePrintings(list.filter((c) => (c.zone || "main") === "main"))));
+          setSideCards(
+            sortDeck(mergePrintings(list.filter((c) => (c.zone || "main") === "sideboard")))
+          );
+        }
       } catch (e) {
         // keep last data on error
       }
     };
     load();
-    const id = setInterval(load, 4000);
+    const id = setInterval(load, 3000);
     return () => {
       active = false;
       clearInterval(id);
     };
   }, []);
 
-  // Rank changes: rank up / rank down / step gained (not on first load)
+  // While the death screen plays, show the pre-rot deck; reveal afterwards.
+  const deathBorn = deathEv ? toMs(deathEv.updated_at) || toMs(deathEv.created_date) : 0;
+  const holdUntil = deathEv && deathEv.step === "death" ? deathBorn + DEATH_REVEAL_MS : 0;
+  const holding = holdUntil > Date.now();
   useEffect(() => {
-    const r = data?.rank;
-    if (!r) return;
-    const before = prevRank.current;
-    prevRank.current = r;
-    if (!before) return;
-    const pos0 = rankPos(before);
-    const pos1 = rankPos(r);
-    let kind = null;
-    if (pos1 > pos0) kind = "up";
-    else if (pos1 < pos0) kind = "down";
-    else if (rankScore(r) > rankScore(before)) kind = "step";
-    if (!kind) return;
-    setRankAnim({ kind, key: Date.now(), fromStep: Number(before.step) || 0 });
-    if (rankTimer.current) clearTimeout(rankTimer.current);
-    rankTimer.current = setTimeout(() => setRankAnim(null), RANK_ANIM_MS);
-  }, [data?.rank]);
-
-  // Animate only on value changes, not on every refresh.
-  useEffect(() => {
-    const wins = data?.currentRun ? Number(data.currentRun.round_wins || 0) : 0;
-    const losses = data?.currentRun
-      ? Number(data.currentRun.round_losses || 0)
-      : 0;
-    const survived = data?.currentRun
-      ? data.currentRun.round_status === "survived"
-      : false;
-
-    const newActive = WIN_SLOTS.map((slot) =>
-      survived ? "won" : activeKey(slot, wins)
-    );
-
-    if (prevActive.current === null) {
-      prevActive.current = newActive;
-      prevWins.current = wins;
-      prevLosses.current = losses;
-      return;
-    }
-
-    prevActive.current = newActive;
-
-    if (wins > prevWins.current) {
-      setIgniteSlot(wins - 1);
-      setPulseSlot(wins);
-      if (igniteTimer.current) clearTimeout(igniteTimer.current);
-      igniteTimer.current = setTimeout(() => setIgniteSlot(null), 400);
-    }
-    prevWins.current = wins;
-
-    if (losses > prevLosses.current) {
-      setFlashPip(losses - 1);
-      if (flashTimer.current) clearTimeout(flashTimer.current);
-      flashTimer.current = setTimeout(() => setFlashPip(null), 400);
-    }
-
-    prevLosses.current = losses;
-  }, [data]);
-
-  useEffect(
-    () => () => {
-      if (igniteTimer.current) clearTimeout(igniteTimer.current);
-      if (flashTimer.current) clearTimeout(flashTimer.current);
-    },
-    []
+    if (!holding) return undefined;
+    const t = setTimeout(() => setRevealTick((n) => n + 1), holdUntil - Date.now() + 50);
+    return () => clearTimeout(t);
+  }, [holding, holdUntil]);
+  const cards = useMemo(
+    () => (holding ? undoRot(rawCards, deathEv, "main") : rawCards),
+    [rawCards, deathEv, holding]
+  );
+  const sideCards = useMemo(
+    () => (holding ? undoRot(rawSideCards, deathEv, "sideboard") : rawSideCards),
+    [rawSideCards, deathEv, holding]
   );
 
-  const s = data;
-  const wins = s?.currentRun ? Number(s.currentRun.round_wins || 0) : 0;
-  const losses = s?.currentRun ? Number(s.currentRun.round_losses || 0) : 0;
-  const survived = Boolean(s?.currentRun?.round_status === "survived");
-  const died = losses >= 2;
-  const seasonNumber = s?.season?.season_number ?? null;
-  const day = s?.day ?? null;
-  const record = s?.record ?? null;
+  const day = useMemo(
+    () =>
+      roundDay({
+        logs: dayLogs,
+        climb,
+        playing: run?.round_status === "playing",
+      }),
+    [dayLogs, climb, run]
+  );
+
+  const seasonNumber = season?.season_number ?? null;
+
+  const todayDecays = useMemo(() => {
+    const now = new Date();
+    return decays
+      .filter((d) => d.date && isSameDay(parseISO(d.date), now))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [decays]);
+
+  const todayOldest = useMemo(
+    () => [...todayDecays].sort((a, b) => new Date(a.date) - new Date(b.date)),
+    [todayDecays]
+  );
+
+  const todayRustedNames = useMemo(
+    () => new Set(todayDecays.map((d) => d.card_removed)),
+    [todayDecays]
+  );
+
+  const n = todayOldest.length;
+  const animating = isOutro && n > 0;
+  const { appliedCount, activeIdx, ticked } = useOutroAnimation(
+    isOutro,
+    todayOldest
+  );
+
+  // Per (name, zone) counts of today's removals and replacements
+  const removedTodayCount = {};
+  const replacedTodayCount = {};
+  for (const d of todayOldest) {
+    const z = d.zone || "main";
+    const rk = `${d.card_removed}|${z}`;
+    const pk = `${d.replacement_card}|${z}`;
+    removedTodayCount[rk] = (removedTodayCount[rk] || 0) + 1;
+    replacedTodayCount[pk] = (replacedTodayCount[pk] || 0) + 1;
+  }
+
+  // Pre-decay copies: reverse all of today's decays from the current deck
+  const preCopiesMap = {};
+  for (const c of [...cards, ...sideCards]) {
+    const z = c.zone || "main";
+    const k = `${c.name}|${z}`;
+    let pre = Number(c.copies) || 0;
+    if (removedTodayCount[k]) pre += removedTodayCount[k];
+    if (replacedTodayCount[k]) pre -= replacedTodayCount[k];
+    preCopiesMap[c.id] = pre;
+  }
+
+  // Decays fully applied so far
+  const removedAppliedCount = {};
+  const replacedAppliedCount = {};
+  for (let j = 0; j < appliedCount; j++) {
+    const d = todayOldest[j];
+    const z = d.zone || "main";
+    const rk = `${d.card_removed}|${z}`;
+    const pk = `${d.replacement_card}|${z}`;
+    removedAppliedCount[rk] = (removedAppliedCount[rk] || 0) + 1;
+    replacedAppliedCount[pk] = (replacedAppliedCount[pk] || 0) + 1;
+  }
+
+  const active = activeIdx != null ? todayOldest[activeIdx] : null;
+  const activeZone = active?.zone || "main";
+  const activeRemovedKey = active ? `${active.card_removed}|${activeZone}` : null;
+  const activeReplacedKey = active
+    ? `${active.replacement_card}|${activeZone}`
+    : null;
+
+  const displayCopiesPreTick = (c) => {
+    const z = c.zone || "main";
+    const k = `${c.name}|${z}`;
+    let disp = preCopiesMap[c.id] ?? (Number(c.copies) || 0);
+    disp -= removedAppliedCount[k] || 0;
+    disp += replacedAppliedCount[k] || 0;
+    return Math.max(0, disp);
+  };
+
+  const displayCopies = (c) => {
+    let disp = displayCopiesPreTick(c);
+    if (active && ticked) {
+      const z = c.zone || "main";
+      const k = `${c.name}|${z}`;
+      if (activeRemovedKey === k) disp -= 1;
+      if (activeReplacedKey === k) disp += 1;
+    }
+    return Math.max(0, disp);
+  };
+
+  const dCopies = (c) => (animating ? displayCopies(c) : Number(c.copies) || 0);
+
+  const preTickRusted = (c) => {
+    const o = Number(c.original_copies) || 0;
+    return o > 0 ? Math.max(0, o - displayCopiesPreTick(c)) : 0;
+  };
+
+  const isCorroding = (c) => {
+    if (!active || ticked) return false;
+    return activeRemovedKey === `${c.name}|${c.zone || "main"}`;
+  };
+  const isReplacementEntering = (c) => {
+    if (!active || !ticked) return false;
+    if (activeReplacedKey !== `${c.name}|${c.zone || "main"}`) return false;
+    return displayCopiesPreTick(c) === 0;
+  };
+  const isRustedEntering = (c) => {
+    if (!active || !ticked) return false;
+    if (activeRemovedKey !== `${c.name}|${c.zone || "main"}`) return false;
+    return preTickRusted(c) === 0;
+  };
+  const salvagedVisible = (c) => {
+    if (!c.is_decay_replacement) return false;
+    if (!animating) return true;
+    const z = c.zone || "main";
+    const k = `${c.name}|${z}`;
+    if (!replacedTodayCount[k]) return true;
+    let applied = replacedAppliedCount[k] || 0;
+    if (active && ticked && activeReplacedKey === k) applied += 1;
+    return applied > 0;
+  };
+
+  const mainCards = cards.filter((c) => dCopies(c) > 0);
+  const sideMain = sideCards.filter((c) => dCopies(c) > 0);
+  const rustedCards = [...cards, ...sideCards]
+    .map((c) => {
+      const o = Number(c.original_copies) || 0;
+      const d = dCopies(c);
+      return { card: c, rusted: o > 0 ? Math.max(0, o - d) : 0 };
+    })
+    .filter((r) => r.rusted > 0)
+    .sort((a, b) => b.rusted - a.rusted);
+  const rustedMainCards = rustedCards.filter(
+    (r) => (r.card.zone || "main") === "main"
+  );
+  const rustedSideCards = rustedCards.filter(
+    (r) => (r.card.zone || "main") === "sideboard"
+  );
+  const rustedMainCount = rustedMainCards.reduce((s, r) => s + r.rusted, 0);
+  const rustedSideCount = rustedSideCards.reduce((s, r) => s + r.rusted, 0);
+
+  // Final-state counts for stable row height
+  const finalMain = cards.filter((c) => (Number(c.copies) || 0) > 0);
+  const finalSide = sideCards.filter((c) => (Number(c.copies) || 0) > 0);
+  const finalRustedMain = cards.filter((c) => {
+    const o = Number(c.original_copies) || 0;
+    const cp = Number(c.copies) || 0;
+    return (c.zone || "main") === "main" && o > 0 && o - cp > 0;
+  });
+  const finalRustedSide = sideCards.filter((c) => {
+    const o = Number(c.original_copies) || 0;
+    const cp = Number(c.copies) || 0;
+    return o > 0 && o - cp > 0;
+  });
+
+  const OUTER_PAD = 16;
+  const PANEL_PAD_V = 28;
+  const HEADER_H = 0;
+  const SECTION_H = 30;
+  const SUB_H = 22;
+  const outroReserve = isOutro && n > 0 ? 100 : isOutro && n === 0 ? 60 : 0;
+  const avail = TOTAL_HEIGHT - OUTER_PAD - PANEL_PAD_V - HEADER_H - outroReserve;
+
+  const sectionsCount =
+    1 +
+    (finalSide.length ? 1 : 0) +
+    (finalRustedMain.length || finalRustedSide.length ? 1 : 0);
+  // MAIN / SIDEBOARD subheadings only when both have rotted cards
+  const bothRotted = finalRustedMain.length > 0 && finalRustedSide.length > 0;
+  const subsCount = bothRotted ? 2 : 0;
+  const totalRows =
+    finalMain.length +
+    finalSide.length +
+    finalRustedMain.length +
+    finalRustedSide.length;
+  const totalItems = totalRows + sectionsCount + subsCount;
+  const headingsH = sectionsCount * SECTION_H + subsCount * SUB_H;
+  const gaps = totalItems > 1 ? (totalItems - 1) * ROW_GAP : 0;
+  const rowH =
+    totalRows > 0
+      ? Math.max(
+          MIN_ROW,
+          Math.min(MAX_ROW, (avail - headingsH - gaps) / totalRows)
+        )
+      : MAX_ROW;
+
+  const hasSide = sideMain.length > 0;
+  const hasRustedMain = rustedMainCards.length > 0;
+  const hasRustedSide = rustedSideCards.length > 0;
+
+  const mainCount = mainCards.reduce((s, c) => s + dCopies(c), 0);
+  const sideCount = sideMain.reduce((s, c) => s + dCopies(c), 0);
+  const rottedCount = rustedMainCount + rustedSideCount;
 
   return (
     <div
-      className={embedded ? undefined : "w-screen h-screen flex items-start justify-center pt-0"}
-      style={
-        embedded
-          ? { width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent" }
-          : { background: "transparent", paddingLeft: 480, boxSizing: "border-box" }
-      }
+      style={{
+        background: "transparent",
+        minHeight: "100vh",
+        padding: `${PANEL_TOP}px 0 0 ${PANEL_LEFT}px`,
+        boxSizing: "border-box",
+      }}
     >
       <style>{`
-        @keyframes ov-ignite { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.25); filter: brightness(1.8) drop-shadow(0 0 10px rgba(255,140,40,0.9)); } 100% { transform: scale(1); filter: brightness(1); } }
-        @keyframes ov-breathe { 0%,100% { transform: scale(1.0); } 50% { transform: scale(1.05); } }
-        @keyframes ov-currentpop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
-        @keyframes ov-pipflash { 0% { transform: scale(1); filter: drop-shadow(0 0 8px ${RED_GLOW}) brightness(1); } 30% { transform: scale(1.3); filter: drop-shadow(0 0 14px ${RED_GLOW}) brightness(2.4); } 100% { transform: scale(1); filter: drop-shadow(0 0 8px ${RED_GLOW}) brightness(1); } }
-        @keyframes ov-titlestamp { 0% { transform: translate(-50%,-50%) scale(2.5) rotate(-12deg); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1) rotate(-4deg); opacity: 1; } }
-        @keyframes ov-screenshake-sm { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(3px, -2px); } 60% { transform: translate(-2px, 1px); } 80% { transform: translate(1px, 0); } }
+        @keyframes ovd-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+        @keyframes ovd-slidein { from { transform: translateX(-24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes ovd-dropin { from { transform: translateY(-18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
+      <div style={{ display: "flex", justifyContent: "flex-start" }}>
+        <div
+          style={{
+            width: PANEL_W,
+            height: PANEL_H,
+            // iron-to-rot border: ember at the top, steel, rot purple at the bottom
+            border: "2px solid transparent",
+            background:
+              "linear-gradient(rgba(8,9,13,0.72), rgba(8,9,13,0.72)) padding-box, linear-gradient(180deg, #E8892F, #c7ced8 45%, #8a5cf0) border-box",
+            boxShadow: "0 0 22px rgba(150,80,255,0.35)",
+            borderRadius: 14,
+            padding: "14px 12px",
+            boxSizing: "border-box",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
+            <SectionTitle title="MAIN DECK" count={mainCount} />
+            {mainCards.map((c) => (
+              <DeckRow
+                key={c.id}
+                card={c}
+                variant="current"
+                copies={animating ? dCopies(c) : undefined}
+                height={rowH}
+                rowWidth={ROW_W}
+                corroding={animating && isCorroding(c)}
+                entering={animating && isReplacementEntering(c)}
+                salvaged={animating ? salvagedVisible(c) : undefined}
+              />
+            ))}
+            {hasSide && (
+              <>
+                <SectionTitle title="SIDEBOARD" count={sideCount} />
+                {sideMain.map((c) => (
+                  <DeckRow
+                    key={c.id}
+                    card={c}
+                    variant="current"
+                    copies={animating ? dCopies(c) : undefined}
+                    height={rowH}
+                rowWidth={ROW_W}
+                    corroding={animating && isCorroding(c)}
+                    entering={animating && isReplacementEntering(c)}
+                    salvaged={animating ? salvagedVisible(c) : undefined}
+                  />
+                ))}
+              </>
+            )}
+            {(hasRustedMain || hasRustedSide) && (
+              <>
+                <SectionTitle title="ROTTED" count={rottedCount} />
+                {hasRustedMain && (
+                  <>
+                    {hasRustedSide && <SubHeading title="MAIN" count={rustedMainCount} />}
+                    {rustedMainCards.map((r) => (
+                      <DeckRow
+                        key={r.card.id}
+                        card={r.card}
+                        variant="rusted"
+                        copies={animating ? dCopies(r.card) : undefined}
+                        height={rowH}
+                rowWidth={ROW_W}
+                        entering={animating && isRustedEntering(r.card)}
+                        glow={isOutro && todayRustedNames.has(r.card.name)}
+                      />
+                    ))}
+                  </>
+                )}
+                {hasRustedSide && (
+                  <>
+                    {hasRustedMain && <SubHeading title="SIDEBOARD" count={rustedSideCount} />}
+                    {rustedSideCards.map((r) => (
+                      <DeckRow
+                        key={r.card.id}
+                        card={r.card}
+                        variant="rusted"
+                        copies={animating ? dCopies(r.card) : undefined}
+                        height={rowH}
+                rowWidth={ROW_W}
+                        entering={animating && isRustedEntering(r.card)}
+                        glow={isOutro && todayRustedNames.has(r.card.name)}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      {isOutro && n === 0 && <DaySurvivedBanner />}
+      {isOutro && n > 0 && <OutroPanel run={run} decays={todayDecays} />}
+    </div>
+  );
+}
+
+function SectionTitle({ title, count }) {
+  return (
+    <div
+      style={{
+        height: 30,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+      }}
+    >
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "0.6rem",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          padding: "0 4px",
         }}
       >
-
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            alignItems: "stretch",
-            gap: "1.3rem",
-            padding: "0.7rem 1.4rem",
-            color: "#fff",
-            fontFamily: "sans-serif",
-            // light see-through panel: helps the text without hiding the board
-            background: embedded ? "none" : "linear-gradient(180deg, rgba(8,9,14,0.5) 0%, rgba(8,9,14,0.3) 100%)",
-            borderRadius: 16,
-            boxShadow: embedded ? "none" : "0 0 0 1px rgba(255,255,255,0.07), 0 8px 24px rgba(0,0,0,0.25)",
-            animation:
-              survived || died
-                ? "ov-screenshake-sm 0.4s ease-in-out 0.35s"
-                : "none",
-          }}
-        >
-        {/* LEFT: Season / Day / Record */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.45rem",
-            minWidth: "92px",
-          }}
-        >
-          <SideStat label="SEASON" value={seasonNumber ?? "—"} labelStyle={steelText(26)} valueStyle={steelText(40)} />
-          <SideStat label="DAY" value={day ?? "—"} labelStyle={steelText(26)} valueStyle={goldText(54)} />
-          {record != null && (
-            <SideStat label="RECORD" value={`${record} DAYS`} labelStyle={steelText(26)} valueStyle={steelText(26)} />
-          )}
-        </div>
-
-        <Divider />
-
-        {/* CENTER: 8 medallions + timeline + labels + losses */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.35rem",
-            justifyContent: "center",
-          }}
-        >
-          {/* Medallions row */}
-          <div
-            style={{
-              display: "flex",
-              gap: SLOT_GAP,
-              alignItems: "center",
-            }}
-          >
-            {WIN_SLOTS.map((slot, i) => (
-              <Medallion
-                key={slot}
-                index={slot}
-                wins={wins}
-                survived={survived}
-                ignite={igniteSlot === i}
-                pulse={pulseSlot === i}
-              />
-            ))}
-          </div>
-
-          {/* Timeline: line + ticks */}
-          <div
-            style={{
-              position: "relative",
-              width: 7 * SLOT_W + 6 * SLOT_GAP,
-              borderTop: `1px solid ${TIMELINE_COLOR}`,
-              height: 8,
-              marginTop: 2,
-            }}
-          >
-            {WIN_SLOTS.map((slot, i) => (
-              <div
-                key={slot}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: i * (SLOT_W + SLOT_GAP) + SLOT_W / 2,
-                  width: 2,
-                  height: 8,
-                  background: TIMELINE_COLOR,
-                  transform: "translateX(-1px)",
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Labels row */}
-          <div style={{ display: "flex", gap: SLOT_GAP }}>
-            {WIN_SLOTS.map((slot) => {
-              const isReached = slot <= wins;
-              // key includes the state so the label is redrawn cleanly when it
-              // changes (a background fade here broke the text clipping)
-              return (
-                <div
-                  key={`${slot}-${isReached ? "won" : "open"}`}
-                  style={{
-                    width: SLOT_W,
-                    textAlign: "center",
-                    ...(isReached ? goldText(17) : steelText(17, true)),
-                  }}
-                >
-                  {slot === 1 ? "1 Win" : `${slot} Wins`}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Loss diamonds + label */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.15rem",
-              marginTop: "0.3rem",
-            }}
-          >
-            <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
-              {[0, 1].map((i) => {
-                const filled = i === 0 ? losses >= 1 : losses >= 2;
-                const src =
-                  i === 0
-                    ? losses >= 1
-                      ? LOSS_1
-                      : LOSS_EMPTY
-                    : losses >= 2
-                    ? LOSS_2
-                    : LOSS_EMPTY;
-                const isFlash = flashPip === i;
-                return (
-                  <img
-                    key={i}
-                    src={src}
-                    alt=""
-                    draggable={false}
-                    style={{
-                      width: 72,
-                      height: 72,
-                      objectFit: "contain",
-                      filter: filled
-                        ? `drop-shadow(0 0 8px ${RED_GLOW})`
-                        : "none",
-                      animation: isFlash
-                        ? "ov-pipflash 0.4s ease-out"
-                        : "none",
-                      pointerEvents: "none",
-                    }}
-                  />
-                );
-              })}
-            </div>
-            <span style={steelText(18)}>LOSSES</span>
-          </div>
-        </div>
-
-        <Divider />
-
-        {/* RIGHT: Run wins + Best */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            alignSelf: "stretch",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.1rem",
-              minWidth: "110px",
-            }}
-          >
-            <span style={steelText(26)}>RUN</span>
-            <span style={goldText(76)}>{s?.currentRun?.total_wins ?? "—"}</span>
-            <span style={steelText(26)}>BEST {s?.bestRun ?? "—"}</span>
-          </div>
-        </div>
-
-        {s?.rank && (
-          <>
-            <Divider />
-            <RankBlock key={rankAnim?.key || "rank"} rank={s.rank} anim={rankAnim} />
-          </>
-        )}
-
-        </div>
+        <span style={{ ...steelText(18), fontWeight: 900, letterSpacing: "2px" }}>
+          {title}
+        </span>
+        <span style={{ ...goldText(16) }}>{count}</span>
       </div>
-      {survived && (
-        <img
-          src={SURVIVED}
-          alt="DAY SURVIVED"
-          draggable={false}
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            width: 520,
-            transform: "translate(-50%,-50%)",
-            animation:
-              "ov-titlestamp 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
-            zIndex: 50,
-            pointerEvents: "none",
-          }}
-        />
-      )}
+      <div
+        style={{
+          height: 1,
+          background: "#5A462E",
+          marginTop: 3,
+          opacity: 0.85,
+        }}
+      />
     </div>
   );
 }
 
-// Current Arena rank: emblem, rank + tier, and step pips (6 per tier).
-// Animates on rank up (burst + "RANK UP"), rank down (shake), and steps gained.
-function RankBlock({ rank, anim }) {
-  const cls = rank.rank_class || "";
-  const row = RANK_ROWS.indexOf(cls);
-  const isMythic = cls === "Mythic";
-  const tier = Math.min(4, Math.max(1, Number(rank.tier) || 4));
-  const col = isMythic ? 0 : tier - 1;
-  const size = 96;
-  const steps = Math.max(0, Math.min(6, Number(rank.step) || 0));
-  const label = isMythic
-    ? rank.leaderboard_place
-      ? `#${rank.leaderboard_place}`
-      : rank.percentile
-      ? `${Math.round(Number(rank.percentile))}%`
-      : ""
-    : `TIER ${tier}`;
-  const up = anim?.kind === "up";
-  const down = anim?.kind === "down";
-  const stepUp = anim?.kind === "step";
-  const emblemAnim = up
-    ? "ov-rankup 1.3s cubic-bezier(0.2, 0.8, 0.3, 1)"
-    : down
-    ? "ov-rankdown 0.6s ease-in-out"
-    : "none";
+function SubHeading({ title, count }) {
   return (
     <div
       style={{
-        position: "relative",
+        height: 22,
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: "0.3rem",
-        minWidth: "130px",
+        justifyContent: "space-between",
+        padding: "0 12px",
       }}
     >
-      <style>{`
-        @keyframes ov-rankup {
-          0% { transform: scale(1); filter: brightness(1) drop-shadow(0 4px 8px rgba(0,0,0,0.8)); }
-          25% { transform: scale(1.45); filter: brightness(2) drop-shadow(0 0 26px rgba(255,190,90,1)); }
-          60% { transform: scale(0.94); filter: brightness(1.3) drop-shadow(0 0 14px rgba(255,170,60,0.8)); }
-          100% { transform: scale(1); filter: brightness(1) drop-shadow(0 4px 8px rgba(0,0,0,0.8)); }
-        }
-        @keyframes ov-rankring { 0% { transform: translate(-50%,-50%) scale(0.3); opacity: 0.95; } 100% { transform: translate(-50%,-50%) scale(2.4); opacity: 0; } }
-        @keyframes ov-rankdown {
-          0%,100% { transform: translateX(0); filter: none; }
-          20% { transform: translateX(-5px); filter: grayscale(0.6) brightness(0.7); }
-          40% { transform: translateX(5px); }
-          60% { transform: translateX(-3px); }
-          80% { transform: translateX(2px); filter: none; }
-        }
-        @keyframes ov-rankword { 0% { transform: translate(-50%, 10px) scale(0.6); opacity: 0; } 15% { transform: translate(-50%, 0) scale(1.1); opacity: 1; } 25% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%, -8px); opacity: 0; } }
-        @keyframes ov-stepin { 0% { transform: rotate(45deg) scale(1); } 40% { transform: rotate(45deg) scale(1.9); filter: brightness(2.2); } 100% { transform: rotate(45deg) scale(1); } }
-      `}</style>
+      <span style={{ ...steelText(13), fontWeight: 900, letterSpacing: "1.5px" }}>
+        {title}
+      </span>
+      <span style={{ ...goldText(12) }}>{count}</span>
+    </div>
+  );
+}
 
-      {up && (
-        <>
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: size / 2,
-              width: size * 1.2,
-              height: size * 1.2,
-              borderRadius: "50%",
-              border: "3px solid rgba(255,200,110,0.95)",
-              boxShadow: "0 0 24px 6px rgba(255,170,60,0.7)",
-              animation: "ov-rankring 1.1s ease-out forwards",
-              pointerEvents: "none",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: -30,
-              whiteSpace: "nowrap",
-              ...goldText(24),
-              letterSpacing: "3px",
-              animation: `ov-rankword ${RANK_ANIM_MS}ms ease forwards`,
-              pointerEvents: "none",
-            }}
-          >
-            RANK UP!
-          </div>
-        </>
-      )}
+function DaySurvivedBanner() {
+  return (
+    <div style={{ marginTop: "14px", display: "flex", justifyContent: "center" }}>
+      <div
+        style={{
+          padding: "10px 28px",
+          borderRadius: "8px",
+          background: "rgba(20,23,29,0.82)",
+          border: "1px solid #2d8a4e",
+          color: "#fff",
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          fontSize: "1.2rem",
+          textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+        }}
+      >
+        DAY SURVIVED
+      </div>
+    </div>
+  );
+}
 
-      {RANK_SPRITE && row >= 0 ? (
+function OutroPanel({ run, decays }) {
+  const status = run?.round_status;
+  const wins = run?.round_wins ?? 0;
+  const losses = run?.round_losses ?? 0;
+  const resultLabel =
+    status === "survived"
+      ? "DAY SURVIVED"
+      : status === "died"
+      ? "RUN DIED"
+      : "IN PROGRESS";
+  const resultColor =
+    status === "survived"
+      ? "#2d8a4e"
+      : status === "died"
+      ? "#c0392b"
+      : RUST;
+
+  return (
+    <div
+      style={{
+        marginTop: "14px",
+        display: "flex",
+        gap: "16px",
+        alignItems: "stretch",
+      }}
+    >
+      <div
+        style={{
+          flexShrink: 0,
+          padding: "10px 18px",
+          borderRadius: "8px",
+          background: "rgba(20,23,29,0.82)",
+          border: `1px solid ${resultColor}`,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          minWidth: 200,
+        }}
+      >
+        <span
+          style={{
+            fontSize: "0.6rem",
+            letterSpacing: "0.18em",
+            fontWeight: 700,
+            color: resultColor,
+          }}
+        >
+          TODAY
+        </span>
+        <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#fff" }}>
+          {resultLabel}
+        </span>
+        <span
+          style={{
+            fontSize: "0.85rem",
+            fontWeight: 700,
+            color: "rgba(255,255,255,0.7)",
+          }}
+        >
+          {wins}–{losses}
+        </span>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          padding: "10px 16px",
+          borderRadius: "8px",
+          background: "rgba(20,23,29,0.82)",
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
         <div
           style={{
-            width: size,
-            height: size,
-            backgroundImage: `url(${RANK_SPRITE})`,
-            backgroundSize: `${size * 4}px ${size * 6}px`,
-            backgroundPosition: `${-col * size}px ${-row * size}px`,
-            backgroundRepeat: "no-repeat",
-            filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.8))",
-            animation: emblemAnim,
+            fontSize: "0.6rem",
+            letterSpacing: "0.18em",
+            fontWeight: 700,
+            color: RUST,
+            marginBottom: "6px",
           }}
-        />
-      ) : null}
-      <span style={{ ...goldText(30), animation: RANK_SPRITE ? "none" : emblemAnim }}>
-        {cls.toUpperCase() || "—"}
-      </span>
-      {label && <span style={steelText(20)}>{label}</span>}
-      {!isMythic && (
-        <div style={{ display: "flex", gap: 5, marginTop: 2 }}>
-          {Array.from({ length: 6 }).map((_, i) => {
-            const filled = i < steps;
-            const fresh = stepUp && filled && i >= (anim?.fromStep || 0);
-            return (
+        >
+          CARDS RUSTED TODAY
+        </div>
+        {decays.length === 0 ? (
+          <div
+            style={{
+              fontSize: "0.85rem",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            No decay today.
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "6px 18px",
+            }}
+          >
+            {decays.map((d, i) => (
               <div
                 key={i}
                 style={{
-                  width: 11,
-                  height: 11,
-                  transform: "rotate(45deg)",
-                  borderRadius: 2,
-                  border: "1.5px solid #120d08",
-                  background: filled
-                    ? "linear-gradient(135deg,#FFF0CD,#D68C3C)"
-                    : "rgba(60,64,72,0.9)",
-                  boxShadow: filled ? "0 0 6px rgba(255,170,60,0.8)" : "none",
-                  animation: fresh ? `ov-stepin 0.6s ease-out ${(i - (anim?.fromStep || 0)) * 0.15}s both` : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "0.82rem",
+                  color: "#fff",
                 }}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SideStat({ label, value, labelStyle, valueStyle }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-      <span style={labelStyle}>{label}</span>
-      <span style={valueStyle}>{value}</span>
-    </div>
-  );
-}
-
-function Divider() {
-  return (
-    <div
-      style={{
-        width: "1px",
-        alignSelf: "stretch",
-        background: "rgba(255,255,255,0.12)",
-      }}
-    />
-  );
-}
-
-function Medallion({ index, wins, survived, ignite, pulse }) {
-  const active = survived ? "won" : activeKey(index, wins);
-  let anim = "none";
-  if (ignite) {
-    anim = "ov-ignite 0.4s ease-out";
-  } else if (active === "current") {
-    anim = pulse
-      ? "ov-currentpop 0.3s ease, ov-breathe 1.6s ease-in-out infinite 0.3s"
-      : "ov-breathe 1.6s ease-in-out infinite";
-  }
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: SLOT_W,
-        height: SLOT_W,
-        animation: anim,
-      }}
-    >
-      {["won", "current", "future"].map((k) => (
-        <img
-          key={k}
-          src={DIAMONDS[k][index]}
-          alt=""
-          draggable={false}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: SLOT_W,
-            height: SLOT_W,
-            objectFit: "contain",
-            opacity: active === k ? 1 : 0,
-            transition: "opacity 0.3s ease",
-            pointerEvents: "none",
-          }}
-        />
-      ))}
+              >
+                <span
+                  style={{
+                    textDecoration: "line-through",
+                    color: "rgba(255,255,255,0.6)",
+                  }}
+                >
+                  {d.card_removed}
+                </span>
+                <span style={{ color: RUST, fontWeight: 800 }}>→</span>
+                <span style={{ fontWeight: 700 }}>{d.replacement_card}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
