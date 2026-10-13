@@ -43,21 +43,6 @@ export default function Sentencing({ season, cards, active, onDone }) {
       .catch(() => { asked.current = false; });
   }, [active, phase, season, wheelCards.length]);
 
-  // Wheel slices: unique rares/mythics still in the deck.
-  const wheelCards = useMemo(() => {
-    const seen = new Map();
-    for (const c of cards || []) {
-      if (n(c.copies) > 0 && (c.rarity === "rare" || c.rarity === "mythic") && !seen.has(c.name))
-        seen.set(c.name, { name: c.name, scryfall_id: c.scryfall_id || "" });
-    }
-    return [...seen.values()];
-  }, [cards]);
-  const artMap = useMemo(() => {
-    const m = {};
-    wheelCards.forEach((c) => { if (c.scryfall_id) m[c.scryfall_id] = { artCrop: scry(c.scryfall_id, "art_crop") }; });
-    return m;
-  }, [wheelCards]);
-
   // Wait until a card is condemned, then decide: spin or "still on the block".
   useEffect(() => {
     if (!active || phase !== "wait" || !s0?.condemned_card || wheelCards.length === 0) return;
