@@ -3,7 +3,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.53';
 // Makes sure today's condemned card exists. Called by the Overlay Intro when it
 // finds no card on the block (e.g. the round was started before the wheel).
 // Same rules as src/lib/condemned.js: keep the current card if it's still in the
-// deck; otherwise pick a random rare/mythic; sentence 3 days, then 2, then 1.
+// deck; otherwise pick a random card from the pool (rares/mythics, or uncommons,
+// then commons, if none are left); sentence 3 days, then 2, then 1 from then on.
 const SENTENCES = [3, 2, 1];
 const n = (v: unknown) => Number(v) || 0;
 
@@ -16,15 +17,22 @@ export default async function(req: Request): Promise<Response> {
     if (!season) return Response.json({ error: "No active season" }, { status: 404 });
 
     const cards = await db.Card.filter({ season_id: season.id });
-    const names = [...new Set(
-      (cards || [])
-        .filter((c: any) => n(c.copies) > 0 && (c.rarity === "rare" || c.rarity === "mythic"))
-        .map((c: any) => c.name),
-    )];
-    if (season.condemned_card && names.includes(season.condemned_card)) {
+    const POOLS: [string, (r: string) => boolean][] = [
+      ["rare", (r) => r === "rare" || r === "mythic"],
+      ["uncommon", (r) => r === "uncommon"],
+      ["common", (r) => r === "common"],
+    ];
+    let pool = "rare";
+    let names: string[] = [];
+    for (const [p, match] of POOLS) {
+      names = [...new Set((cards || []).filter((c: any) => n(c.copies) > 0 && match(c.rarity)).map((c: any) => c.name as string))];
+      if (names.length) { pool = p; break; }
+    }
+    const still = (cards || []).some((c: any) => c.name === season.condemned_card && n(c.copies) > 0);
+    if (season.condemned_card && still) {
       return Response.json({ ok: true, kept: true, ...pick(season) });
     }
-    if (names.length === 0) return Response.json({ ok: false, reason: "No rares or mythics left" });
+    if (names.length === 0) return Response.json({ ok: false, reason: "No cards left in the deck" });
 
     const name = names[Math.floor(Math.random() * names.length)];
     let pardons: Record<string, number> = {};
@@ -36,6 +44,7 @@ export default async function(req: Request): Promise<Response> {
       block_days: 0,
       block_sentence: SENTENCES[Math.min(capture, SENTENCES.length) - 1],
       block_capture: capture,
+      block_pool: pool,
     };
     await db.Season.update(season.id, update);
     return Response.json({ ok: true, kept: false, ...update });
@@ -51,5 +60,6 @@ function pick(s: any) {
     block_days: s.block_days,
     block_sentence: s.block_sentence,
     block_capture: s.block_capture,
+    block_pool: s.block_pool,
   };
 }
