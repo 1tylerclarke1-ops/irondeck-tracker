@@ -14,8 +14,8 @@ const BLOCK_IMG = MEDIA + "9843f7bd9_block-normal.png";
 const STUMP_IMG = MEDIA + "1299fe5b1_stump-normal.png";
 const STUMP_ROT_IMG = MEDIA + "006920b1a_stump-rotted.png";
 const AXE_IMG = MEDIA + "4a043ee21_axe.png";
-const TRAIL_IMG = "PASTE_SLASH_TRAIL_LINK";
-const ROT_FRAMES_IMG = "PASTE_ROT_FRAMES_LINK";
+const TRAIL_IMG = MEDIA + "043115ed5_slash-trail.png";
+const ROT_FRAMES_IMG = MEDIA + "1f6e29d17_rot-frames.png";
 
 // The block images are 1024×1536, shown 452 wide at the bottom of the panel.
 const STUMP_W = 452;
