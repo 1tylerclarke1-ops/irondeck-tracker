@@ -122,7 +122,8 @@ export default function OverlayOutro() {
     const html = document.documentElement;
     html.style.background = "#08060e";
     document.body.style.background = "#08060e";
-    loadStory().then(setStory).catch(() => setStory(null));
+    // No finished round to report (or a load error)? Go straight to the thank-you end card.
+    loadStory().then((s) => setStory(s || { empty: true })).catch(() => setStory({ empty: true }));
   }, []);
 
   // One clock for the whole sequence, started once the data is in.
@@ -135,6 +136,7 @@ export default function OverlayOutro() {
 
   const at = (ms) => t >= ms;
   const scene = !story ? null
+    : story.empty ? "end"
     : at(T.end) ? "end" : at(T.tomorrow) ? "tomorrow" : at(T.climb) ? "climb" : at(T.block) ? "block" : at(T.result) ? "result" : null;
   const b = story?.block;
   const blockDone = b && (b.kind === "rotted" || b.kind === "pardoned" || b.kind === "none");
