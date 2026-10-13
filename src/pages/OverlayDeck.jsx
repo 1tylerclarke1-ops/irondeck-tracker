@@ -58,7 +58,7 @@ function sortDeck(cards) {
 // Don't spoil the death screen: while a fresh death plays out, show the deck
 // as it was BEFORE the rot, and switch to the new deck once the death
 // screen's result has been shown (it takes about 30 seconds).
-const DEATH_REVEAL_MS = 31000;
+const DEATH_REVEAL_MS = 24000; // sidebar execution (18.5s) + death screen result, then the deck returns
 const toMs = (v) => {
   if (!v) return 0;
   const t = String(v);
