@@ -207,6 +207,7 @@ function Half({ image, clip, seed, anim, clock }) {
 
 export default function ChoppingBlock({ mode, name, image, day, sentence, recapture, newName, newImage, rarity, rollCards }) {
   const rot = mode === "rot";
+  const wait = mode === "wait"; // the first 2s of a Death Run: the card waits on the block
   const axeRef = useRef(null);
   const rar = RARITY[rarity] || null;
   // The randomiser's sequence: candidate images (repeated), ending on the scavenged card.
@@ -241,7 +242,7 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
     "@keyframes cbHdrIn { 0%," + pc(T_LAND + 150) + " { opacity: 0 } " + pc(T_LAND + 650) + ",100% { opacity: 1 } }",
     "@keyframes cbSlot { 0%," + pc(T_SCAV + 300) + " { opacity: 0 } " + pc(T_RAR) + "," + pc(T_LAND) + " { opacity: 1 } " + pc(T_LAND + 300) + ",100% { opacity: 0 } }",
     "@keyframes cbStamp { 0%," + pc(RAR_T[RAR_T.length - 1]) + " { transform: scale(1) } " + pc(RAR_T[RAR_T.length - 1] + 120) + " { transform: scale(1.25) } " + pc(RAR_T[RAR_T.length - 1] + 400) + ",100% { transform: scale(1) } }",
-    "@keyframes cbLand { 0%," + pc(T_LAND) + " { transform: scale(1) } " + pc(T_LAND + 150) + " { transform: scale(1.08) } " + pc(T_LAND + 500) + ",100% { transform: scale(1) } }",
+    "@keyframes cbLand { 0%," + pc(T_LAND) + " { transform: scale(1) } " + pc(T_LAND + 150) + " { transform: scale(1.08) } " + pc(T_LAND + 500) + "," + pc(T_LAND + 600) + " { transform: scale(1); opacity: 1 } " + pc(T_LAND + 750) + ",100% { transform: scale(1.1); opacity: 0 } }", // then it flies out to the middle of the game (death screen)
     "@keyframes cbBurst { 0%," + pc(T_LAND) + " { opacity: 0; transform: scale(.6) } " + pc(T_LAND + 120) + " { opacity: 1 } " + pc(T_LAND + 900) + ",100% { opacity: 0; transform: scale(1.8) } }",
     "@keyframes cbH1 { 0%," + pc(T_SCAV + 500) + " { opacity: 0 } " + pc(T_SCAV + 900) + "," + pc(T_RND - 200) + " { opacity: 1 } " + pc(T_RND) + ",100% { opacity: 0 } }",
     "@keyframes cbH2 { 0%," + pc(T_RND) + " { opacity: 0 } " + pc(T_RND + 300) + "," + pc(T_LAND) + " { opacity: 1 } " + pc(T_LAND + 150) + ",100% { opacity: 0 } }",
@@ -267,13 +268,13 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
       {/* Heading, name and sentence */}
       <div style={{ position: "absolute", left: 0, right: 0, top: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 3,
         animation: rot && newName ? "cbHdrOut " + ROT_MS + "ms linear both" : "none" }}>
-        <div style={{ ...(rot ? purpleText(32) : goldText(32)), letterSpacing: 3, whiteSpace: "nowrap" }}>
-          {rot ? "THE BLADE FALLS" : "ON THE CHOPPING BLOCK"}
+        <div style={{ ...(rot || wait ? purpleText(32) : goldText(32)), letterSpacing: 3, whiteSpace: "nowrap" }}>
+          {rot ? "THE BLADE FALLS" : wait ? "DEATH RUN" : "ON THE CHOPPING BLOCK"}
         </div>
-        {!rot && recapture && <div style={{ ...purpleText(22), letterSpacing: 3 }}>THE EXECUTIONER REMEMBERS</div>}
+        {!rot && !wait && recapture && <div style={{ ...purpleText(22), letterSpacing: 3 }}>THE EXECUTIONER REMEMBERS</div>}
         <div style={{ ...goldText(30), lineHeight: 1, maxWidth: 420, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{(name || "").toUpperCase()}</div>
-        {rot ? (
-          <div style={{ ...steelText(24) }}>THE CONDEMNED CARD ROTS</div>
+        {rot || wait ? (
+          <div style={{ ...steelText(24) }}>{wait ? "THE BLADE IS RAISED…" : "THE CONDEMNED CARD ROTS"}</div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ ...(last ? purpleText(24) : steelText(24)) }}>
@@ -388,7 +389,7 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
         <img key={src} src={src} alt="" style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} />
       ))}
 
-      {!rot && (
+      {!rot && !wait && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 14, ...steelText(24), textShadow: "0 0 3px #000, 0 2px 6px #000, 0 0 14px #000" }}>
           LOSE TODAY, AND IT ROTS.
         </div>
