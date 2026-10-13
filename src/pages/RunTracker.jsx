@@ -111,46 +111,11 @@ export default function RunTracker() {
     loadAll();
   }, [loadAll]);
 
-  // Re-read the round from the database every 5s, so this page never shows an old
-  // score (e.g. another Run Tracker or the auto-results saved a match). Skipped
-  // while this page is saving, and thrown away if a save happened meanwhile.
-  const busyRef = useRef(false);
-  const saves = useRef(0);
-  useEffect(() => {
-    busyRef.current = busy;
-    if (busy) saves.current += 1;
-  }, [busy]);
-  useEffect(() => {
-    if (!season?.id) return undefined;
-    const id = setInterval(async () => {
-      if (busyRef.current) return;
-      const seen = saves.current;
-      try {
-        const [active, list, logs, events] = await Promise.all([
-          base44.entities.Season.filter({ status: "active" }),
-          base44.entities.Run.filter({ season_id: season.id }),
-          readDayLogs(season.id),
-          base44.entities.DecayEvent.filter({ season_id: season.id }, "-updated_date", 1),
-        ]);
-        if (busyRef.current || saves.current !== seen) return;
-        const found = active[0] || null;
-        if (!found || found.id !== season.id) {
-          loadAll();
-          return;
-        }
-        setSeason(found);
-        setRuns(list);
-        if (logs) {
-          setDayLogs(logs);
-          setLogsOk(true);
-        }
-        setDeathEvent(events && events.length ? events[0] : null);
-      } catch {
-        // try again in 5s
-      }
-    }, 5000);
-    return () => clearInterval(id);
-  }, [season?.id, loadAll]);
+    useEffect(() => {
+      loadAll();
+    }, [loadAll]);
+
+    const sortedRuns = [...runs].sort(
 
   const sortedRuns = [...runs].sort(
     (a, b) => (b.attempt_number || 0) - (a.attempt_number || 0)
@@ -453,7 +418,7 @@ export default function RunTracker() {
       <div className="space-y-6">
         {!logsOk && (
           <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-            Couldn't read the day history, so the day number may be wrong. Start Round is paused until it loads (retrying every 5s).
+              Couldn't read the day history, so the day number may be wrong. Start Round is paused until it loads. Refresh this page to try again.
           </div>
         )}
         <RunStats
