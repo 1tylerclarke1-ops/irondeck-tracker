@@ -7,13 +7,22 @@ import { ukDate } from "@/lib/ukDay";
 // - on a later day, before the round starts: rounds finished + 1
 // - a completed climb shows how many days it took
 
-export async function loadDayLogs(seasonId) {
+// Reads the season's DayLogs, trying up to 3 times. Returns null if they still
+// can't be read, so the caller can keep what it had (not "no days played").
+export async function readDayLogs(seasonId) {
   if (!seasonId || !base44.entities.DayLog) return [];
-  try {
-    return await base44.entities.DayLog.filter({ season_id: seasonId });
-  } catch {
-    return [];
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await base44.entities.DayLog.filter({ season_id: seasonId });
+    } catch {
+      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+    }
   }
+  return null;
+}
+
+export async function loadDayLogs(seasonId) {
+  return (await readDayLogs(seasonId)) || [];
 }
 
 const todayUtc = () => ukDate(); // UK calendar day (name kept for older code)
