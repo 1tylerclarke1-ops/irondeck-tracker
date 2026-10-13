@@ -7,7 +7,7 @@ const scryImage = (id, version) =>
   id ? `https://api.scryfall.com/cards/${id}?format=image&version=${version}` : "";
 
 // Run the full decay flow for a dead run and create a single "death" DecayEvent.
-export async function performDecay({ season, cards, run }) {
+export async function performDecay({ season, cards, run, condemned }) {
   if (!season || !run) throw new Error("Missing season or run");
 
   // 1. Pick a random unique mythic/rare card with copies > 0 (main or sideboard).
@@ -23,7 +23,8 @@ export async function performDecay({ season, cards, run }) {
       uniqueCards.push(c);
     }
   }
-  const chosen = uniqueCards[Math.floor(Math.random() * uniqueCards.length)];
+  const condemnedCard = condemned && uniqueCards.find((c) => c.name === condemned);
+  const chosen = condemnedCard || uniqueCards[Math.floor(Math.random() * uniqueCards.length)];
 
   // 2. Roll uncommon or common 50/50, then fetch replacement + decoys.
   const rollRarity = Math.random() < 0.5 ? "uncommon" : "common";
@@ -149,7 +150,8 @@ export async function performDecay({ season, cards, run }) {
     zone: targetZone,
     sideboard_rotted: sideboardRotted,
     replacement_rule: replacementRule,
-    updated_at: now,
+        updated_at: now,
+    was_condemned: Boolean(condemnedCard),
   });
 
   return { event, decayId: decay.id };
