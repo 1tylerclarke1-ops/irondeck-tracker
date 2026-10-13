@@ -26,6 +26,38 @@
     "season_number": {
       "type": "integer",
       "description": "Season number"
+    },
+    "condemned_card": {
+      "type": "string",
+      "description": "Card currently condemned by the season's block rules"
+    },
+    "condemned_since": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the current card was condemned"
+    },
+    "block_days": {
+      "type": "integer",
+      "default": 0,
+      "description": "Days the condemned card has been blocked so far"
+    },
+    "block_sentence": {
+      "type": "integer",
+      "default": 3,
+      "description": "Block sentence length in days for a condemned card"
+    },
+    "block_capture": {
+      "type": "integer",
+      "default": 1,
+      "description": "How many block captures have been served"
+    },
+    "pardon_counts": {
+      "type": "string",
+      "description": "JSON text tracking per-card pardon counts"
+    },
+    "last_pardoned": {
+      "type": "string",
+      "description": "Card most recently pardoned from a block"
     }
   },
   "required": [

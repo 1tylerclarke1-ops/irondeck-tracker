@@ -123,6 +123,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When the event was last updated"
+    },
+    "was_condemned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the decayed card was condemned at the time of this event"
     }
   },
   "required": [
