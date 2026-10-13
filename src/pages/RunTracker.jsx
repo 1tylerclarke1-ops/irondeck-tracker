@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import AppNav from "@/components/AppNav";
 import NoSeason from "@/components/run/NoSeason";
@@ -12,7 +12,7 @@ import { performDecay } from "@/lib/performDecay";
 import { ensureCondemned, serveBlockDay, clearCondemned } from "@/lib/condemned";
 import { ukDate, missedDates } from "@/lib/ukDay";
 import { createDayLog, deleteLatestDayLogForRun } from "@/lib/dayLog";
-import { loadDayLogs, roundDay } from "@/lib/roundDay";
+import { loadDayLogs, readDayLogs, roundDay } from "@/lib/roundDay";
 import {
   useArenaAutoResults,
   useAutoResultsSetting,
@@ -33,6 +33,7 @@ export default function RunTracker() {
   const [decayApplying, setDecayApplying] = useState(false);
   const [decayError, setDecayError] = useState(null);
   const [dayLogs, setDayLogs] = useState([]);
+  const [logsOk, setLogsOk] = useState(true);
 
   const loadSeason = useCallback(async () => {
     const active = await base44.entities.Season.filter({ status: "active" });
@@ -70,7 +71,9 @@ export default function RunTracker() {
   }, []);
 
   const reloadDayLogs = useCallback(async (seasonId) => {
-    setDayLogs(await loadDayLogs(seasonId));
+    const logs = await readDayLogs(seasonId);
+    if (logs) setDayLogs(logs);
+    setLogsOk(Boolean(logs));
   }, []);
 
   const loadClimb = useCallback(async () => {
@@ -107,6 +110,47 @@ export default function RunTracker() {
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  // Re-read the round from the database every 5s, so this page never shows an old
+  // score (e.g. another Run Tracker or the auto-results saved a match). Skipped
+  // while this page is saving, and thrown away if a save happened meanwhile.
+  const busyRef = useRef(false);
+  const saves = useRef(0);
+  useEffect(() => {
+    busyRef.current = busy;
+    if (busy) saves.current += 1;
+  }, [busy]);
+  useEffect(() => {
+    if (!season?.id) return undefined;
+    const id = setInterval(async () => {
+      if (busyRef.current) return;
+      const seen = saves.current;
+      try {
+        const [active, list, logs, events] = await Promise.all([
+          base44.entities.Season.filter({ status: "active" }),
+          base44.entities.Run.filter({ season_id: season.id }),
+          readDayLogs(season.id),
+          base44.entities.DecayEvent.filter({ season_id: season.id }, "-updated_date", 1),
+        ]);
+        if (busyRef.current || saves.current !== seen) return;
+        const found = active[0] || null;
+        if (!found || found.id !== season.id) {
+          loadAll();
+          return;
+        }
+        setSeason(found);
+        setRuns(list);
+        if (logs) {
+          setDayLogs(logs);
+          setLogsOk(true);
+        }
+        setDeathEvent(events && events.length ? events[0] : null);
+      } catch {
+        // try again in 5s
+      }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [season?.id, loadAll]);
 
   const sortedRuns = [...runs].sort(
     (a, b) => (b.attempt_number || 0) - (a.attempt_number || 0)
@@ -399,7 +443,7 @@ export default function RunTracker() {
   const showMythic = Boolean(climb && climb.status === "active");
   const survived = inProgress?.round_status === "survived";
   const deathUnverified = deathEvent?.step === "death";
-  const canStart = allPass && !decayDue && !deathUnverified;
+  const canStart = allPass && !decayDue && !deathUnverified && logsOk;
   const canUndo = history.length > 0;
 
   return (
@@ -407,6 +451,11 @@ export default function RunTracker() {
       <AppNav />
       <h1 className="text-2xl font-bold mb-6">Run Tracker</h1>
       <div className="space-y-6">
+        {!logsOk && (
+          <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+            Couldn't read the day history, so the day number may be wrong. Start Round is paused until it loads (retrying every 5s).
+          </div>
+        )}
         <RunStats
           seasonNumber={season.season_number}
           day={day}
