@@ -17,30 +17,24 @@ export default function SeasonSetup() {
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
 
-  const loadSeason = useCallback(async () => {
-    const active = await base44.entities.Season.filter({ status: "active" });
-    const found = active.length > 0 ? active[0] : null;
-    setSeason(found);
-    return found;
-  }, []);
-
   const loadCards = useCallback(async (seasonId) => {
     const cardList = await base44.entities.Card.filter({ season_id: seasonId });
     setCards(cardList);
   }, []);
 
-  const loadRuns = useCallback(async (seasonId) => {
-    const list = await base44.entities.Run.filter({ season_id: seasonId });
-    setRuns(list);
-  }, []);
-
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const found = await loadSeason();
+      const active = await base44.entities.Season.filter({ status: "active" });
+      const found = active.length > 0 ? active[0] : null;
+      setSeason(found);
       if (found) {
-        await loadCards(found.id);
-        await loadRuns(found.id);
+        const [cardList, runList] = await Promise.all([
+          base44.entities.Card.filter({ season_id: found.id }),
+          base44.entities.Run.filter({ season_id: found.id }),
+        ]);
+        setCards(cardList);
+        setRuns(runList);
       } else {
         setCards([]);
         setRuns([]);
@@ -48,7 +42,7 @@ export default function SeasonSetup() {
     } finally {
       setLoading(false);
     }
-  }, [loadSeason, loadCards, loadRuns]);
+  }, []);
 
   useEffect(() => {
     loadAll();
