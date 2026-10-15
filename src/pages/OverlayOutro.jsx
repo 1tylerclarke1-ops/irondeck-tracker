@@ -210,7 +210,7 @@ export default function OverlayOutro() {
               {story.died ? "DEATH RUN" : story.missed ? "MISSED DAY" : "SURVIVED"}
             </div>
             <div style={{ ...steelText(64), marginTop: 26, animation: "ooIn .6s ease-out .5s both" }}>
-              {story.wins}–{story.losses} · SEASON {story.season} · DAY {story.day}
+              {story.wins}–{story.losses} · SEASON {story.season} · DAY {story.day} · CHALLENGE DAY {story.total}
             </div>
           </div>
         )}
