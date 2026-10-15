@@ -16,6 +16,7 @@ const STUMP_ROT_IMG = MEDIA + "006920b1a_stump-rotted.png";
 const AXE_IMG = MEDIA + "4a043ee21_axe.png";
 const TRAIL_IMG = MEDIA + "043115ed5_slash-trail.png";
 const ROT_FRAMES_IMG = MEDIA + "1f6e29d17_rot-frames.png";
+const AXE_WRENCH_SOUND = "https://media.base44.com/files/public/6ac605d777721f9149c6b225/31e8c3da3_axe-wrench.mp3";
 
 // The block images are 1024×1536, shown 452 wide at the bottom of the panel.
 const STUMP_W = 452;
@@ -209,6 +210,14 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
   const rot = mode === "rot";
   const wait = mode === "wait"; // the first 2s of a Death Run: the card waits on the block
   const axeRef = useRef(null);
+
+  // The axe wrenches itself free from the stump ~500ms into the death run.
+  useEffect(() => {
+    if (!rot) return undefined;
+    const audio = new Audio(AXE_WRENCH_SOUND);
+    const t = setTimeout(() => { audio.play().catch(() => {}); }, 400);
+    return () => { clearTimeout(t); audio.pause(); };
+  }, [rot]);
   const rar = RARITY[rarity] || null;
   // The randomiser's sequence: candidate images (repeated), ending on the scavenged card.
   const pool = (rollCards || []).map((c) => c.image_url).filter((u) => u && u !== newImage);
