@@ -166,7 +166,7 @@ export default function RunTracker() {
     );
     if (!ok) return { ok: false };
     const runForDecay = inProgress || latest;
-    let dayNo = dayLogs.filter((l) => !climb?.id || l.climb_id === climb.id).length + (Number(dayLogs.priorDays) || 0);
+     let dayNo = dayLogs.filter((l) => !climb?.id || l.climb_id === climb.id).length;
     for (const date of missed) {
       fresh = await base44.entities.Card.filter({ season_id: season.id });
       if (!s.condemned_card || !fresh.some((c) => c.name === s.condemned_card && num(c.copies) > 0)) {
@@ -346,7 +346,7 @@ export default function RunTracker() {
     setMythicBusy(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const days = day || 1;
+      const days = (day || 1) + (Number(dayLogs.priorDays) || 0); // challenge days, not just this season
       await base44.entities.Climb.update(climb.id, {
         mythic_date: today,
         days_taken: days,
