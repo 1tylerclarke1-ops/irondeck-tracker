@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from "react";
 // Testing: add ?cta=now to the overlay URL to see it after 5s, then every 20s.
 const SHEET = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/05ae97149_cta-sheet.webp";
 const FW = 338, FH = 624, FRAMES = 6;
+import CtaPopup from "@/components/overlay/CtaPopup";
 const GROW_MS = 110, HOLD_MS = 8000, SHRINK_MS = 90, FADE_MS = 400;
 const MIN = 60000;
 const rand = (a, b) => a + Math.random() * (b - a);
