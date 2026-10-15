@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { liveReload } from "@/lib/liveReload";
+import { demoDeathEvent, isDemoDeath } from "@/lib/demoDeath";
 import DeathWheel from "@/components/overlay/DeathWheel";
 import DeathCardFrame from "@/components/overlay/DeathCardFrame";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
@@ -165,7 +166,9 @@ export default function OverlayDeath() {
           base44.entities.Run.filter({ season_id: s.id }),
         ]);
         if (!active) return;
-        setEvent(list && list.length ? list[0] : null);
+        const demoCards = isDemoDeath ? await base44.entities.Card.filter({ season_id: s.id }) : null;
+        if (!active) return;
+        setEvent(demoDeathEvent(s, demoCards) || (list && list.length ? list[0] : null));
         // A run that has just died: show the banner while the rot is worked out
         const died = (runs || [])
           .filter((r) => r.round_status === "died")
