@@ -176,11 +176,10 @@ export default function OverlayDeath() {
         // keep last event on error
       }
     };
-    load();
-    const id = setInterval(load, POLL_MS);
+    const stopLive = liveReload(["Season", "DecayEvent", "Run"], load);
     return () => {
       active = false;
-      clearInterval(id);
+      stopLive();
     };
   }, []);
 
