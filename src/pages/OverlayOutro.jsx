@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { loadDayLogs } from "@/lib/roundDay";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
+import { captureTitle, poolFor } from "@/lib/condemned";
 
 // The daily outro (OBS scene "Overlay Outro"): the mirror of the intro.
 // 1. Result stamp   2. What happened to the condemned card   3. The climb
@@ -13,7 +14,8 @@ const SHIELD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/
 // Same rank emblem sheet as the HUD: 4 columns (tiers 1-4), 6 rows (Bronze..Mythic).
 const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/78b084191_rank-emblems.png";
 const RANK_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
-const T = { result: 400, block: 4500, climb: 10500, tomorrow: 14000, end: 17500 };
+const T = { result: 400, block: 4500, climb: 10500, tomorrow: 14000, end: 17500, mythicEnd: 22000 };
+const DAY_MILESTONES = [10, 25, 50, 75, 100, 150, 200, 250, 300, 365];
 const n = (v) => Number(v) || 0;
 const toMs = (v) => {
   if (!v) return 0;
@@ -53,16 +55,20 @@ async function loadStory() {
   const seasons = await base44.entities.Season.filter({ status: "active" });
   const season = seasons && seasons[0];
   if (!season) return null;
-  const [logs, cards, runs, events, ranks] = await Promise.all([
+  const [logs, cards, runs, events, ranks, climbs] = await Promise.all([
     loadDayLogs(season.id),
     base44.entities.Card.filter({ season_id: season.id }),
     base44.entities.Run.filter({ season_id: season.id }),
     base44.entities.DecayEvent.filter({ season_id: season.id }),
     base44.entities.ArenaRank ? base44.entities.ArenaRank.list() : Promise.resolve([]),
+    base44.entities.Climb.list().catch(() => []),
   ]);
-  const log = [...logs].sort((a, b) => n(b.day) - n(a.day) || toMs(b.created_date) - toMs(a.created_date))[0];
+  // The round just played = the most recently saved log (day numbers can be wrong).
+  const sorted = [...logs].sort((a, b) => toMs(b.created_date) - toMs(a.created_date));
+  const log = sorted[0];
   if (!log) return null;
   const died = log.result === "died";
+  const missed = log.result === "missed";
   const byName = (name) => cards.find((c) => (c.name || "").toLowerCase() === (name || "").toLowerCase());
   const ev = died
     ? [...events].filter((e) => e.run_id === log.run_id)
@@ -78,16 +84,22 @@ async function loadStory() {
       newName: ev?.replacement_card || "",
       newImage: ev?.replacement_card_image || "",
     };
+  } else if (missed) {
+    block = { kind: "none" };
   } else if (season.condemned_card) {
     block = {
       kind: "spared",
+      title: captureTitle(n(season.block_capture)),
       name: season.condemned_card,
       image: scry(byName(season.condemned_card)?.scryfall_id),
       served: n(season.block_days),
       sentence: n(season.block_sentence) || 3,
     };
   } else if (season.last_pardoned) {
-    block = { kind: "pardoned", name: season.last_pardoned, image: scry(byName(season.last_pardoned)?.scryfall_id) };
+    let pardons = {};
+    try { pardons = JSON.parse(season.pardon_counts || "{}") || {}; } catch { pardons = {}; }
+    block = { kind: "pardoned", name: season.last_pardoned, image: scry(byName(season.last_pardoned)?.scryfall_id),
+      times: n(pardons[season.last_pardoned]) };
   } else {
     block = { kind: "none" };
   }
@@ -96,11 +108,29 @@ async function loadStory() {
     const o = n(c.original_copies);
     return o > 0 ? s + Math.max(0, o - n(c.copies)) : s;
   }, 0);
+  // Milestones from this round (same rules as the intro), shown on the climb screen.
+  const runWins = n(log.run_wins_after);
+  const bestBefore = sorted.slice(1).filter((l) => l.result !== "missed").reduce((m, l) => Math.max(m, n(l.run_wins_after)), 0);
+  const milestones = [];
+  if (!missed) {
+    if (runWins >= 7 && runWins > bestBefore) milestones.push("NEW BEST RUN");
+    if (log.result === "survived" && n(log.wins) >= 7 && n(log.losses) === 0) milestones.push("FLAWLESS DAY 7–0");
+    if (DAY_MILESTONES.includes(n(log.day))) milestones.push(`DAY ${n(log.day)}`);
+  }
+  // Mythic reached (the climb was completed on or after this round's date).
+  const climb = [...(climbs || [])].sort((a, b) => n(b.number) - n(a.number))[0];
+  const mythic = climb && climb.status === "complete" && (climb.mythic_date || "") >= (log.date || "")
+    ? { days: n(climb.days_taken) || n(log.day) } : null;
+  const lowered = poolFor(cards).pool !== "rare";
   const rank = [...(ranks || [])].sort((a, b) => toMs(b.captured_at || b.created_date) - toMs(a.captured_at || a.created_date))[0];
   return {
     season: season.season_number,
     day: n(log.day),
     died,
+    missed,
+    milestones,
+    mythic,
+    lowered,
     wins: n(log.wins),
     losses: n(log.losses),
     runWins: n(log.run_wins_after),
@@ -137,17 +167,18 @@ export default function OverlayOutro() {
   const at = (ms) => t >= ms;
   const scene = !story ? null
     : story.empty ? "end"
-    : at(T.end) ? "end" : at(T.tomorrow) ? "tomorrow" : at(T.climb) ? "climb" : at(T.block) ? "block" : at(T.result) ? "result" : null;
+    : at(story.mythic ? T.mythicEnd : T.end) ? "end" : at(T.tomorrow) ? (story.mythic ? "mythic" : "tomorrow") : at(T.climb) ? "climb" : at(T.block) ? "block" : at(T.result) ? "result" : null;
   const b = story?.block;
   const blockDone = b && (b.kind === "rotted" || b.kind === "pardoned" || b.kind === "none");
   const lastDay = b?.kind === "spared" && b.served === b.sentence - 1;
 
   const tomorrow = useMemo(() => {
     if (!b) return ["", ""];
+    if (blockDone && story?.lowered) return ["NO RARES LEFT", "THE UNCOMMONS STAND TRIAL TOMORROW"];
     if (blockDone) return ["TOMORROW", "THE WHEEL SPINS AGAIN"];
     if (lastDay) return ["TOMORROW", `${b.name.toUpperCase()} IS ONE DAY FROM FREEDOM`];
     return ["TOMORROW", `${b.name.toUpperCase()} IS STILL ON THE BLOCK`];
-  }, [b, blockDone, lastDay]);
+  }, [b, blockDone, lastDay, story]);
 
   const end = scene === "end";
   return (
@@ -175,8 +206,8 @@ export default function OverlayOutro() {
         {/* 1. Result stamp */}
         {scene === "result" && (
           <div style={{ position: "absolute", left: 0, right: 0, top: 340 }}>
-            <div style={{ animation: "ooSlam .7s ease-out both", ...(story.died ? purpleText(190) : goldText(190)), letterSpacing: 8, lineHeight: 1 }}>
-              {story.died ? "DEATH RUN" : "SURVIVED"}
+            <div style={{ animation: "ooSlam .7s ease-out both", ...(story.died || story.missed ? purpleText(190) : goldText(190)), letterSpacing: 8, lineHeight: 1 }}>
+              {story.died ? "DEATH RUN" : story.missed ? "MISSED DAY" : "SURVIVED"}
             </div>
             <div style={{ ...steelText(64), marginTop: 26, animation: "ooIn .6s ease-out .5s both" }}>
               {story.wins}–{story.losses} · SEASON {story.season} · DAY {story.day}
@@ -213,6 +244,7 @@ export default function OverlayOutro() {
               <div style={{ ...goldText(54), marginTop: 10 }}>{b.newName.toUpperCase()} SCAVENGED</div>
             </>}
             {b.kind === "spared" && <>
+              {b.title && <div style={{ ...purpleText(40), letterSpacing: 6, marginBottom: 8 }}>{b.title}</div>}
               <div style={{ ...goldText(66), letterSpacing: 3 }}>SPARED · DAY {b.served} OF {b.sentence}</div>
               <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 20 }}>
                 {Array.from({ length: b.sentence }).map((_, i) => (
@@ -225,6 +257,7 @@ export default function OverlayOutro() {
             {b.kind === "pardoned" && <>
               <div style={{ ...goldText(76), letterSpacing: 4 }}>PARDONED</div>
               <div style={{ ...steelText(50), marginTop: 10 }}>{b.name.toUpperCase()} WALKS FREE… FOR NOW</div>
+              {b.times > 1 && <div style={{ ...purpleText(34), marginTop: 10 }}>PARDONED {b.times} TIMES THIS SEASON</div>}
             </>}
             {b.kind === "none" && <div style={{ ...goldText(76) }}>THE DECK LIVES ON</div>}
           </div>
@@ -241,6 +274,35 @@ export default function OverlayOutro() {
                 <div style={{ ...steelText(38), marginTop: 14, letterSpacing: 4 }}>{k}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {scene === "climb" && story.milestones.length > 0 && (
+          <div style={{ position: "absolute", left: 0, right: 0, top: 720, display: "flex", justifyContent: "center", gap: 30 }}>
+            {story.milestones.map((m, i) => (
+              <div key={m} style={{ ...goldText(48), letterSpacing: 3, padding: "10px 30px", borderRadius: 14,
+                border: "3px solid #FFD38A", background: "rgba(40,20,0,.55)", animation: `ooSlam .7s ease-out ${1.2 + i * 0.4}s both, ooGold 2.4s ease-in-out ${2 + i * 0.4}s infinite` }}>
+                ★ {m}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Mythic reached: replaces "tomorrow" on the day the climb is completed */}
+        {scene === "mythic" && (
+          <div style={{ position: "absolute", left: 0, right: 0, top: 250 }}>
+            <div style={{ position: "absolute", left: 960 - 520, top: -230, width: 1040, height: 1040, borderRadius: "50%",
+              animation: "ooRays 1.5s ease-out both",
+              background: "radial-gradient(closest-side, rgba(255,230,170,.6), rgba(255,170,60,.25) 50%, transparent 75%)" }} />
+            {story.rankRaw && <div style={{ position: "relative", display: "flex", justifyContent: "center", animation: "ooSlam .8s ease-out both" }}>
+              <RankEmblem rank={{ ...story.rankRaw, rank_class: "Mythic" }} label="" />
+            </div>}
+            <div style={{ position: "relative", ...goldText(140), letterSpacing: 6, lineHeight: 1, marginTop: 10, animation: "ooSlam .8s ease-out .4s both" }}>
+              MYTHIC REACHED
+            </div>
+            <div style={{ position: "relative", ...steelText(60), marginTop: 20, animation: "ooIn .7s ease-out 1.2s both" }}>
+              IN {story.mythic.days} DAYS · {story.rotted} CARDS ROTTED · THE DECK MADE IT
+            </div>
           </div>
         )}
 
