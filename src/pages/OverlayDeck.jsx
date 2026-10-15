@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { isSameDay, parseISO } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { liveReload } from "@/lib/liveReload";
+import { demoDeathEvent } from "@/lib/demoDeath";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import DeckRow from "@/components/overlay/DeckRow";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
@@ -147,7 +148,7 @@ export default function OverlayDeck({ outro } = {}) {
         );
         setDecays(decs);
         setDayLogs(logs);
-        const ev = (evs && evs[0]) || null;
+        const ev = demoDeathEvent(s, list) || (evs && evs[0]) || null;
         setDeathEv(ev);
         // A run that died moments ago whose death isn't recorded yet: the rot
         // may already have changed the cards, so keep showing the old deck.
