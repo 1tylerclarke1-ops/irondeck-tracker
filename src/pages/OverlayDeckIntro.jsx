@@ -161,6 +161,7 @@ export default function OverlayDeckIntro() {
 
   return (
     <>
+      if (!go) return <StartGate onGo={() => setGo(true)} />;
       <IntroLayout
         seasonNumber={seasonNumber}
         day={day}
