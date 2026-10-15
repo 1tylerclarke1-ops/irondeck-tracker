@@ -166,7 +166,7 @@ export default function RunTracker() {
     );
     if (!ok) return { ok: false };
     const runForDecay = inProgress || latest;
-    let dayNo = dayLogs.filter((l) => !climb?.id || l.climb_id === climb.id).length;
+    let dayNo = dayLogs.filter((l) => !climb?.id || l.climb_id === climb.id).length + (Number(dayLogs.priorDays) || 0);
     for (const date of missed) {
       fresh = await base44.entities.Card.filter({ season_id: season.id });
       if (!s.condemned_card || !fresh.some((c) => c.name === s.condemned_card && num(c.copies) > 0)) {
