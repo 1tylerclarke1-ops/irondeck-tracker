@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { isSameDay, parseISO } from "date-fns";
 import { base44 } from "@/api/base44Client";
+import { liveReload } from "@/lib/liveReload";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import DeckRow from "@/components/overlay/DeckRow";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
@@ -167,11 +168,10 @@ export default function OverlayDeck({ outro } = {}) {
         // keep last data on error
       }
     };
-    load();
-    const id = setInterval(load, 1500);
+    const stopLive = liveReload(["Season", "Card", "Run", "Decay", "DayLog", "DecayEvent", "Climb"], load);
     return () => {
       active = false;
-      clearInterval(id);
+      stopLive();
     };
   }, []);
 
