@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { liveReload } from "@/lib/liveReload";
 import DeathWheel from "@/components/overlay/DeathWheel";
 import DeathCardFrame from "@/components/overlay/DeathCardFrame";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
