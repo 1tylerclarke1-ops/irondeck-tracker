@@ -47,9 +47,16 @@ const todayUtc = () => ukDate(); // UK calendar day (name kept for older code)
 export function roundDay({ logs, climb, playing }) {
   if (climb?.status === "complete" && climb.days_taken) return climb.days_taken;
   const mine = (logs || []).filter((l) => !climb?.id || l.climb_id === climb.id);
-  const finished = mine.length + (Number(logs?.priorDays) || 0); // + earlier seasons of this climb
+  const finished = mine.length; // DAY = the day of this season
   if (playing) return finished + 1;
-  if (mine.length === 0) return finished + 1; // nothing played yet this season
+  if (finished === 0) return 1;
   const latestDate = mine.reduce((m, l) => (l.date && l.date > m ? l.date : m), "");
   return latestDate === todayUtc() ? finished : finished + 1;
+}
+
+
+// CHALLENGE DAY = every day of this climb across all seasons (titles, outro, milestones).
+export function challengeDay(args) {
+  if (args.climb?.status === "complete" && args.climb.days_taken) return args.climb.days_taken;
+  return roundDay(args) + (Number(args.logs?.priorDays) || 0);
 }
