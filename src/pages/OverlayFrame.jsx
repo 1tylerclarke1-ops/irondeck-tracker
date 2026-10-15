@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
+import { liveReload } from "@/lib/liveReload";
 import { loadDayLogs, roundDay } from "@/lib/roundDay";
 import { INTRO_BG } from "@/lib/overlayAssets";
 import { goldText, irondeckText } from "@/lib/overlayText";
@@ -88,11 +89,10 @@ export default function OverlayFrame() {
         // keep last values
       }
     };
-    load();
-    const id = setInterval(load, 10000);
+    const stopLive = liveReload(["Season", "Run", "Climb", "DayLog"], load);
     return () => {
       active = false;
-      clearInterval(id);
+      stopLive();
     };
   }, []);
 
