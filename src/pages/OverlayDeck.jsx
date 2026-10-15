@@ -531,7 +531,7 @@ export default function OverlayDeck({ outro } = {}) {
           {(block || rotMode) && (
             <div style={{ position: "absolute", inset: 0, opacity: sideMode === "deck" ? 0 : 1, transition: "opacity 0.8s ease" }}>
               <ChoppingBlock
-                key={rotMode ? (rotLive ? "rot" : "wait") : "block"}
+                key={rotMode ? "exec" : "block"}
                 mode={rotMode ? (rotLive ? "rot" : "wait") : "block"}
                 name={rotMode ? deathEv.card_removed : block.name}
                 image={rotMode ? deathEv.card_removed_image : scryNormal(condemnedRow?.scryfall_id)}
@@ -542,6 +542,7 @@ export default function OverlayDeck({ outro } = {}) {
                 newImage={rotMode ? deathEv.replacement_card_image : undefined}
                 rarity={rotMode ? deathEv.rarity_roll : undefined}
                 rollCards={rotMode ? deathEv.roll_cards : undefined}
+                playSound={rotLive && Date.now() - rotAt < 1500}
               />
             </div>
           )}
