@@ -472,7 +472,7 @@ export default function OverlayDeath() {
           style={{
             position: "fixed",
             top: "50%",
-            left: "50%",
+            left: "62.5%", // centre of the game window (480 + 1440 / 2 = 1200px)
             transform: "translate(-50%,-50%)",
             width: PANEL_W,
             height: PANEL_H,
@@ -672,6 +672,19 @@ export default function OverlayDeath() {
         </div>
       )}
 
+      {/* While the sidebar executes the card, point viewers at it */}
+      {phase === "waiting" && (
+        <div style={{ position: "fixed", left: 500, top: 700, zIndex: 4, pointerEvents: "none", display: "flex", alignItems: "center", gap: 14,
+          animation: "odCueIn .6s ease .8s both" }}>
+          <style>{"@keyframes odCueIn { from { opacity: 0; transform: translateX(30px) } to { opacity: 1; transform: none } } @keyframes odCueNudge { 0%,100% { transform: translateX(0) } 50% { transform: translateX(-14px) } }"}</style>
+          <div style={{ ...purpleText(64), lineHeight: 1, animation: "odCueNudge 1s ease-in-out infinite" }}>◀</div>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ ...purpleText(40), letterSpacing: 4, lineHeight: 1 }}>THE CONDEMNED CARD</div>
+            <div style={{ ...steelText(26), marginTop: 4 }}>WATCH THE BLOCK</div>
+          </div>
+        </div>
+      )}
+
       {/* The scavenged card flies out of the sidebar and expands into the middle of the game */}
       {raised && seq?.replacement_card_image && (
         <div key={"scav-" + (seq.id || "")} style={{ position: "fixed", left: 1000, top: 352, width: 400, zIndex: 4, pointerEvents: "none",
@@ -696,7 +709,7 @@ export default function OverlayDeath() {
       <div
         style={{
           position: "fixed",
-          left: "50%",
+          left: "62.5%", // centre of the game window (480 + 1440 / 2 = 1200px)
           top: `calc(50% - ${PANEL_H / 2 - 46}px)`,
           width: TITLE_W,
           marginLeft: -TITLE_W / 2,
@@ -767,7 +780,7 @@ function VerifiedNote({ removedName, replacementName }) {
       <div
         style={{
           position: "fixed",
-          left: "50%",
+          left: "62.5%", // centre of the game window (480 + 1440 / 2 = 1200px)
           bottom: "16%",
           display: "flex",
           alignItems: "center",
