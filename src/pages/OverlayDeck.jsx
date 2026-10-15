@@ -7,6 +7,7 @@ import DeckRow from "@/components/overlay/DeckRow";
 import { goldText, steelText, irondeckText } from "@/lib/overlayText";
 import useOutroAnimation from "@/hooks/useOutroAnimation";
 import ChoppingBlock from "@/components/overlay/ChoppingBlock";
+import CtaPopup from "@/components/overlay/CtaPopup";
 import { blockState } from "@/lib/condemned";
 
 const RUST = "#a35a3d";
