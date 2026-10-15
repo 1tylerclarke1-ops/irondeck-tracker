@@ -126,6 +126,7 @@ async function loadStory() {
   return {
     season: season.season_number,
     day: n(log.day),
+    total: n(log.day) + n(logs.priorDays), // challenge day
     died,
     missed,
     milestones,
