@@ -156,7 +156,7 @@ export async function performDecay({ season, cards, run, condemned, step = "deat
     zone: targetZone,
     sideboard_rotted: sideboardRotted,
     replacement_rule: replacementRule,
-        updated_at: now,
+        updated_at: new Date().toISOString(), // the moment the overlays can see it (not when the decay started)
     was_condemned: Boolean(condemnedCard),
   });
 
