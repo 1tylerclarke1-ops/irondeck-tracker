@@ -18,6 +18,13 @@ import { liveReload } from "@/lib/liveReload";
 
 const SHIELD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 const WIN = { x: 0, y: 390, w: 1080, h: 608 }; // the clip window (16:9)
+// The HUD's own win medallions (numbered 1-7) and loss icons.
+const DPRE = "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
+const WON = ["d00d35fc6", "4a1fe34b6", "894562e97", "8e4c0cdf4", "f6c98f779", "c22df9ff5", "6b3cea327", "2aa7c4fa9"].map((h, i) => `${DPRE}${h}_win-won-${i}.png`);
+const FUTURE = ["ae065396e", "72347b8a9", "866337c2f", "0c3e97da6", "32d047d90", "881388982", "be6471094", "d034996f4"].map((h, i) => `${DPRE}${h}_win-future-${i}.png`);
+const LOSS_EMPTY = `${DPRE}43bd79795_loss-empty.png`;
+const LOSS_1 = `${DPRE}04f5808d9_loss-1.png`;
+const LOSS_2 = `${DPRE}0901a13ba_loss-2.png`;
 const n = (v) => Number(v) || 0;
 const toMs = (v) => {
   if (!v) return 0;
@@ -173,15 +180,15 @@ export default function OverlayShortFrame() {
           )}
           {/* Today's round: 7 win pips, 2 loss pips */}
           <div style={{ ...steelText(30), marginTop: 30 }}>TODAY</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={"w" + i} style={{ width: 38, height: 38, borderRadius: 19, border: "3px solid #FFCF7A",
-                background: i < (d?.wins || 0) ? "#FFCF7A" : "transparent" }} />
+          <div style={{ display: "flex", gap: 2, marginTop: 8, alignItems: "center" }}>
+            {[1, 2, 3, 4, 5, 6, 7].map((slot) => (
+              <img key={"w" + slot} src={(slot <= (d?.wins || 0) ? WON : FUTURE)[slot]} alt=""
+                style={{ width: 62, height: 62, maxWidth: "none", display: "block" }} />
             ))}
-            <div style={{ width: 14 }} />
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={"l" + i} style={{ width: 38, height: 38, borderRadius: 8, border: "3px solid #9b5cff",
-                background: i < (d?.losses || 0) ? "#9b5cff" : "transparent" }} />
+            <div style={{ width: 12 }} />
+            {[1, 2].map((n) => (
+              <img key={"l" + n} src={(d?.losses || 0) >= n ? (n === 1 ? LOSS_1 : LOSS_2) : LOSS_EMPTY} alt=""
+                style={{ width: 54, height: 54, maxWidth: "none", display: "block" }} />
             ))}
           </div>
         </div>
