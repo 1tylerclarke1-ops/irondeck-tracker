@@ -50,8 +50,9 @@ export function planIntro({ seasonNumber, logs, season, today, rulesParam }) {
     if (runWins >= 7 && runWins > bestBefore) milestones.push({ title: "NEW BEST RUN", sub: `${runWins} WINS` });
     if (prev.result === "survived" && n(prev.wins) >= 7 && n(prev.losses) === 0)
       milestones.push({ title: "FLAWLESS DAY", sub: "7–0" });
-    if (DAY_MILESTONES.includes(n(prev.day)))
-      milestones.push({ title: `DAY ${n(prev.day)}`, sub: prev.result === "survived" ? "SURVIVED" : "REACHED" });
+    const total = n(prev.day) + n(logs?.priorDays); // challenge day, not season day
+    if (DAY_MILESTONES.includes(total))
+      milestones.push({ title: `DAY ${total}`, sub: prev.result === "survived" ? "SURVIVED" : "REACHED" });
   }
 
   const stages = ["recap"];
