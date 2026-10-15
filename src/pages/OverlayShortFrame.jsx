@@ -60,7 +60,7 @@ async function loadDay() {
     season, block, ev, todayLog, wins, losses, rotted,
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
-    day: n(todayLog?.day) || n(logs.length) + 1,
+    day: n(todayLog?.day) || n(logs.length) + n(logs.priorDays) + 1,
     rank: ranks && ranks[0],
     cardImg: (name) => scry(byName(name)?.scryfall_id),
   };
