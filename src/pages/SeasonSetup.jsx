@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
+import { withRetry } from "@/lib/retry";
 import SeasonForm from "@/components/season/SeasonForm";
 import ActiveSeasonPanel from "@/components/season/ActiveSeasonPanel";
 import DeckCounters from "@/components/season/DeckCounters";
@@ -18,20 +19,20 @@ export default function SeasonSetup() {
   const [ending, setEnding] = useState(false);
 
   const loadCards = useCallback(async (seasonId) => {
-    const cardList = await base44.entities.Card.filter({ season_id: seasonId });
+    const cardList = await withRetry(() => base44.entities.Card.filter({ season_id: seasonId }));
     setCards(cardList);
   }, []);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const active = await base44.entities.Season.filter({ status: "active" });
+      const active = await withRetry(() => base44.entities.Season.filter({ status: "active" }));
       const found = active.length > 0 ? active[0] : null;
       setSeason(found);
       if (found) {
         const [cardList, runList] = await Promise.all([
-          base44.entities.Card.filter({ season_id: found.id }),
-          base44.entities.Run.filter({ season_id: found.id }),
+          withRetry(() => base44.entities.Card.filter({ season_id: found.id })),
+          withRetry(() => base44.entities.Run.filter({ season_id: found.id })),
         ]);
         setCards(cardList);
         setRuns(runList);
