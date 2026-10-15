@@ -4,8 +4,12 @@ import { loadDayLogs } from "@/lib/roundDay";
 import { blockState } from "@/lib/condemned";
 import { ukDate } from "@/lib/ukDay";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
+import { liveReload } from "@/lib/liveReload";
 
-// Shorts frame (1080×1920): today's hook at the top, a clip window, the stakes below.
+// Shorts frame (1080×1920): a spoiler-free hook at the top, the game window, the stakes below.
+// Built for a vertical recording canvas (Aitum Vertical): put the Arena capture in the window.
+// The hook is fixed when the page loads (round start) and never reveals the result or the card;
+// only the win/loss pips update live.
 // Open /overlay/short in an OBS browser source sized 1080×1920, then right-click the
 // source → "Screenshot (Source)" to save a full-size PNG for CapCut.
 // The clip window is pure green (#00FF00): in CapCut put the frame ABOVE your clip and
@@ -55,44 +59,58 @@ async function loadDay() {
   };
 }
 
-// The hook: the most dramatic true thing about today.
+// The hooks: the stakes, never the outcome. They take turns at the top (4s each).
+// Day 1 of a sentence the card stays hidden (the wheel reveals it in that episode);
+// day 2+ it was revealed in an earlier episode, so it spins: real art <-> card back.
 function hookFor(d) {
   const b = d.block;
-  if (d.todayLog?.result === "died" || d.ev?.step === "death" || d.ev?.step === "verified") {
-    const name = d.ev?.card_removed || "THE CARD";
-    return { tone: "rot", hook: "IT ROTTED.", sub: `${up(name)} IS GONE FOREVER`,
-      card: d.ev?.card_removed_image || d.cardImg(name), label: "ROTTED", detail: d.ev?.replacement_card ? `REPLACED BY ${up(d.ev.replacement_card)}` : "" };
-  }
-  if (d.pardonedToday && d.pardonedName) {
-    return { tone: "gold", hook: "IT WALKS FREE.", sub: `${up(d.pardonedName)} SURVIVED THE EXECUTIONER`,
-      card: d.cardImg(d.pardonedName), label: "PARDONED", detail: "THE EXECUTIONER WILL REMEMBER" };
-  }
-  if (!b) return { tone: "gold", hook: "THE WHEEL AWAITS.", sub: "WHICH CARD WILL BE CONDEMNED?", card: "", label: "", detail: "" };
-  const lastDay = b.day >= b.sentence;
-  const base = { card: d.cardImg(b.name), label: `ON THE BLOCK · DAY ${b.day} OF ${b.sentence}`, detail: b.title || "" };
-  if (d.todayLog?.result === "survived") {
-    if (d.wins >= 7 && d.losses === 0) return { ...base, tone: "gold", hook: "FLAWLESS.", sub: `7–0 · ${up(b.name)} LIVES ANOTHER DAY` };
-    return { ...base, tone: "gold", hook: "SURVIVED.", sub: lastDay ? `${up(b.name)} IS ONE DAY FROM FREEDOM` : `${up(b.name)} LIVES ANOTHER DAY` };
-  }
-  if (d.losses >= 1) return { ...base, tone: "rot", hook: "ONE LOSS FROM DEATH.", sub: `LOSE AGAIN AND ${up(b.name)} ROTS` };
-  return { ...base, tone: lastDay ? "gold" : "rot", hook: lastDay ? "ONE DAY FROM FREEDOM." : `${up(b.name)} IS ON THE BLOCK.`,
-    sub: "LOSE TWICE TODAY AND IT ROTS" };
+  const always = { hook: "EVERY LOSS COSTS A CARD.", sub: "CAN THIS DECK STILL REACH MYTHIC?" };
+  if (!b) return { tone: "gold", hooks: [{ hook: "THE WHEEL AWAITS.", sub: "WHICH CARD IS NEXT?" }, always], label: "", detail: "", show: false };
+  const label = `CONDEMNED · DAY ${b.day} OF ${b.sentence}`;
+  const lowered = b.pool && b.pool !== "rare";
+  const detail = lowered ? "NO RARES LEFT · THE UNCOMMONS STAND TRIAL" : "LOSE TWICE TODAY AND IT ROTS";
+  const show = b.day >= 2;
+  const hooks = [];
+  let tone = "rot";
+  if (b.capture >= 3) hooks.push({ hook: "THE EXECUTIONER'S VENDETTA.", sub: "ONE DAY · NO MISTAKES" });
+  else if (b.capture === 2 && b.day === 1) hooks.push({ hook: "THE EXECUTIONER REMEMBERS.", sub: `CAUGHT AGAIN · ${b.sentence} DAYS TO SURVIVE` });
+  if (b.day >= b.sentence) { tone = "gold"; hooks.push({ hook: "ONE DAY FROM FREEDOM.", sub: "SURVIVE TODAY AND IT WALKS FREE" }); }
+  else hooks.push({ hook: "LOSE TWICE AND IT ROTS.", sub: `DAY ${b.day} OF ${b.sentence} ON THE CHOPPING BLOCK` });
+  if (show) hooks.push({ hook: `${up(b.name)}.`, sub: "STILL ON THE CHOPPING BLOCK" });
+  else hooks.push({ hook: "THE WHEEL HAS CHOSEN.", sub: "BUT WHICH CARD?" });
+  hooks.push(always);
+  return { tone, hooks, label, detail, show, image: show ? d.cardImg(b.name) : "" };
 }
 
 export default function OverlayShortFrame() {
   const [d, setD] = useState(null);
+  const [locked, setLocked] = useState(null); // the hook, fixed at the first load
   const q = new URLSearchParams(window.location.search);
   const clear = q.get("window") === "clear";
 
   useEffect(() => {
     document.documentElement.style.background = "transparent";
     document.body.style.background = "transparent";
-    loadDay().then(setD).catch(() => setD(null));
+    let active = true;
+    const load = async () => {
+      const day = await loadDay();
+      if (!active || !day) return;
+      setD(day);
+      setLocked((h) => h || hookFor(day));
+    };
+    const stop = liveReload(["Run", "DayLog"], load);
+    return () => { active = false; stop(); };
   }, []);
 
-  const h = d ? hookFor(d) : { tone: "gold", hook: "IRONDECK", sub: "CAN A ROTTING DECK REACH MYTHIC?", card: "", label: "", detail: "" };
-  const hook = q.get("hook") || h.hook;
-  const sub = q.get("sub") || h.sub;
+  const h = locked || { tone: "gold", hooks: [{ hook: "IRONDECK", sub: "CAN A ROTTING DECK REACH MYTHIC?" }], label: "", detail: "", show: false };
+  const [turn, setTurn] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTurn((t) => t + 1), 4000);
+    return () => clearInterval(id);
+  }, []);
+  const cur = h.hooks[turn % h.hooks.length];
+  const hook = q.get("hook") || cur.hook;
+  const sub = q.get("sub") || cur.sub;
   const rot = h.tone === "rot";
   const glow = rot ? "rgba(150,80,255,.85)" : "rgba(255,180,70,.85)";
   const hookSize = hook.length > 22 ? 82 : hook.length > 11 ? 100 : 128;
@@ -102,11 +120,12 @@ export default function OverlayShortFrame() {
       background: "radial-gradient(circle at 50% 30%, #2a1450, #0d0816 70%)", fontFamily: "'Barlow Condensed', sans-serif", textAlign: "center" }}>
       <style>{`
         @keyframes sfSlam { 0% { opacity: 0; transform: scale(1.6) } 60% { opacity: 1; transform: scale(.96) } 100% { transform: scale(1) } }
+        @keyframes sfSpin { from { transform: rotateY(0deg) } to { transform: rotateY(360deg) } }
         @keyframes sfGlow { 0%,100% { box-shadow: 0 0 30px 6px ${glow} } 50% { box-shadow: 0 0 60px 16px ${glow} } }
       `}</style>
 
       {/* Hook */}
-      <div style={{ position: "absolute", left: 40, right: 40, top: 30, height: WIN.y - 50, display: "flex", flexDirection: "column",
+      <div key={hook} style={{ position: "absolute", left: 40, right: 40, top: 30, height: WIN.y - 50, display: "flex", flexDirection: "column",
         justifyContent: "center", animation: "sfSlam .7s ease-out both" }}>
         <div style={{ ...(rot ? purpleText(hookSize) : goldText(hookSize)), lineHeight: 1, letterSpacing: 2 }}>{hook}</div>
         <div style={{ ...steelText(42), marginTop: 14, lineHeight: 1.1 }}>{sub}</div>
@@ -124,14 +143,28 @@ export default function OverlayShortFrame() {
       </div>
 
       <div style={{ position: "absolute", left: 60, right: 60, top: WIN.y + WIN.h + 100, display: "flex", gap: 44, alignItems: "center" }}>
-        <div style={{ width: 300, height: 418, borderRadius: 16, overflow: "hidden", flex: "none", background: "#120a20",
-          animation: "sfGlow 2.4s ease-in-out infinite", filter: rot && h.label === "ROTTED" ? "grayscale(.5) brightness(.75) hue-rotate(220deg)" : "none" }}>
-          {h.card && <img src={h.card} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />}
+        {/* The condemned card spins: day 1 a card back both sides ("?"), day 2+ the real art on the front */}
+        <div style={{ width: 300, height: 418, flex: "none", perspective: 1200 }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d", animation: "sfSpin 6s linear infinite" }}>
+            {[0, 180].map((deg) => {
+              const front = deg === 0 && h.show && h.image;
+              return (
+                <div key={deg} style={{ position: "absolute", inset: 0, borderRadius: 16, overflow: "hidden", backfaceVisibility: "hidden",
+                  transform: "rotateY(" + deg + "deg)", animation: "sfGlow 2.4s ease-in-out infinite",
+                  background: front ? "#120a20" : "repeating-linear-gradient(45deg, #1a0d2e 0 14px, #140a24 14px 28px)",
+                  border: front ? "none" : "4px solid " + (rot ? "#9b5cff" : "#FFCF7A"), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {front
+                    ? <img src={h.image} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
+                    : <div style={{ ...(rot ? purpleText(220) : goldText(220)), lineHeight: 1 }}>?</div>}
+                </div>
+              );
+            })}
+          </div>
         </div>
         <div style={{ flex: 1, textAlign: "left" }}>
           {h.label && <div style={{ ...(rot ? purpleText(46) : goldText(46)), lineHeight: 1.05 }}>{h.label}</div>}
           {h.detail && <div style={{ ...steelText(34), marginTop: 10, lineHeight: 1.1 }}>{h.detail}</div>}
-          {d?.block && h.label.startsWith("ON THE BLOCK") && (
+          {d?.block && h.label && (
             <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
               {Array.from({ length: d.block.sentence }).map((_, i) => (
                 <div key={i} style={{ width: 70, height: 20, borderRadius: 10, border: "3px solid #c9a8ff", background: i < d.block.day - 1 ? "#c9a8ff" : "transparent" }} />
