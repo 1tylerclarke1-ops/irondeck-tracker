@@ -60,7 +60,8 @@ async function loadDay() {
     season, block, ev, todayLog, wins, losses, rotted,
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
-    day: n(todayLog?.day) || n(logs.length) + n(logs.priorDays) + 1,
+      day: n(todayLog?.day) || n(logs.length) + 1,
+      total: (n(todayLog?.day) || n(logs.length) + 1) + n(logs.priorDays), // challenge day
     rank: ranks && ranks[0],
     cardImg: (name) => scry(byName(name)?.scryfall_id),
   };
@@ -196,7 +197,7 @@ export default function OverlayShortFrame() {
 
       {/* Season line + the pull to the full video */}
       <div style={{ position: "absolute", left: 0, right: 0, top: 1545, ...steelText(32), letterSpacing: 2, whiteSpace: "nowrap" }}>
-        {d ? `SEASON ${d.season.season_number} · DAY ${d.day} · ${d.runWins} RUN WINS · ${d.rotted} ROTTED` : ""}
+          {d ? `S${d.season.season_number} · DAY ${d.day} · CHALLENGE DAY ${d.total} · ${d.rotted} ROTTED` : ""}
       </div>
 
       {/* Bottom 330px is covered by YouTube's title and buttons: keep it to the logo only */}
