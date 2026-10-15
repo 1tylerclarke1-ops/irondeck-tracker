@@ -15,8 +15,11 @@ const STUMP_IMG = MEDIA + "1299fe5b1_stump-normal.png";
 const STUMP_ROT_IMG = MEDIA + "006920b1a_stump-rotted.png";
 const AXE_IMG = MEDIA + "4a043ee21_axe.png";
 const TRAIL_IMG = MEDIA + "043115ed5_slash-trail.png";
+const SFX_WRENCH = "https://media.base44.com/files/public/6ac605d777721f9149c6b225/31e8c3da3_axe-wrench.mp3"; // axe wrenching itself out of the stump (knocks at 0.50s and 0.68s)
+// Loaded as soon as the overlay opens, so it plays instantly (no download delay).
+const wrenchSound = typeof Audio !== "undefined" ? new Audio(SFX_WRENCH) : null;
+if (wrenchSound) { wrenchSound.preload = "auto"; wrenchSound.volume = 0.9; }
 const ROT_FRAMES_IMG = MEDIA + "1f6e29d17_rot-frames.png";
-const AXE_WRENCH_SOUND = "https://media.base44.com/files/public/6ac605d777721f9149c6b225/31e8c3da3_axe-wrench.mp3";
 
 // The block images are 1024×1536, shown 452 wide at the bottom of the panel.
 const STUMP_W = 452;
@@ -61,15 +64,18 @@ const FRAME_W = 240;
 const FRAME_H = 480;
 const FRAME_TIMES = [3650, 3900, 4200, 4600, 5000, 5500, 6000, 6600, 7200, 7900, 8600];
 
-const axeKey = (ms, x, y, r, s) => pc(ms) + " { transform: translate(" + x + "px, " + y + "px) rotate(" + r + "deg) scale(" + s + ") }";
+// Each key can set the easing of the move that starts there (smooth, no robotic steps).
+const EASE = { inOut: "cubic-bezier(.45,0,.55,1)", out: "cubic-bezier(.2,.7,.3,1)", in: "cubic-bezier(.55,0,.85,.45)", rise: "cubic-bezier(.15,.55,.3,1)" };
+const axeKey = (ms, x, y, r, s, ease) => pc(ms) + " { transform: translate(" + x + "px, " + y + "px) rotate(" + r + "deg) scale(" + s + ")" + (ease ? "; animation-timing-function: " + ease : "") + " }";
 const AXE_KEYS = [
   axeKey(0, 24, 362, -5, 0.134), // in the block, where the block image shows it
-  axeKey(300, 24, 362, -5, 0.134),
-  axeKey(500, 24, 352, -9, 0.134), // it wrenches itself loose
-  axeKey(700, 24, 356, -1, 0.134),
-  axeKey(900, 24, 346, -8, 0.134),
-  axeKey(1500, 60, 250, -30, 0.18), // pulls free and rises
-  axeKey(2700, 226, 190, -117, 0.26), // raised high, blade up to the right
+  axeKey(380, 24, 362, -5, 0.134, EASE.out),
+  axeKey(500, 24, 353, -11, 0.134, EASE.inOut), // first wrench (sound: knock 1 at 0.50s)
+  axeKey(590, 24, 359, -3, 0.134, EASE.out),
+  axeKey(680, 24, 350, -12, 0.134, EASE.inOut), // second wrench (sound: knock 2 at 0.68s)
+  axeKey(900, 24, 354, -8, 0.134, EASE.in), // loose... then tears free, speeding up
+  axeKey(1500, 60, 250, -30, 0.18, EASE.rise), // free, still rising fast
+  axeKey(2700, 226, 190, -117, 0.26, EASE.inOut), // eases into the top of the swing
   pc(3300) + " { transform: translate(226px, 190px) rotate(-122deg) scale(0.26); animation-timing-function: cubic-bezier(.6,0,1,.5) }",
   axeKey(T_IMPACT, 226, 190, 28, 0.26), // the chop: right to left, down through the card
   axeKey(3800, 226, 190, 23, 0.26),
@@ -206,18 +212,16 @@ function Half({ image, clip, seed, anim, clock }) {
   );
 }
 
-export default function ChoppingBlock({ mode, name, image, day, sentence, recapture, newName, newImage, rarity, rollCards }) {
+export default function ChoppingBlock({ mode, name, image, day, sentence, recapture, newName, newImage, rarity, rollCards, playSound }) {
   const rot = mode === "rot";
+  // Sound: the axe wrenching loose, timed to the start of the execution (skipped after an OBS refresh mid-way).
+  useEffect(() => {
+    if (!rot || !playSound || !wrenchSound) return;
+    wrenchSound.currentTime = 0;
+    wrenchSound.play().catch(() => {});
+  }, [rot]);
   const wait = mode === "wait"; // the first 2s of a Death Run: the card waits on the block
   const axeRef = useRef(null);
-
-  // The axe wrenches itself free from the stump ~500ms into the death run.
-  useEffect(() => {
-    if (!rot) return undefined;
-    const audio = new Audio(AXE_WRENCH_SOUND);
-    const t = setTimeout(() => { audio.play().catch(() => {}); }, 400);
-    return () => { clearTimeout(t); audio.pause(); };
-  }, [rot]);
   const rar = RARITY[rarity] || null;
   // The randomiser's sequence: candidate images (repeated), ending on the scavenged card.
   const pool = (rollCards || []).map((c) => c.image_url).filter((u) => u && u !== newImage);
@@ -263,6 +267,14 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
     <div style={{ position: "relative", height: "100%", overflow: "hidden", borderRadius: 12,
       fontFamily: "'Barlow Condensed', sans-serif", textAlign: "center" }}>
       <style>{styleContent}</style>
+      {/* Decode the execution's images while the card waits, so nothing blinks when the axe starts. */}
+      {!rot && (
+        <div aria-hidden style={{ position: "absolute", left: 0, top: 0, width: 2, height: 2, overflow: "hidden", opacity: 0.01, pointerEvents: "none" }}>
+          {[AXE_IMG, STUMP_IMG, STUMP_ROT_IMG, TRAIL_IMG, ROT_FRAMES_IMG, image].filter(Boolean).map((u) => (
+            <img key={u} src={u} alt="" style={{ width: 2, height: 2 }} />
+          ))}
+        </div>
+      )}
 
       {/* The block with the axe in it. In a Death Run the axe leaves (bare stump), then the stump rots. */}
       <img src={BLOCK_IMG} alt="" style={{ ...blockImg, animation: rot ? "cbBlockOut " + ROT_MS + "ms linear both" : "none" }} />
@@ -333,17 +345,21 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
         {rot && <Half image={image} clip={CUT_BOTTOM} seed={2} anim="cbBottom" clock={axeRef} />}
       </div>
 
+      {/* The executioner's axe. Drawn (invisibly) while the card waits, so it is ready the
+          instant the execution starts: no blank moment while the browser draws its glow. */}
+      {(rot || wait) && (
+        <div ref={axeRef} style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, transformOrigin: "0 0", zIndex: 1,
+          opacity: rot ? 1 : 0.01, transform: "translate(24px, 362px) rotate(-5deg) scale(0.134)",
+          animation: rot ? "cbAxe " + ROT_MS + "ms linear both" : "none" }}>
+          <img src={AXE_IMG} alt="" style={{ position: "absolute", left: -GRIP.x, top: -GRIP.y, width: AXE_W, height: "auto", maxWidth: "none",
+            filter: "drop-shadow(0 0 30px rgba(150,80,255,.8)) drop-shadow(0 20px 30px #000)" }} />
+        </div>
+      )}
       {rot && (
         <>
           {/* The slash trail, right to left */}
           <img src={TRAIL_IMG} alt="" style={{ position: "absolute", left: 110, top: 110, width: 270, height: "auto", maxWidth: "none",
             mixBlendMode: "screen", animation: "cbTrail " + ROT_MS + "ms ease-out both" }} />
-          {/* The executioner's axe */}
-          <div ref={axeRef} style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, transformOrigin: "0 0",
-            animation: "cbAxe " + ROT_MS + "ms linear both" }}>
-            <img src={AXE_IMG} alt="" style={{ position: "absolute", left: -GRIP.x, top: -GRIP.y, width: AXE_W, height: "auto", maxWidth: "none",
-              filter: "drop-shadow(0 0 30px rgba(150,80,255,.8)) drop-shadow(0 20px 30px #000)" }} />
-          </div>
           {/* The fungal mass grows from the cut, in front of the axe, with the curled card inside it */}
           <div style={{ position: "absolute", left: 226 - FRAME_W / 2, top: 80, width: FRAME_W, height: FRAME_H,
             transformOrigin: "50% 100%", animation: "cbMass " + ROT_MS + "ms ease-out both" }}>
