@@ -10,6 +10,7 @@ import { planIntro } from "@/lib/introRoute";
 import { ukDate } from "@/lib/ukDay";
 const LOGO_IMG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 import useCardImagesById from "@/hooks/useCardImagesById";
+import StartGate from "@/components/overlay/StartGate";
 
 function sortDeck(list) {
   const key = (c) => (c.card_type === "land" ? 999 : Number(c.mana_value) || 0);
@@ -28,6 +29,7 @@ export default function OverlayDeckIntro() {
   const [plan, setPlan] = useState(null); // which opening plays (decided once, from the data)
   const [idx, setIdx] = useState(0); // current stage
   const [badgeOn, setBadgeOn] = useState(false);
+  const [go, setGo] = useState(false); // waits for OBS recording + 3-2-1 (see StartGate)
   const rulesParam = useMemo(() => new URLSearchParams(window.location.search).get("rules"), []);
   const [stageScale, setStageScale] = useState(1);
   useEffect(() => {
