@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { demoBorn } from "@/lib/demoDeath";
 
 // Live updates instead of polling: runs load() once now, then again only when
 // Base44 says one of `entities` changed (a win, a loss, a rot...). Changes that
@@ -32,8 +33,9 @@ export function liveReload(entities, load, { fallbackMs = 30000, mergeMs = 250 }
     } catch { /* fall back to the safety check */ }
   }
   run();
-  const demo = new URLSearchParams(window.location.search).get("demo"); // testing: check every second
-  const safety = setInterval(run, demo ? 1000 : stops.length ? fallbackMs : 5000);
+  const safety = setInterval(run, stops.length ? fallbackMs : 5000);
+  // Demo mode (?demo=death): one reload when the pretend death starts.
+  if (demoBorn) setTimeout(run, Math.max(0, demoBorn - Date.now() + 150));
   const onShow = () => { if (!document.hidden) run(); };
   document.addEventListener("visibilitychange", onShow);
 
