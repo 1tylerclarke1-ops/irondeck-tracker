@@ -32,7 +32,8 @@ export function liveReload(entities, load, { fallbackMs = 30000, mergeMs = 250 }
     } catch { /* fall back to the safety check */ }
   }
   run();
-  const safety = setInterval(run, stops.length ? fallbackMs : 5000);
+  const demo = new URLSearchParams(window.location.search).get("demo"); // testing: check every second
+  const safety = setInterval(run, demo ? 1000 : stops.length ? fallbackMs : 5000);
   const onShow = () => { if (!document.hidden) run(); };
   document.addEventListener("visibilitychange", onShow);
 
