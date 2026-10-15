@@ -161,9 +161,10 @@ export default function OverlayDeckIntro() {
   const zoneCount = (zone) =>
     allCards.filter((c) => (c.zone || "main") === zone).reduce((sum, c) => sum + num(c.copies), 0);
 
+      if (!go) return <StartGate onGo={() => setGo(true)} />;
+
   return (
     <>
-      if (!go) return <StartGate onGo={() => setGo(true)} />;
       <IntroLayout
         seasonNumber={seasonNumber}
         day={day}
