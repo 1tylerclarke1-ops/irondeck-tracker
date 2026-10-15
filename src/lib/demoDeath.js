@@ -21,6 +21,7 @@ function seeded(seed) {
   };
 }
 
+export const demoBorn = born;
 let cached = null;
 export function demoDeathEvent(season, cards) {
   if (!isDemoDeath || !season || Date.now() < born) return null;
