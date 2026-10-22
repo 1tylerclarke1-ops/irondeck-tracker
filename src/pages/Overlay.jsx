@@ -668,9 +668,7 @@ function Medallion({ index, wins, survived, ignite, pulse }) {
 // whole page when the HUD is used on its own), its gems ignite, SURVIVED stamps into
 // the centre, and it holds solid, ready for OBS to fade into the outro.
 const SURVIVE_FRAME = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3ef98d1bd_irondeck-survived-background.webp";
-const SV_EMBLEM = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/724202f99_irondeck-survived-emblem-sheet.webp";
-const SV_EMBLEM_FRAMES = 15;
-const SV_FRAME_S = 0.2; // seconds per frame (bigger = slower, smoother build)
+const SV_EMBLEM = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/679a0d657_irondeck-survived-emblem.webp";
 // Load the emblem early so it's ready the moment the 7th win lands
 if (typeof Image !== "undefined") new Image().src = SV_EMBLEM;
 const SV_GEMS = [
@@ -745,10 +743,8 @@ function SurviveCelebration({ embedded }) {
         animation: "sv-flash .7s ease-out 1.95s both" }} />
       <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
         border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 1.95s both" }} />
-      <div role="img" aria-label="DAY SURVIVED" style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "532 / 378",
-        backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat", backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`, backgroundPosition: "100% 0",
+      <img src={SV_EMBLEM} alt="DAY SURVIVED" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", width: "40%", maxWidth: "none",
         animation: "sv-slam .55s cubic-bezier(.55, 0, .9, .4) 1.6s both, sv-breathe 3s ease-in-out 2.6s infinite" }} />
     </div>
   );
 }
-
