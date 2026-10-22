@@ -8,7 +8,7 @@ import { goldText, steelText, purpleText } from "@/lib/overlayText";
 
 const PRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
-const DEATH_RUN = `${PRE}a1e57edaa_death-run.png`;
+const DEATH_RUN = ` https://media.base44.com/images/public/6ac605d777721f9149c6b225/aed9fb1b2_irondeck-deathrun-emblem.webp`;
 const DEATH_VIGNETTE = `${PRE}be70dc153_death-vignette.png`;
 const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
 
@@ -674,7 +674,7 @@ export default function OverlayDeath() {
 
       {/* While the sidebar executes the card, point viewers at it */}
       {phase === "waiting" && (
-        <div style={{ position: "fixed", left: 500, top: 700, zIndex: 4, pointerEvents: "none", display: "flex", alignItems: "center", gap: 14,
+        <div style={{ position: "fixed", left: 500, top: 880, zIndex: 4, pointerEvents: "none", display: "flex", alignItems: "center", gap: 14,
           animation: "odCueIn .6s ease .8s both" }}>
           <style>{"@keyframes odCueIn { from { opacity: 0; transform: translateX(30px) } to { opacity: 1; transform: none } } @keyframes odCueNudge { 0%,100% { transform: translateX(0) } 50% { transform: translateX(-14px) } }"}</style>
           <div style={{ ...purpleText(64), lineHeight: 1, animation: "odCueNudge 1s ease-in-out infinite" }}>◀</div>
@@ -716,8 +716,8 @@ export default function OverlayDeath() {
           transform: docked
             ? "translateY(0) scale(1) rotate(0deg)"
             : raised
-            ? `translateY(-20px) scale(${(STAMP_W / TITLE_W) * 0.8}) rotate(-2deg)` // raised: the scavenged card takes the centre
-            : `translateY(calc(${PANEL_H / 2 - 46}px - 50%)) scale(${STAMP_W / TITLE_W}) rotate(-4deg)`,
+            ? `translate(-460px, calc(${PANEL_H / 2 - 46}px - 50%)) scale(0.62)` // raised: moves to the left of the game window, the scavenged card takes the centre
+            : `translateY(calc(${PANEL_H / 2 - 46}px - 50%)) scale(1.25)`,
           transition: `transform 1s ${DOCK_EASE}`,
           animation: leaving ? "odFadeOut 0.5s ease forwards" : "none",
           zIndex: 5,
