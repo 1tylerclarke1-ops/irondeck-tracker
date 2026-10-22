@@ -700,7 +700,7 @@ function SurviveCelebration({ embedded }) {
         @keyframes sv-shock { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) } 8% { opacity: .9 } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2) } }
         @keyframes sv-breathe { 0%, 100% { filter: drop-shadow(0 0 24px rgba(255,170,60,.7)) } 50% { filter: drop-shadow(0 0 48px rgba(255,190,90,1)) } }
       `}</style>
-      <div style={{ position: "absolute", left: 0, top: "50%", width: "100%", aspectRatio: "1200 / 630",
+      <div style={{ position: "absolute", left: 0, top: "50%", width: "100%", aspectRatio: "1732 / 908",
         animation: "sv-framein 1.4s cubic-bezier(.2,.8,.3,1) .2s both" }}>
         <img src={SURVIVE_FRAME} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
         {/* Flames licking along the top edge */}
@@ -708,8 +708,8 @@ function SurviveCelebration({ embedded }) {
           background: "radial-gradient(ellipse at 50% 60%, rgba(255,120,30,.55), rgba(200,60,10,.2) 45%, transparent 70%)",
           animation: "sv-flicker 1.6s linear 1s infinite both" }} />
         {SV_ORBS.map((o, i) => (
-          <div key={"o" + i} style={{ position: "absolute", left: o.x + "%", top: o.y + "%", width: "4%", aspectRatio: "1", transform: "translate(-50%, -50%)",
-            borderRadius: "50%", mixBlendMode: "screen", background: "radial-gradient(circle, rgba(120,170,255,.8), transparent 65%)",
+          <div key={"o" + i} style={{ position: "absolute", left: o.x + "%", top: o.y + "%", width: "7%", aspectRatio: "1", transform: "translate(-50%, -50%)",
+            borderRadius: "50%", mixBlendMode: "screen", background: "radial-gradient(circle, rgba(255,190,90,.8), transparent 65%)",
             animation: `sv-orb 3s ease-in-out ${1.6 + i * 0.3}s infinite both` }} />
         ))}
         {SV_GEMS.map((g, i) => (
