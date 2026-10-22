@@ -8,9 +8,18 @@ import { goldText, steelText, purpleText } from "@/lib/overlayText";
 
 const PRE =
   "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
-const DEATH_RUN = ` https://media.base44.com/images/public/6ac605d777721f9149c6b225/aed9fb1b2_irondeck-deathrun-emblem.webp`;
+const DEATH_RUN = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/aed9fb1b2_irondeck-deathrun-emblem.webp";
 const DEATH_VIGNETTE = `${PRE}be70dc153_death-vignette.png`;
 const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
+
+// Death screen: the gold frame appears, then rot spreads across it from the sidebar side
+const DF_GOLD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/130900cf6_irondeck-survived-aligned-for-rot.webp";
+const DF_ROT = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/bddf3495c_irondeck-corrupted-background.webp";
+const DF_ROT_AT = 1.6; // seconds: rot starts spreading
+const DF_ROT_S = 2.6; // seconds: how long the rot takes to cross
+const DF_GEMS = [ { x: 50, y: 16 }, { x: 2.4, y: 43 }, { x: 97.2, y: 43 }, { x: 50, y: 72 } ];
+const dfGemRotAt = (x) => DF_ROT_AT + DF_ROT_S * x / 100; // when the rot edge reaches that gem
+if (typeof Image !== "undefined") { new Image().src = DF_GOLD; new Image().src = DF_ROT; }
 
 // ---- Timeline ---------------------------------------------------------------
 // waiting    DEATH RUN banner slams in at the centre
@@ -132,6 +141,7 @@ export default function OverlayDeath() {
   const [rollImage, setRollImage] = useState(null);
   const [rollBlur, setRollBlur] = useState(false);
   const [rollLanded, setRollLanded] = useState(false);
+  const [nextRound, setNextRound] = useState(false);
 
   const wheelRef = useRef(null);
   const playedFor = useRef(readPlayed());
@@ -168,7 +178,7 @@ export default function OverlayDeath() {
         if (!active) return;
         const demoCards = isDemoDeath ? await base44.entities.Card.filter({ season_id: s.id }) : null;
         if (!active) return;
-        setEvent(demoDeathEvent(s, demoCards) || (list && list.length ? list[0] : null));
+        setNextRound(!isDemoDeath && (runs || []).some((r) => r.round_status === "playing"));
         // A run that has just died: show the banner while the rot is worked out
         const died = (runs || [])
           .filter((r) => r.round_status === "died")
@@ -203,6 +213,11 @@ export default function OverlayDeath() {
     setPreloaded(false);
     setPhase("waiting");
   }, [deadRun, event, phase]);
+
+  // The death screen holds (solid) on the scavenged card until the next round starts
+  useEffect(() => {
+    if (phase === "scavenge" && nextRound) setPhase("outro");
+  }, [phase, nextRound]);
 
   // Loss undone while the banner waits: take it away again
   useEffect(() => {
@@ -295,7 +310,6 @@ export default function OverlayDeath() {
       sideRot: ["centered", SIDE_ROT_MS],
       centered: ["holding", CENTERED_MS],
       holding: ["outro", RESULT_HOLD_MS],
-      scavenge: ["outro", SCAV_HOLD_MS],
       outro: ["away", OUTRO_MS],
       verifiedNote: ["done", NOTE_MS],
     }[phase];
@@ -450,22 +464,58 @@ export default function OverlayDeath() {
         @keyframes odLandPop { 0% { transform: scale(1); } 40% { transform: scale(1.07); } 100% { transform: scale(1); } }
       `}</style>
 
-      {/* Purple blanket: the rot seeps over the game window from the sidebar side.
-          (Game window: x 480, y 270, 1440×810 of 1920×1080; the HUD and sidebar stay bright.) */}
-      <div style={{ position: "fixed", left: "25vw", top: "25vh", width: "75vw", height: "75vh", pointerEvents: "none", overflow: "hidden",
-        animation: leaving ? "odFadeOut 0.8s ease forwards" : "odSeep 1.6s cubic-bezier(.3,.6,.3,1) both" }}>
-        <div style={{ position: "absolute", inset: 0,
-          background: "radial-gradient(ellipse at 50% 50%, rgba(95,45,180,.55), rgba(40,12,80,.82) 70%, rgba(20,6,40,.92))" }} />
-        <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", opacity: 0.5, animation: "odVeins 6s ease-in-out infinite alternate",
-          background: "radial-gradient(circle at 12% 30%, rgba(200,150,255,.35), transparent 30%), radial-gradient(circle at 80% 75%, rgba(200,150,255,.25), transparent 35%), radial-gradient(circle at 45% 90%, rgba(170,110,255,.3), transparent 30%)" }} />
-        {Array.from({ length: 22 }, (_, i) => (
+           {/* Solid death screen over the game window: black seeps in from the sidebar side, the gold
+          frame rises, then rot spreads across it from the left and the gems turn from amber to purple.
+          Holds until the next round starts. (Game window: x 480, y 270, 1440×810 of 1920×1080.) */}
+      <style>{`
+        @keyframes dfFrameIn { 0% { opacity: 0; filter: brightness(0); transform: scale(1.06) } 100% { opacity: 1; filter: brightness(1); transform: scale(1) } }
+        @keyframes dfRot { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+        @keyframes dfEdge { 0% { left: -9%; opacity: 1 } 90% { opacity: 1 } 100% { left: 91%; opacity: 0 } }
+        @keyframes dfIgnite { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) } 40% { opacity: 1; transform: translate(-50%, -50%) scale(1.8) } 100% { opacity: .8; transform: translate(-50%, -50%) scale(1) } }
+        @keyframes dfOut { from { opacity: .8 } to { opacity: 0 } }
+        @keyframes dfPulse { 0%, 100% { opacity: .8 } 50% { opacity: .35 } }
+        @keyframes dfDrift { from { transform: translateX(-3%) scale(1.05) } to { transform: translateX(3%) scale(1.12) } }
+        @keyframes dfFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes dfGrow { 0% { transform: scale(0); opacity: 0; filter: brightness(2.5) blur(10px) }
+          55% { transform: scale(1.06); opacity: 1; filter: brightness(1.3) blur(0) drop-shadow(0 0 30px rgba(150,80,255,1)) }
+          100% { transform: scale(1); opacity: 1; filter: brightness(1) drop-shadow(0 0 22px rgba(150,80,255,.75)) } }
+        @keyframes dfDeathGlow { 0%, 100% { filter: drop-shadow(0 0 22px rgba(150,80,255,.75)) } 50% { filter: drop-shadow(0 0 44px rgba(170,100,255,1)) } }
+      `}</style>
+      <div style={{ position: "fixed", left: "25vw", top: "25vh", width: "75vw", height: "75vh", pointerEvents: "none", overflow: "hidden", background: "#050208",
+        animation: leaving ? "odFadeOut 0.8s ease forwards" : "odSeep 1s cubic-bezier(.3,.6,.3,1) both" }}>
+        <div style={{ position: "absolute", inset: 0, animation: "dfFrameIn 1.2s cubic-bezier(.2,.8,.3,1) .3s both" }}>
+          {/* Gold frame (the deck as it was) */}
+          <img src={DF_GOLD} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxWidth: "none" }} />
+          {DF_GEMS.map((g, i) => (
+            <div key={"ga" + i} style={{ position: "absolute", left: g.x + "%", top: g.y + "%", width: "8%", aspectRatio: "1", borderRadius: "50%",
+              mixBlendMode: "screen", background: "radial-gradient(circle, rgba(255,220,140,1), rgba(255,130,40,.7) 30%, transparent 68%)",
+              animation: `dfIgnite .6s ease-out ${0.6 + i * 0.12}s both, dfOut .4s ease ${dfGemRotAt(g.x)}s forwards` }} />
+          ))}
+          {/* Rot spreading across from the sidebar side */}
+          <div style={{ position: "absolute", inset: 0,
+            animation: `dfRot ${DF_ROT_S}s linear ${DF_ROT_AT}s both` }}>
+            <img src={DF_ROT} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxWidth: "none" }} />
+            <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", opacity: 0.45, animation: "dfDrift 9s ease-in-out infinite alternate",
+              background: "radial-gradient(ellipse at 20% 70%, rgba(150,80,255,.35), transparent 35%), radial-gradient(ellipse at 80% 30%, rgba(170,90,255,.3), transparent 35%)" }} />
+          </div>
+          {/* The glowing edge of the rot */}
+          <div style={{ position: "absolute", top: 0, bottom: 0, width: "18%", mixBlendMode: "screen", pointerEvents: "none",
+            background: "linear-gradient(90deg, transparent, rgba(150,70,255,.55) 45%, rgba(220,170,255,.7) 50%, rgba(150,70,255,.55) 55%, transparent)",
+            animation: `dfEdge ${DF_ROT_S}s linear ${DF_ROT_AT}s both` }} />
+          {DF_GEMS.map((g, i) => (
+            <div key={"gp" + i} style={{ position: "absolute", left: g.x + "%", top: g.y + "%", width: "8%", aspectRatio: "1", borderRadius: "50%",
+              mixBlendMode: "screen", background: "radial-gradient(circle, rgba(235,215,255,1), rgba(160,90,255,.75) 30%, transparent 68%)",
+              animation: `dfIgnite .7s ease-out ${dfGemRotAt(g.x)}s both, dfPulse 2.4s ease-in-out ${dfGemRotAt(g.x) + 0.7}s infinite` }} />
+          ))}
+        </div>
+        {Array.from({ length: 30 }, (_, i) => (
           <div key={i} style={{ position: "absolute", left: `${(i * 37) % 100}%`, top: `${40 + ((i * 53) % 60)}%`,
-            width: 4 + (i % 3) * 3, height: 4 + (i % 3) * 3, borderRadius: "50%", background: "#d4baff",
+            width: 3 + (i % 3) * 3, height: 3 + (i % 3) * 3, borderRadius: "50%", background: "#d4baff",
             boxShadow: "0 0 10px 3px rgba(150,90,255,.9)", opacity: 0,
-            animation: `odSpore ${4 + (i % 4)}s ease-out ${(i * 0.37) % 4}s infinite` }} />
+            animation: `odSpore ${4 + (i % 4)}s ease-out ${DF_ROT_AT + DF_ROT_S + ((i * 0.37) % 4)}s infinite` }} />
         ))}
       </div>
-
+      
       {/* Panel (rises in as the banner docks, drops away at the end) */}
       {docked && (
         <div
