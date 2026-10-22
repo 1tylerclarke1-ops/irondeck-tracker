@@ -729,12 +729,23 @@ function SurviveCelebration({ embedded }) {
       {/* Shockwave as SURVIVED burns in */}
       <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
         border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 3.3s both" }} />
-      {/* Animated SURVIVED emblem: forms, the banner unfurls, the word burns in, then holds on the last frame */}
-      <style>{`@keyframes sv-emblem { from { background-position: 0% 0 } to { background-position: 100% 0 } }`}</style>
-      <div role="img" aria-label="DAY SURVIVED" style={{ position: "absolute", left: "50%", top: "50%", width: "36%", aspectRatio: "552 / 392",
-        transform: "translate(-50%, -50%)", backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat",
-        backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`,
-        animation: `sv-black .3s ease 1.5s both, sv-emblem ${((SV_EMBLEM_FRAMES - 1) / 6).toFixed(2)}s steps(${SV_EMBLEM_FRAMES - 1}) 1.5s forwards, sv-breathe 3s ease-in-out 4s infinite` }} />
+      {/* Animated SURVIVED emblem: forms, the banner unfurls, the word burns in, then holds on the last frame.
+          Two layers: the back one steps through the frames, the front one fades in the NEXT frame each step,
+          so every frame melts into the next instead of jumping. */}
+      <style>{`
+        @keyframes sv-emblem { from { background-position: 0% 0 } to { background-position: 100% 0 } }
+        @keyframes sv-emblem-next { from { background-position: ${100 / (SV_EMBLEM_FRAMES - 1)}% 0 } to { background-position: 100% 0 } }
+        @keyframes sv-xfade { from { opacity: 0 } to { opacity: 1 } }
+      `}</style>
+      <div role="img" aria-label="DAY SURVIVED" style={{ position: "absolute", left: "50%", top: "50%", width: "36%", aspectRatio: "532 / 378",
+        transform: "translate(-50%, -50%)", animation: "sv-black .3s ease 1.5s both, sv-breathe 3s ease-in-out 4s infinite" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat",
+          backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`,
+          animation: `sv-emblem ${((SV_EMBLEM_FRAMES - 1) * SV_FRAME_S).toFixed(3)}s steps(${SV_EMBLEM_FRAMES - 1}) 1.5s both` }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat",
+          backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`,
+          animation: `sv-emblem-next ${((SV_EMBLEM_FRAMES - 2) * SV_FRAME_S).toFixed(3)}s steps(${SV_EMBLEM_FRAMES - 2}) 1.5s both, sv-xfade ${SV_FRAME_S}s linear 1.5s ${SV_EMBLEM_FRAMES - 1} both` }} />
+      </div>
     </div>
   );
 }
