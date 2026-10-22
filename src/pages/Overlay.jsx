@@ -737,6 +737,7 @@ function SurviveCelebration({ embedded }) {
         @keyframes sv-shake { 0%, 100% { margin-top: 0; margin-left: 0 } 15% { margin-top: 14px; margin-left: -6px } 35% { margin-top: -10px; margin-left: 5px }
           55% { margin-top: 6px; margin-left: -3px } 75% { margin-top: -3px; margin-left: 2px } }
         @keyframes sv-flash { 0% { opacity: 0 } 12% { opacity: .85 } 100% { opacity: 0 } }
+        @keyframes sv-glowin { from { filter: drop-shadow(0 0 0 rgba(255,170,60,0)) } to { filter: drop-shadow(0 0 24px rgba(255,170,60,.7)) } }
       `}</style>
       <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", pointerEvents: "none",
         background: "radial-gradient(circle at 50% 50%, rgba(255,235,180,.95), rgba(255,170,60,.35) 35%, transparent 65%)",
@@ -744,7 +745,7 @@ function SurviveCelebration({ embedded }) {
       <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
         border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 1.95s both" }} />
       <img src={SV_EMBLEM} alt="DAY SURVIVED" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", width: "40%", maxWidth: "none",
-        animation: "sv-slam .55s cubic-bezier(.55, 0, .9, .4) 1.6s both, sv-breathe 3s ease-in-out 2.6s infinite" }} />
+        animation: "sv-slam .55s cubic-bezier(.55, 0, .9, .4) 1.6s both, sv-glowin 1.5s ease-in 2.3s both, sv-breathe 3s ease-in-out 3.8s infinite" }} />
     </div>
   );
 }
