@@ -706,7 +706,7 @@ function SurviveCelebration({ embedded }) {
         @keyframes sv-breathe { 0%, 100% { filter: drop-shadow(0 0 24px rgba(255,170,60,.7)) } 50% { filter: drop-shadow(0 0 48px rgba(255,190,90,1)) } }
       `}</style>
       <div style={{ position: "absolute", left: 0, top: "50%", width: "100%", aspectRatio: "1732 / 908",
-        animation: "sv-framein 1.4s cubic-bezier(.2,.8,.3,1) .2s both" }}>
+        animation: "sv-framein 1.4s cubic-bezier(.2,.8,.3,1) .2s both, sv-shake .45s linear 1.95s both" }}>
         <img src={SURVIVE_FRAME} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
         {/* Flames licking along the top edge */}
         <div style={{ position: "absolute", left: "28%", top: "-4%", width: "44%", height: "34%", mixBlendMode: "screen",
@@ -727,26 +727,6 @@ function SurviveCelebration({ embedded }) {
         <div key={i} style={{ position: "absolute", left: m.x + "%", top: m.y + "%", width: m.s, height: m.s, borderRadius: "50%",
           background: "#FFC27A", boxShadow: "0 0 10px 3px rgba(255,120,30,.8)", animation: `sv-ember ${m.t}s ease-out ${m.d}s infinite both` }} />
       ))}
-      {/* Shockwave as SURVIVED burns in */}
-      <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
-        border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 3.3s both" }} />
-      {/* Animated SURVIVED emblem: forms, the banner unfurls, the word burns in, then holds on the last frame.
-          Two layers: the back one steps through the frames, the front one fades in the NEXT frame each step,
-          so every frame melts into the next instead of jumping. */}
-      <style>{`
-        @keyframes sv-emblem { from { background-position: 0% 0 } to { background-position: 100% 0 } }
-        @keyframes sv-emblem-next { from { background-position: ${100 / (SV_EMBLEM_FRAMES - 1)}% 0 } to { background-position: 100% 0 } }
-        @keyframes sv-xfade { from { opacity: 0 } to { opacity: 1 } }
-      `}</style>
-      <div role="img" aria-label="DAY SURVIVED" style={{ position: "absolute", left: "50%", top: "50%", width: "36%", aspectRatio: "532 / 378",
-        transform: "translate(-50%, -50%)", animation: "sv-black .3s ease 1.5s both, sv-breathe 3s ease-in-out 4s infinite" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat",
-          backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`,
-          animation: `sv-emblem ${((SV_EMBLEM_FRAMES - 1) * SV_FRAME_S).toFixed(3)}s steps(${SV_EMBLEM_FRAMES - 1}) 1.5s both` }} />
-        <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat",
-          backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`,
-          animation: `sv-emblem-next ${((SV_EMBLEM_FRAMES - 2) * SV_FRAME_S).toFixed(3)}s steps(${SV_EMBLEM_FRAMES - 2}) 1.5s both, sv-xfade ${SV_FRAME_S}s linear 1.5s ${SV_EMBLEM_FRAMES - 1} both` }} />
-      </div>
     </div>
   );
 }
