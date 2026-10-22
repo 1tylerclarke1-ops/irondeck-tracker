@@ -213,7 +213,22 @@ export default function Overlay({ embedded = false } = {}) {
   const s = data;
   const wins = s?.currentRun ? Number(s.currentRun.round_wins || 0) : 0;
   const losses = s?.currentRun ? Number(s.currentRun.round_losses || 0) : 0;
-  const survived = Boolean(s?.currentRun?.round_status === "survived");
+  // The 7th win: the survived screen plays only if the win has just happened
+  // (not when OBS refreshes later). It holds solid until the next round starts.
+  const [celebrate, setCelebrate] = useState(false);
+  const celebrated = useRef("");
+  const runId = s?.currentRun?.id || "";
+  const runUpdated = s?.currentRun?.updated_date || "";
+  useEffect(() => {
+    if (!survived || !runId || celebrated.current === runId) return;
+    celebrated.current = runId;
+    const v = String(runUpdated);
+    const at = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(v) ? v : v + "Z") || 0;
+    if (Date.now() - at < 60000) setCelebrate(true);
+  }, [survived, runId, runUpdated]);
+  useEffect(() => {
+    if (!survived) setCelebrate(false);
+  }, [survived]);
   const died = losses >= 2;
   const seasonNumber = s?.season?.season_number ?? null;
   const day = s?.day ?? null;
@@ -444,24 +459,7 @@ export default function Overlay({ embedded = false } = {}) {
 
         </div>
       </div>
-      {survived && (
-        <img
-          src={SURVIVED}
-          alt="DAY SURVIVED"
-          draggable={false}
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            width: 520,
-            transform: "translate(-50%,-50%)",
-            animation:
-              "ov-titlestamp 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
-            zIndex: 50,
-            pointerEvents: "none",
-          }}
-        />
-      )}
+      {celebrate && <SurviveCelebration embedded={embedded} />}
     </div>
   );
 }
