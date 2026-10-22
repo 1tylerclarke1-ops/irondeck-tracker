@@ -668,7 +668,7 @@ function Medallion({ index, wins, survived, ignite, pulse }) {
 // whole page when the HUD is used on its own), its gems ignite, SURVIVED stamps into
 // the centre, and it holds solid, ready for OBS to fade into the outro.
 const SURVIVE_FRAME = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3ef98d1bd_irondeck-survived-background.webp";
-const SV_EMBLEM = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/XXXXXXXX_irondeck-survived-emblem-sheet.webp";
+const SV_EMBLEM = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/724202f99_irondeck-survived-emblem-sheet.webp";
 const SV_EMBLEM_FRAMES = 15;
 // Load the emblem early so it's ready the moment the 7th win lands
 if (typeof Image !== "undefined") new Image().src = SV_EMBLEM;
