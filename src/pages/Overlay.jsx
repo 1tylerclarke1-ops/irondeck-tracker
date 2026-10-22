@@ -213,6 +213,7 @@ export default function Overlay({ embedded = false } = {}) {
   const s = data;
   const wins = s?.currentRun ? Number(s.currentRun.round_wins || 0) : 0;
   const losses = s?.currentRun ? Number(s.currentRun.round_losses || 0) : 0;
+  const survived = Boolean(s?.currentRun?.round_status === "survived"); 
   // The 7th win: the survived screen plays only if the win has just happened
   // (not when OBS refreshes later). It holds solid until the next round starts.
   const [celebrate, setCelebrate] = useState(false);
