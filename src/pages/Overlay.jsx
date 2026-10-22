@@ -668,6 +668,10 @@ function Medallion({ index, wins, survived, ignite, pulse }) {
 // whole page when the HUD is used on its own), its gems ignite, SURVIVED stamps into
 // the centre, and it holds solid, ready for OBS to fade into the outro.
 const SURVIVE_FRAME = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/3ef98d1bd_irondeck-survived-background.webp";
+const SV_EMBLEM = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/XXXXXXXX_irondeck-survived-emblem-sheet.webp";
+const SV_EMBLEM_FRAMES = 15;
+// Load the emblem early so it's ready the moment the 7th win lands
+if (typeof Image !== "undefined") new Image().src = SV_EMBLEM;
 const SV_GEMS = [
   { x: 50, y: 15, d: 0.9, s: 8 },
   { x: 3.5, y: 50, d: 1.15, s: 8 },
@@ -722,11 +726,15 @@ function SurviveCelebration({ embedded }) {
         <div key={i} style={{ position: "absolute", left: m.x + "%", top: m.y + "%", width: m.s, height: m.s, borderRadius: "50%",
           background: "#FFC27A", boxShadow: "0 0 10px 3px rgba(255,120,30,.8)", animation: `sv-ember ${m.t}s ease-out ${m.d}s infinite both` }} />
       ))}
-      {/* Shockwave as SURVIVED lands */}
+      {/* Shockwave as SURVIVED burns in */}
       <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
-        border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 2.05s both" }} />
-      <img src={SURVIVED} alt="DAY SURVIVED" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", width: "46%", maxWidth: "none",
-        animation: "sv-stamp .5s cubic-bezier(0.15, 0.9, 0.3, 1) 1.7s both, sv-breathe 3s ease-in-out 2.4s infinite" }} />
+        border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 3.3s both" }} />
+      {/* Animated SURVIVED emblem: forms, the banner unfurls, the word burns in, then holds on the last frame */}
+      <style>{`@keyframes sv-emblem { from { background-position: 0% 0 } to { background-position: 100% 0 } }`}</style>
+      <div role="img" aria-label="DAY SURVIVED" style={{ position: "absolute", left: "50%", top: "50%", width: "36%", aspectRatio: "552 / 392",
+        transform: "translate(-50%, -50%)", backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat",
+        backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`,
+        animation: `sv-black .3s ease 1.5s both, sv-emblem ${((SV_EMBLEM_FRAMES - 1) / 6).toFixed(2)}s steps(${SV_EMBLEM_FRAMES - 1}) 1.5s forwards, sv-breathe 3s ease-in-out 4s infinite` }} />
     </div>
   );
 }
