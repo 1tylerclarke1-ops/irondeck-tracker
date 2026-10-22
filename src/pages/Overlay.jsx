@@ -667,7 +667,7 @@ function Medallion({ index, wins, survived, ignite, pulse }) {
 // The 7th win: the ember frame rises out of the dark over the game window (or the
 // whole page when the HUD is used on its own), its gems ignite, SURVIVED stamps into
 // the centre, and it holds solid, ready for OBS to fade into the outro.
-const SURVIVE_FRAME = "PASTE_SURVIVED_BACKGROUND_URL";
+const SURVIVE_FRAME = "https://base44.app/api/apps/…/irondeck-survived-background.webp";
 const SV_GEMS = [
   { x: 50, y: 27, d: 0.9, s: 9 },
   { x: 2.9, y: 52.4, d: 1.15, s: 9 },
