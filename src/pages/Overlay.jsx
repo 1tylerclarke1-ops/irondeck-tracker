@@ -727,6 +727,28 @@ function SurviveCelebration({ embedded }) {
         <div key={i} style={{ position: "absolute", left: m.x + "%", top: m.y + "%", width: m.s, height: m.s, borderRadius: "50%",
           background: "#FFC27A", boxShadow: "0 0 10px 3px rgba(255,120,30,.8)", animation: `sv-ember ${m.t}s ease-out ${m.d}s infinite both` }} />
       ))}
+            {/* SURVIVED slams down from above, the frame shakes, a flash and shockwave on impact, then it holds */}
+      <style>{`
+        @keyframes sv-slam {
+          0% { transform: translate(-50%, -260%) scale(1.35); opacity: 0 }
+          15% { opacity: 1 }
+          62% { transform: translate(-50%, -50%) scale(1); animation-timing-function: ease-out }
+          72% { transform: translate(-50%, -46%) scale(1.06, .92) }
+          86% { transform: translate(-50%, -51.5%) scale(.98, 1.03) }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1 } }
+        @keyframes sv-shake { 0%, 100% { margin-top: 0; margin-left: 0 } 15% { margin-top: 14px; margin-left: -6px } 35% { margin-top: -10px; margin-left: 5px }
+          55% { margin-top: 6px; margin-left: -3px } 75% { margin-top: -3px; margin-left: 2px } }
+        @keyframes sv-flash { 0% { opacity: 0 } 12% { opacity: .85 } 100% { opacity: 0 } }
+      `}</style>
+      <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", pointerEvents: "none",
+        background: "radial-gradient(circle at 50% 50%, rgba(255,235,180,.95), rgba(255,170,60,.35) 35%, transparent 65%)",
+        animation: "sv-flash .7s ease-out 1.95s both" }} />
+      <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
+        border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 1.95s both" }} />
+      <div role="img" aria-label="DAY SURVIVED" style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "532 / 378",
+        backgroundImage: `url(${SV_EMBLEM})`, backgroundRepeat: "no-repeat", backgroundSize: `${SV_EMBLEM_FRAMES * 100}% 100%`, backgroundPosition: "100% 0",
+        animation: "sv-slam .55s cubic-bezier(.55, 0, .9, .4) 1.6s both, sv-breathe 3s ease-in-out 2.6s infinite" }} />
     </div>
   );
 }
+
