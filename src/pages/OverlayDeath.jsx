@@ -515,7 +515,7 @@ export default function OverlayDeath() {
             animation: `odSpore ${4 + (i % 4)}s ease-out ${DF_ROT_AT + DF_ROT_S + ((i * 0.37) % 4)}s infinite` }} />
         ))}
       </div>
-      
+
       {/* Panel (rises in as the banner docks, drops away at the end) */}
       {docked && (
         <div
@@ -782,7 +782,7 @@ export default function OverlayDeath() {
             display: "block",
             width: TITLE_W,
             height: "auto",
-            animation: "odBannerSlam 0.35s cubic-bezier(0.15, 0.9, 0.3, 1) both",
+            animation: "dfGrow 1.6s cubic-bezier(.2,.7,.2,1) 3.6s both, dfDeathGlow 3s ease-in-out 5.2s infinite",
             pointerEvents: "none",
           }}
         />
