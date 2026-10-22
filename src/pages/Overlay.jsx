@@ -661,3 +661,71 @@ function Medallion({ index, wins, survived, ignite, pulse }) {
     </div>
   );
 }
+
+
+// The 7th win: the ember frame rises out of the dark over the game window (or the
+// whole page when the HUD is used on its own), its gems ignite, SURVIVED stamps into
+// the centre, and it holds solid, ready for OBS to fade into the outro.
+const SURVIVE_FRAME = "PASTE_SURVIVED_BACKGROUND_URL";
+const SV_GEMS = [
+  { x: 50, y: 27, d: 0.9, s: 9 },
+  { x: 2.9, y: 52.4, d: 1.15, s: 9 },
+  { x: 97.1, y: 52.4, d: 1.15, s: 9 },
+  { x: 50, y: 80.5, d: 1.4, s: 7 },
+];
+const SV_ORBS = [ { x: 4, y: 24 }, { x: 95.8, y: 24 }, { x: 4, y: 80 }, { x: 95.8, y: 80 } ];
+function SurviveCelebration({ embedded }) {
+  const box = embedded
+    ? { left: 480, top: 270, width: 1440, height: 810 }
+    : { left: 0, top: 0, width: "100vw", height: "100vh" };
+  const embers = Array.from({ length: 34 }, (_, i) => ({
+    x: (i * 37) % 100, y: 60 + ((i * 53) % 40), d: 1 + (i % 9) * 0.5, s: 3 + (i % 4) * 2, t: 3.5 + (i % 5) * 0.6,
+  }));
+  return (
+    <div style={{ position: "fixed", ...box, zIndex: 50, pointerEvents: "none", overflow: "hidden", background: "#050302",
+      animation: "sv-black .5s ease both" }}>
+      <style>{`
+        @keyframes sv-black { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes sv-framein { 0% { opacity: 0; filter: brightness(0); transform: translateY(-50%) scale(1.08) }
+          60% { opacity: 1 } 100% { opacity: 1; filter: brightness(1); transform: translateY(-50%) scale(1) } }
+        @keyframes sv-ignite { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) } 40% { opacity: 1; transform: translate(-50%, -50%) scale(1.8) }
+          100% { opacity: .75; transform: translate(-50%, -50%) scale(1) } }
+        @keyframes sv-pulse { 0%, 100% { opacity: .75 } 50% { opacity: .35 } }
+        @keyframes sv-orb { 0%, 100% { opacity: .25 } 50% { opacity: .7 } }
+        @keyframes sv-flicker { 0% { opacity: .55 } 17% { opacity: .8 } 31% { opacity: .5 } 48% { opacity: .9 } 66% { opacity: .6 } 83% { opacity: .85 } 100% { opacity: .55 } }
+        @keyframes sv-ember { 0% { opacity: 0; transform: translate(0, 0) } 15% { opacity: 1 } 100% { opacity: 0; transform: translate(30px, -320px) } }
+        @keyframes sv-stamp { 0% { transform: translate(-50%, -50%) scale(2.6); opacity: 0 } 70% { transform: translate(-50%, -50%) scale(.96); opacity: 1 }
+          100% { transform: translate(-50%, -50%) scale(1); opacity: 1 } }
+        @keyframes sv-shock { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) } 8% { opacity: .9 } 100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2) } }
+        @keyframes sv-breathe { 0%, 100% { filter: drop-shadow(0 0 24px rgba(255,170,60,.7)) } 50% { filter: drop-shadow(0 0 48px rgba(255,190,90,1)) } }
+      `}</style>
+      <div style={{ position: "absolute", left: 0, top: "50%", width: "100%", aspectRatio: "1200 / 630",
+        animation: "sv-framein 1.4s cubic-bezier(.2,.8,.3,1) .2s both" }}>
+        <img src={SURVIVE_FRAME} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+        {/* Flames licking along the top edge */}
+        <div style={{ position: "absolute", left: "28%", top: "-4%", width: "44%", height: "34%", mixBlendMode: "screen",
+          background: "radial-gradient(ellipse at 50% 60%, rgba(255,120,30,.55), rgba(200,60,10,.2) 45%, transparent 70%)",
+          animation: "sv-flicker 1.6s linear 1s infinite both" }} />
+        {SV_ORBS.map((o, i) => (
+          <div key={"o" + i} style={{ position: "absolute", left: o.x + "%", top: o.y + "%", width: "4%", aspectRatio: "1", transform: "translate(-50%, -50%)",
+            borderRadius: "50%", mixBlendMode: "screen", background: "radial-gradient(circle, rgba(120,170,255,.8), transparent 65%)",
+            animation: `sv-orb 3s ease-in-out ${1.6 + i * 0.3}s infinite both` }} />
+        ))}
+        {SV_GEMS.map((g, i) => (
+          <div key={"g" + i} style={{ position: "absolute", left: g.x + "%", top: g.y + "%", width: g.s + "%", aspectRatio: "1", borderRadius: "50%",
+            mixBlendMode: "screen", background: "radial-gradient(circle, rgba(255,220,140,1), rgba(255,130,40,.7) 30%, transparent 68%)",
+            animation: `sv-ignite .7s ease-out ${g.d}s both, sv-pulse 2.4s ease-in-out ${g.d + 0.7}s infinite` }} />
+        ))}
+      </div>
+      {embers.map((m, i) => (
+        <div key={i} style={{ position: "absolute", left: m.x + "%", top: m.y + "%", width: m.s, height: m.s, borderRadius: "50%",
+          background: "#FFC27A", boxShadow: "0 0 10px 3px rgba(255,120,30,.8)", animation: `sv-ember ${m.t}s ease-out ${m.d}s infinite both` }} />
+      ))}
+      {/* Shockwave as SURVIVED lands */}
+      <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
+        border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 2.05s both" }} />
+      <img src={SURVIVED} alt="DAY SURVIVED" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", width: "46%", maxWidth: "none",
+        animation: "sv-stamp .5s cubic-bezier(0.15, 0.9, 0.3, 1) 1.7s both, sv-breathe 3s ease-in-out 2.4s infinite" }} />
+    </div>
+  );
+}
