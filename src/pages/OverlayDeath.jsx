@@ -47,7 +47,8 @@ const DEATH_DELAY_MS = 1100; // banner slam + short hold; wheel is ready ~2s aft
 const SIDEBAR_MS = 18500; // the sidebar's execution and scavenge (ChoppingBlock); the result shows after it
 // New flow: purple blanket + DEATH RUN while the sidebar executes the card, then the
 // scavenged card flies out of the sidebar and expands into the middle of the game.
-const FLY_AT_MS = 22800; // sidebar lead-in (OverlayDeck ROT_LEAD_MS 2000) + its scavenged card landing (ChoppingBlock T_LAND + 600)
+const ROT_LEAD_MS = 6500; // must match OverlayDeck: the axe lifts 6.5s after the second loss
+const FLY_AFTER_AXE_MS = 16800; // the sidebar's scavenged card lands (ChoppingBlock T_LAND + 600) this long after the axe lifts
 const SCAV_HOLD_MS = 6000; // the scavenged card stays big in the middle
 const INTRO_MS = 1200; // panel rises, then the wheel grows in
 const COUNTDOWN_FROM = 3;
@@ -293,13 +294,13 @@ export default function OverlayDeath() {
     if (phase !== "waiting") return;
     // The banner holds while the sidebar plays the execution, then goes
     // straight to the result (no wheel, rarity flip or randomiser here).
-    const born = seq ? Date.parse(seq.updated_at || "") : NaN;
-    const wait = seq
-      ? Math.max(300, (Number.isFinite(born) ? born : bannerStart.current) + FLY_AT_MS - Date.now())
-      : PENDING_GIVE_UP_MS;
+    const born = seq ? toMs(seq.updated_at) || toMs(seq.created_date) : 0;
+    const died = (deadRun && seq && deadRun.id === seq.run_id && toMs(deadRun.updated_date)) || bannerStart.current;
+    const axeAt = Math.max(died + ROT_LEAD_MS, (born || bannerStart.current) + 500); // same rule as OverlayDeck
+    const wait = seq ? Math.max(300, axeAt + FLY_AFTER_AXE_MS - Date.now()) : PENDING_GIVE_UP_MS;
     const t = setTimeout(() => setPhase(seq ? "scavenge" : "idle"), wait);
     return () => clearTimeout(t);
-  }, [phase, seq]);
+  }, [phase, seq, deadRun]);
 
   // Fixed-length phases
   useEffect(() => {
