@@ -62,7 +62,7 @@ function sortDeck(cards) {
 // as it was BEFORE the rot, and switch to the new deck once the death
 // screen's result has been shown (it takes about 30 seconds).
 const DEATH_REVEAL_MS = 26000; // lead-in (2s) + sidebar execution (16.8s) + scavenged card in the middle (6.9s), then the deck returns
-const ROT_LEAD_MS = 2000; // the execution starts exactly 2s after the death, so it stays in step with the death screen
+const ROT_LEAD_MS = 6000; // the execution starts exactly 2s after the death, so it stays in step with the death screen
 const toMs = (v) => {
   if (!v) return 0;
   const t = String(v);
