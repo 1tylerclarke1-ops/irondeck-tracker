@@ -39,11 +39,13 @@ export function liveReload(entities, load, { fallbackMs = 30000, mergeMs = 250 }
   const onShow = () => { if (!document.hidden) run(); };
   document.addEventListener("visibilitychange", onShow);
 
-  return () => {
+  const stop = () => {
     stopped = true;
     clearTimeout(timer);
     clearInterval(safety);
     document.removeEventListener("visibilitychange", onShow);
-    stops.forEach((stop) => { try { stop(); } catch { /* ignore */ } });
+    stops.forEach((s) => { try { s(); } catch { /* ignore */ } });
   };
+  stop.now = run; // reload straight away (used while waiting for a death result)
+  return stop;
 }
