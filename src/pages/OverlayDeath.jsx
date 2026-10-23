@@ -47,7 +47,7 @@ const DEATH_DELAY_MS = 1100; // banner slam + short hold; wheel is ready ~2s aft
 const SIDEBAR_MS = 18500; // the sidebar's execution and scavenge (ChoppingBlock); the result shows after it
 // New flow: purple blanket + DEATH RUN while the sidebar executes the card, then the
 // scavenged card flies out of the sidebar and expands into the middle of the game.
-const FLY_AT_MS = 18800; // sidebar lead-in (OverlayDeck ROT_LEAD_MS 2000) + its scavenged card landing (ChoppingBlock T_LAND + 600)
+const FLY_AT_MS = 22800; // sidebar lead-in (OverlayDeck ROT_LEAD_MS 2000) + its scavenged card landing (ChoppingBlock T_LAND + 600)
 const SCAV_HOLD_MS = 6000; // the scavenged card stays big in the middle
 const INTRO_MS = 1200; // panel rises, then the wheel grows in
 const COUNTDOWN_FROM = 3;
