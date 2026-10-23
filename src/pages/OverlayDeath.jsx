@@ -180,6 +180,7 @@ export default function OverlayDeath() {
         const demoCards = isDemoDeath ? await base44.entities.Card.filter({ season_id: s.id }) : null;
         if (!active) return;
         setEvent(demoDeathEvent(s, demoCards) || (list && list.length ? list[0] : null));
+        setNextRound(!isDemoDeath && (runs || []).some((r) => r.round_status === "playing"));
         // A run that has just died: show the banner while the rot is worked out
         const died = (runs || [])
           .filter((r) => r.round_status === "died")
@@ -724,17 +725,25 @@ export default function OverlayDeath() {
         </div>
       )}
 
-      {/* While the sidebar executes the card, point viewers at it */}
+      {/* While the sidebar executes the card, pull eyes to it: the sidebar lights up purple and
+          glowing chevrons stream towards it from the game window. (Sidebar: x 0, y 270, 480×810.) */}
       {phase === "waiting" && (
-        <div style={{ position: "fixed", left: 500, top: 700, zIndex: 4, pointerEvents: "none", display: "flex", alignItems: "center", gap: 14,
-          animation: "odCueIn .6s ease .8s both" }}>
-          <style>{"@keyframes odCueIn { from { opacity: 0; transform: translateX(30px) } to { opacity: 1; transform: none } } @keyframes odCueNudge { 0%,100% { transform: translateX(0) } 50% { transform: translateX(-14px) } }"}</style>
-          <div style={{ ...purpleText(64), lineHeight: 1, animation: "odCueNudge 1s ease-in-out infinite" }}>◀</div>
-          <div style={{ textAlign: "left" }}>
-            <div style={{ ...purpleText(40), letterSpacing: 4, lineHeight: 1 }}>THE CONDEMNED CARD</div>
-            <div style={{ ...steelText(26), marginTop: 4 }}>WATCH THE BLOCK</div>
+        <>
+          <style>{`
+            @keyframes odSpot { 0%, 100% { box-shadow: inset 0 0 40px 6px rgba(150,80,255,.55), 0 0 30px 6px rgba(150,80,255,.5); border-color: rgba(200,150,255,.7) }
+              50% { box-shadow: inset 0 0 80px 14px rgba(170,100,255,.9), 0 0 60px 14px rgba(170,100,255,.9); border-color: rgba(235,210,255,1) } }
+            @keyframes odChev { 0% { opacity: 0; transform: translateX(40px) scale(.8) } 30% { opacity: 1 } 70% { opacity: 1 } 100% { opacity: 0; transform: translateX(-40px) scale(1.1) } }
+          `}</style>
+          <div style={{ position: "fixed", left: 0, top: 270, width: 480, height: 810, zIndex: 4, pointerEvents: "none", borderRadius: 6,
+            border: "4px solid rgba(200,150,255,.7)", animation: "dfFadeIn .6s ease 4.2s both, odSpot 1.4s ease-in-out 4.2s infinite" }} />
+          <div style={{ position: "fixed", left: 500, top: 615, zIndex: 4, pointerEvents: "none", display: "flex", gap: 6,
+            animation: "dfFadeIn .6s ease 4.2s both" }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={{ ...purpleText(110), lineHeight: 1, filter: "drop-shadow(0 0 14px rgba(170,100,255,1))",
+                animation: `odChev 1.2s ease-in-out ${4.2 + (2 - i) * 0.2}s infinite both` }}>❮</div>
+            ))}
           </div>
-        </div>
+        </>
       )}
 
       {/* The scavenged card flies out of the sidebar and expands into the middle of the game */}
