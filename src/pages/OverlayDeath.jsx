@@ -149,7 +149,7 @@ export default function OverlayDeath() {
   const playedFor = useRef(readPlayed());
   const eventIdRef = useRef(null);
   const bannerFor = useRef(null); // run id the banner was shown for
-  const bannerStart = useRef(0);
+  const reloadNow = useRef(null);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -193,7 +193,7 @@ export default function OverlayDeath() {
         // keep last event on error
       }
     };
-    const stopLive = liveReload(["Season", "DecayEvent", "Run"], load);
+    reloadNow.current = stopLive.now;
     return () => {
       active = false;
       stopLive();
@@ -226,6 +226,14 @@ export default function OverlayDeath() {
   useEffect(() => {
     if (phase === "waiting" && !seq && !deadRun) setPhase("idle");
   }, [phase, seq, deadRun]);
+
+  // Waiting for the rot result after a second loss: check every 2s as well as live updates
+  // (a live update can be missed), so the scavenged card is never late.
+  useEffect(() => {
+    if (phase !== "waiting" || seq) return undefined;
+    const t = setInterval(() => reloadNow.current?.(), 2000);
+    return () => clearInterval(t);
+  }, [phase, seq]);
 
   // Start the sequence when a fresh "death" event arrives
   useEffect(() => {
