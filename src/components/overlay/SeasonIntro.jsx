@@ -898,6 +898,26 @@ export default function SeasonIntro({ t, season, seasonNumber, allCards, cardIma
             const k = Object.keys(map).find((x) => x.toLowerCase() === n.toLowerCase());
             if (k) map[n] = map[k];
           });
+          // Not found by full name (e.g. double-faced cards like "Campus Composer // Aqueous Aria")?
+          // 1) try the front face's name, 2) use the card's Scryfall id from the deck records.
+          const missing = names.filter((n) => !map[n]);
+          if (missing.length) {
+            const front = (n) => n.split(" // ")[0].trim();
+            const res2 = await postCollection(missing.map((n) => ({ name: front(n) }))).catch(() => []);
+            for (const c of res2) {
+              const url = c.image_uris?.normal || c.card_faces?.[0]?.image_uris?.normal || null;
+              if (!url) continue;
+              const keys = [c.name, c.card_faces?.[0]?.name].filter(Boolean).map((x) => x.toLowerCase());
+              missing.forEach((n) => {
+                if (!map[n] && keys.includes(front(n).toLowerCase())) map[n] = url;
+              });
+            }
+            for (const n of missing.filter((x) => !map[x])) {
+              const rows = await base44.entities.Card.filter({ name: n }).catch(() => []);
+              const r = (rows || []).find((c) => c.scryfall_id);
+              if (r) map[n] = `https://api.scryfall.com/cards/${r.scryfall_id}?format=image&version=normal`;
+            }
+          }
         } catch {
           // best effort
         }
