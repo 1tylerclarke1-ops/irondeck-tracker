@@ -347,7 +347,7 @@ export default function OverlayOutro() {
 function RankEmblem({ rank, label }) {
   const row = RANK_ROWS.indexOf(rank.rank_class || "");
   const tier = Math.min(4, Math.max(1, Number(rank.tier) || 4));
-  const col = rank.rank_class === "Mythic" ? 0 : tier - 1;
+  const col = rank.rank_class === "Mythic" ? 0 : 4 - tier; // sheet columns left → right: Tier 4, 3, 2, 1
   const size = 150;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
