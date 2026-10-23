@@ -737,7 +737,7 @@ export default function OverlayDeath() {
           <div style={{ position: "fixed", left: 0, top: 270, width: 480, height: 810, zIndex: 4, pointerEvents: "none", borderRadius: 6,
             border: "4px solid rgba(200,150,255,.7)", animation: "dfFadeIn .6s ease 5.8s both, odSpot 1.4s ease-in-out 5.8s infinite" }} />
           <div style={{ position: "fixed", left: 500, top: 615, zIndex: 4, pointerEvents: "none", display: "flex", gap: 6,
-            animation: "dfFadeIn .6s ease 4.2s both" }}>
+            animation: "dfFadeIn .6s ease 5.8s both" }}>
             {[0, 1, 2].map((i) => (
               <div key={i} style={{ ...purpleText(110), lineHeight: 1, filter: "drop-shadow(0 0 14px rgba(170,100,255,1))",
                 animation: `odChev 1.2s ease-in-out ${4.2 + (2 - i) * 0.2}s infinite both` }}>❮</div>
