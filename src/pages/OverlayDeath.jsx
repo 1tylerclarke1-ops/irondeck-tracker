@@ -740,7 +740,7 @@ export default function OverlayDeath() {
             animation: "dfFadeIn .6s ease 5.8s both" }}>
             {[0, 1, 2].map((i) => (
               <div key={i} style={{ ...purpleText(110), lineHeight: 1, filter: "drop-shadow(0 0 14px rgba(170,100,255,1))",
-                animation: `odChev 1.2s ease-in-out ${4.2 + (2 - i) * 0.2}s infinite both` }}>❮</div>
+                animation: `odChev 1.2s ease-in-out ${5.8 + (2 - i) * 0.2}s infinite both` }}>❮</div>
             ))}
           </div>
         </>
