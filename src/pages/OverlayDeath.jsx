@@ -149,6 +149,7 @@ export default function OverlayDeath() {
   const playedFor = useRef(readPlayed());
   const eventIdRef = useRef(null);
   const bannerFor = useRef(null); // run id the banner was shown for
+  const bannerStart = useRef(0);
   const reloadNow = useRef(null);
 
   useEffect(() => {
@@ -193,6 +194,8 @@ export default function OverlayDeath() {
         // keep last event on error
       }
     };
+
+    const stopLive = liveReload(["Season", "DecayEvent", "Run"], load);
     reloadNow.current = stopLive.now;
     return () => {
       active = false;
