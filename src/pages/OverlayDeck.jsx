@@ -61,8 +61,8 @@ function sortDeck(cards) {
 // Don't spoil the death screen: while a fresh death plays out, show the deck
 // as it was BEFORE the rot, and switch to the new deck once the death
 // screen's result has been shown (it takes about 30 seconds).
-const DEATH_REVEAL_MS = 26000; // lead-in (2s) + sidebar execution (16.8s) + scavenged card in the middle (6.9s), then the deck returns
-const ROT_LEAD_MS = 6000; // the execution starts exactly 2s after the death, so it stays in step with the death screen
+const REVEAL_AFTER_AXE_MS = 24000; // sidebar execution (16.8s) + scavenged card in the middle (6.9s), then the deck returns
+const ROT_LEAD_MS = 6500; // the axe lifts 6.5s after the second loss, once the death screen has built (gold, DEATH RUN, rot ring, chevrons)
 const toMs = (v) => {
   if (!v) return 0;
   const t = String(v);
@@ -86,6 +86,7 @@ export default function OverlayDeck({ outro } = {}) {
   const [rawCards, setCards] = useState([]);
   const [rawSideCards, setSideCards] = useState([]);
   const [deathEv, setDeathEv] = useState(null);
+  const [diedAt, setDiedAt] = useState(0); // when the run behind the death event died (the second loss)
   const [, setRevealTick] = useState(0);
   const loadedOnce = useRef(false);
   const [climb, setClimb] = useState(null);
@@ -150,6 +151,8 @@ export default function OverlayDeck({ outro } = {}) {
         setDayLogs(logs);
         const ev = demoDeathEvent(s, list) || (evs && evs[0]) || null;
         setDeathEv(ev);
+        const evRun = ev && runs.find((r) => r.id === ev.run_id);
+        setDiedAt(evRun && evRun.round_status === "died" ? toMs(evRun.updated_date) : 0);
         // A run that died moments ago whose death isn't recorded yet: the rot
         // may already have changed the cards, so keep showing the old deck.
         const justDied = runs
@@ -179,7 +182,10 @@ export default function OverlayDeck({ outro } = {}) {
 
   // While the death screen plays, show the pre-rot deck; reveal afterwards.
   const deathBorn = deathEv ? toMs(deathEv.updated_at) || toMs(deathEv.created_date) : 0;
-  const holdUntil = deathEv && deathEv.step === "death" ? deathBorn + DEATH_REVEAL_MS : 0;
+  // The axe is timed from the second loss (same clock as the death screen), not from when the
+  // rot result arrives, which can take a few seconds. If it arrives late, the axe starts 0.5s later.
+  const rotAt = Math.max((diedAt || deathBorn) + ROT_LEAD_MS, deathBorn + 500);
+  const holdUntil = deathEv && deathEv.step === "death" ? rotAt + REVEAL_AFTER_AXE_MS : 0;
   const holding = holdUntil > Date.now();
   useEffect(() => {
     if (!holding) return undefined;
@@ -212,7 +218,6 @@ export default function OverlayDeck({ outro } = {}) {
   }, [blockTurn, !!block, isOutro]);
   const rotMode = Boolean(holding && deathEv && !isOutro);
   // While the death screen shows the card over the game, the block waits empty.
-  const rotAt = deathBorn + ROT_LEAD_MS;
   const [, setLeadTick] = useState(0);
   useEffect(() => {
     if (!rotMode || Date.now() >= rotAt) return undefined;
