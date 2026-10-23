@@ -212,13 +212,15 @@ export default function OverlayDeck({ outro } = {}) {
     : null;
   const [blockTurn, setBlockTurn] = useState(false);
   useEffect(() => {
-    if (!block || isOutro) {
+    // After the 7th win, keep the main deck on screen: the condemned card has already moved
+    // on to the next day, so the block would show tomorrow's count at the end of today's video.
+    if (!block || isOutro || run?.round_status === "survived") {
       setBlockTurn(false);
       return undefined;
     }
     const t = setTimeout(() => setBlockTurn((b) => !b), blockTurn ? 8000 : 20000);
     return () => clearTimeout(t);
-  }, [blockTurn, !!block, isOutro]);
+  }, [blockTurn, !!block, isOutro, run?.round_status]);
   const rotMode = Boolean(holding && deathEv && !isOutro);
   // While the death screen shows the card over the game, the block waits empty.
   const [, setLeadTick] = useState(0);
