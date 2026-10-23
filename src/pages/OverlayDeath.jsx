@@ -15,10 +15,11 @@ const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
 // Death screen: the gold frame appears, then rot spreads across it from the sidebar side
 const DF_GOLD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/130900cf6_irondeck-survived-aligned-for-rot.webp";
 const DF_ROT = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/bddf3495c_irondeck-corrupted-background.webp";
-const DF_ROT_AT = 1.6; // seconds: rot starts spreading
-const DF_ROT_S = 2.6; // seconds: how long the rot takes to cross
+const DF_ROT_AT = 2.0; // seconds: rot starts spreading from the centre (with DEATH RUN)
+const DF_ROT_S = 2.4; // seconds: how long the rot takes to reach the corners
 const DF_GEMS = [ { x: 50, y: 16 }, { x: 2.4, y: 43 }, { x: 97.2, y: 43 }, { x: 50, y: 72 } ];
-const dfGemRotAt = (x) => DF_ROT_AT + DF_ROT_S * x / 100; // when the rot edge reaches that gem
+// when the spreading rot reaches a gem (its distance from the centre of the 1440×810 window)
+const dfGemRotAt = (g) => DF_ROT_AT + DF_ROT_S * Math.hypot((g.x - 50) * 14.4, (g.y - 50) * 8.1) / 876;
 if (typeof Image !== "undefined") { new Image().src = DF_GOLD; new Image().src = DF_ROT; }
 
 // ---- Timeline ---------------------------------------------------------------
@@ -178,7 +179,7 @@ export default function OverlayDeath() {
         if (!active) return;
         const demoCards = isDemoDeath ? await base44.entities.Card.filter({ season_id: s.id }) : null;
         if (!active) return;
-        setNextRound(!isDemoDeath && (runs || []).some((r) => r.round_status === "playing"));
+        setEvent(demoDeathEvent(s, demoCards) || (list && list.length ? list[0] : null));
         // A run that has just died: show the banner while the rot is worked out
         const died = (runs || [])
           .filter((r) => r.round_status === "died")
@@ -469,8 +470,8 @@ export default function OverlayDeath() {
           Holds until the next round starts. (Game window: x 480, y 270, 1440×810 of 1920×1080.) */}
       <style>{`
         @keyframes dfFrameIn { 0% { opacity: 0; filter: brightness(0); transform: scale(1.06) } 100% { opacity: 1; filter: brightness(1); transform: scale(1) } }
-        @keyframes dfRot { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
-        @keyframes dfEdge { 0% { left: -9%; opacity: 1 } 90% { opacity: 1 } 100% { left: 91%; opacity: 0 } }
+        @keyframes dfRot { from { clip-path: circle(0% at 50% 50%) } to { clip-path: circle(75% at 50% 50%) } }
+        @keyframes dfEdge { 0% { width: 0%; opacity: 1 } 85% { opacity: 1 } 100% { width: 122%; opacity: 0 } }
         @keyframes dfIgnite { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) } 40% { opacity: 1; transform: translate(-50%, -50%) scale(1.8) } 100% { opacity: .8; transform: translate(-50%, -50%) scale(1) } }
         @keyframes dfOut { from { opacity: .8 } to { opacity: 0 } }
         @keyframes dfPulse { 0%, 100% { opacity: .8 } 50% { opacity: .35 } }
@@ -489,7 +490,7 @@ export default function OverlayDeath() {
           {DF_GEMS.map((g, i) => (
             <div key={"ga" + i} style={{ position: "absolute", left: g.x + "%", top: g.y + "%", width: "8%", aspectRatio: "1", borderRadius: "50%",
               mixBlendMode: "screen", background: "radial-gradient(circle, rgba(255,220,140,1), rgba(255,130,40,.7) 30%, transparent 68%)",
-              animation: `dfIgnite .6s ease-out ${0.6 + i * 0.12}s both, dfOut .4s ease ${dfGemRotAt(g.x)}s forwards` }} />
+              animation: `dfIgnite .6s ease-out ${0.6 + i * 0.12}s both, dfOut .4s ease ${dfGemRotAt(g)}s forwards` }} />
           ))}
           {/* Rot spreading across from the sidebar side */}
           <div style={{ position: "absolute", inset: 0,
@@ -499,13 +500,14 @@ export default function OverlayDeath() {
               background: "radial-gradient(ellipse at 20% 70%, rgba(150,80,255,.35), transparent 35%), radial-gradient(ellipse at 80% 30%, rgba(170,90,255,.3), transparent 35%)" }} />
           </div>
           {/* The glowing edge of the rot */}
-          <div style={{ position: "absolute", top: 0, bottom: 0, width: "18%", mixBlendMode: "screen", pointerEvents: "none",
-            background: "linear-gradient(90deg, transparent, rgba(150,70,255,.55) 45%, rgba(220,170,255,.7) 50%, rgba(150,70,255,.55) 55%, transparent)",
+          <div style={{ position: "absolute", left: "50%", top: "50%", aspectRatio: "1", transform: "translate(-50%, -50%)", borderRadius: "50%",
+            mixBlendMode: "screen", pointerEvents: "none",
+            background: "radial-gradient(circle, transparent 58%, rgba(150,70,255,.5) 65%, rgba(220,170,255,.75) 69%, rgba(150,70,255,.5) 72%, transparent 76%)",
             animation: `dfEdge ${DF_ROT_S}s linear ${DF_ROT_AT}s both` }} />
           {DF_GEMS.map((g, i) => (
             <div key={"gp" + i} style={{ position: "absolute", left: g.x + "%", top: g.y + "%", width: "8%", aspectRatio: "1", borderRadius: "50%",
               mixBlendMode: "screen", background: "radial-gradient(circle, rgba(235,215,255,1), rgba(160,90,255,.75) 30%, transparent 68%)",
-              animation: `dfIgnite .7s ease-out ${dfGemRotAt(g.x)}s both, dfPulse 2.4s ease-in-out ${dfGemRotAt(g.x) + 0.7}s infinite` }} />
+            animation: `dfIgnite .7s ease-out ${dfGemRotAt(g)}s both, dfPulse 2.4s ease-in-out ${dfGemRotAt(g) + 0.7}s infinite` }} />    
           ))}
         </div>
         {Array.from({ length: 30 }, (_, i) => (
@@ -766,8 +768,8 @@ export default function OverlayDeath() {
           transform: docked
             ? "translateY(0) scale(1) rotate(0deg)"
             : raised
-            ? `translate(-460px, calc(${PANEL_H / 2 - 46}px - 50%)) scale(0.62)` // raised: moves to the left of the game window, the scavenged card takes the centre
-            : `translateY(calc(${PANEL_H / 2 - 46}px - 50%)) scale(1.25)`,
+            ? `translate(-460px, calc(${PANEL_H / 2 - 46 + 135}px - 50%)) scale(0.55)` // raised: moves to the left of the game window, the scavenged card takes the centre
+            : `translateY(calc(${PANEL_H / 2 - 46 + 135}px - 50%)) scale(1)`, // centre of the game window (y 675)
           transition: `transform 1s ${DOCK_EASE}`,
           animation: leaving ? "odFadeOut 0.5s ease forwards" : "none",
           zIndex: 5,
@@ -782,7 +784,7 @@ export default function OverlayDeath() {
             display: "block",
             width: TITLE_W,
             height: "auto",
-            animation: "dfGrow 1.6s cubic-bezier(.2,.7,.2,1) 3.6s both, dfDeathGlow 3s ease-in-out 5.2s infinite",
+            animation: "dfGrow 1.6s cubic-bezier(.2,.7,.2,1) 2s both, dfDeathGlow 3s ease-in-out 3.6s infinite",
             pointerEvents: "none",
           }}
         />
