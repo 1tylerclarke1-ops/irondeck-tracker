@@ -18,7 +18,7 @@ const START_DELAY = 1100; // let the TDC shield finish docking before scene 1
 // (rows: Bronze, Silver, Gold, Platinum, Diamond, Mythic). Leave "" to use the drawn gem.
 const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/78b084191_rank-emblems.png";
 const SPRITE_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
-const LEFT_IS_TIER_1 = true; // sheet columns left → right are Tier 1, 2, 3, 4
+const LEFT_IS_TIER_1 = false; // sheet columns left → right are Tier 4, 3, 2, 1
 const at = (t, from) => t >= from;
 
 const solid = (size, color, extra = {}) => ({
