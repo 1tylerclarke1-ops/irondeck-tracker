@@ -15,7 +15,7 @@ const DEATH_PANEL = `${PRE}43f34a533_death-panel.png`;
 // Death screen: the gold frame appears, then rot spreads across it from the sidebar side
 const DF_GOLD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/130900cf6_irondeck-survived-aligned-for-rot.webp";
 const DF_ROT = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/bddf3495c_irondeck-corrupted-background.webp";
-const DF_ROT_AT = 2.0; // seconds: rot starts spreading from the centre (with DEATH RUN)
+const DF_ROT_AT = 3.4; // seconds: rot starts spreading from the centre (with DEATH RUN)
 const DF_ROT_S = 2.4; // seconds: how long the rot takes to reach the corners
 const DF_GEMS = [ { x: 50, y: 16 }, { x: 2.4, y: 43 }, { x: 97.2, y: 43 }, { x: 50, y: 72 } ];
 // when the spreading rot reaches a gem (its distance from the centre of the 1440×810 window)
@@ -735,7 +735,7 @@ export default function OverlayDeath() {
             @keyframes odChev { 0% { opacity: 0; transform: translateX(40px) scale(.8) } 30% { opacity: 1 } 70% { opacity: 1 } 100% { opacity: 0; transform: translateX(-40px) scale(1.1) } }
           `}</style>
           <div style={{ position: "fixed", left: 0, top: 270, width: 480, height: 810, zIndex: 4, pointerEvents: "none", borderRadius: 6,
-            border: "4px solid rgba(200,150,255,.7)", animation: "dfFadeIn .6s ease 4.2s both, odSpot 1.4s ease-in-out 4.2s infinite" }} />
+            border: "4px solid rgba(200,150,255,.7)", animation: "dfFadeIn .6s ease 5.8s both, odSpot 1.4s ease-in-out 5.8s infinite" }} />
           <div style={{ position: "fixed", left: 500, top: 615, zIndex: 4, pointerEvents: "none", display: "flex", gap: 6,
             animation: "dfFadeIn .6s ease 4.2s both" }}>
             {[0, 1, 2].map((i) => (
