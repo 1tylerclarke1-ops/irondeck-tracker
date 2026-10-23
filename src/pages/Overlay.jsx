@@ -472,7 +472,7 @@ function RankBlock({ rank, anim }) {
   const row = RANK_ROWS.indexOf(cls);
   const isMythic = cls === "Mythic";
   const tier = Math.min(4, Math.max(1, Number(rank.tier) || 4));
-  const col = isMythic ? 0 : tier - 1;
+  const col = isMythic ? 0 : 4 - tier; // sheet columns left → right: Tier 4, 3, 2, 1
   const size = 96;
   const steps = Math.max(0, Math.min(6, Number(rank.step) || 0));
   const label = isMythic
