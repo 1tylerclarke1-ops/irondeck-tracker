@@ -89,6 +89,7 @@ export default function OverlayDeck({ outro } = {}) {
   const [diedAt, setDiedAt] = useState(0); // when the run behind the death event died (the second loss)
   const [, setRevealTick] = useState(0);
   const loadedOnce = useRef(false);
+  const reloadNow = useRef(null);
   const [climb, setClimb] = useState(null);
   const [dayLogs, setDayLogs] = useState([]);
   const [run, setRun] = useState(null);
@@ -174,6 +175,7 @@ export default function OverlayDeck({ outro } = {}) {
       }
     };
     const stopLive = liveReload(["Season", "Card", "Run", "Decay", "DayLog", "DecayEvent", "Climb"], load);
+    reloadNow.current = stopLive.now;
     return () => {
       active = false;
       stopLive();
@@ -189,7 +191,8 @@ export default function OverlayDeck({ outro } = {}) {
   const holding = holdUntil > Date.now();
   useEffect(() => {
     if (!holding) return undefined;
-    const t = setTimeout(() => setRevealTick((n) => n + 1), holdUntil - Date.now() + 50);
+    // When the death sequence ends, reload so the new deck and the cleared block show straight away
+    const t = setTimeout(() => { setRevealTick((n) => n + 1); reloadNow.current?.(); }, holdUntil - Date.now() + 50);
     return () => clearTimeout(t);
   }, [holding, holdUntil]);
   const cards = useMemo(
