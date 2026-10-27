@@ -17,7 +17,7 @@ const SLIDES = [
   { ms: 8000, kicker: "RULE 5", head: "NO MERCY",
     lines: ["Nothing is ever resurrected. Nothing is shielded.", "Miss a day, and the card rots anyway.", "Only a new season brings a fresh deck."] },
   { ms: 7000, kicker: "THE SMALL PRINT", head: "FAIR PLAY",
-    lines: ["Any deck is allowed: netdeck or homebrew.", "A draw counts as nothing.", "A disconnect is a loss only if Arena says so."] },
+    lines: ["Any deck is allowed: netdeck or homebrew.", "No mulligans: you keep the opening hand.", "A draw counts as nothing. A disconnect is a loss only if Arena says so."] },
   { ms: 6500, kicker: "THE GOAL", head: "MYTHIC",
     lines: ["The climb carries on, season after season,", "until this deck reaches Mythic."] },
 ];
