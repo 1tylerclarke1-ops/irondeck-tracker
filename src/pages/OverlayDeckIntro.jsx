@@ -126,7 +126,7 @@ export default function OverlayDeckIntro() {
   // The "deck" stage just shows the deck for a while before the wheel.
   useEffect(() => {
     if (cur !== "deck") return undefined;
-    const t = setTimeout(() => next(idx), 9000);
+    const t = setTimeout(() => next(idx), 4000);
     return () => clearTimeout(t);
   }, [cur, idx, next]);
 
