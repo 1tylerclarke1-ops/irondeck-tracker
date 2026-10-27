@@ -196,7 +196,7 @@ function CardBack({ style }) {
       background: "radial-gradient(circle at 50% 45%, #4a2380, #160a2a 72%)", boxShadow: "0 6px 18px rgba(0,0,0,.65)", ...style }}>
       <div style={{ position: "absolute", inset: 14, borderRadius: 9, border: "2px solid rgba(201,168,255,.5)",
         display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ ...goldText(46), letterSpacing: 4 }}>ID</div>
+        <div style={{ ...goldText(170), lineHeight: 1 }}>?</div>
       </div>
     </div>
   );
