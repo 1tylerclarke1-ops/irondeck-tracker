@@ -61,6 +61,8 @@ async function loadDay() {
   const wins = n(run?.round_wins);
   const losses = n(run?.round_losses);
   return {
+  return {
+    season, block, ev, todayLog, wins, losses, rotted,
     roundKey: `${run?.id || ""}|${run?.round_started_at || ""}`, // changes when a new round starts
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
