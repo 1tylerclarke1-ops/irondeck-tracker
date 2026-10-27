@@ -9,7 +9,7 @@ const SLIDES = [
   { ms: 7000, kicker: "RULE 1", head: "ONE ROUND A DAY",
     lines: ["Ranked, best-of-one.", "7 wins and the deck survives the day.", "2 losses is a DEATH RUN."] },
   { ms: 7000, kicker: "RULE 2", head: "THE CONDEMNED",
-    lines: ["Every day the wheel condemns one rare or mythic.", "It goes on the chopping block.", "Lose today, and it rots."] },
+    lines: ["Every day the shuffle condemns one rare or mythic.", "It goes on the chopping block.", "Lose today, and it rots."] },
   { ms: 7000, kicker: "RULE 3", head: "THE ROT",
     lines: ["The condemned card is executed.", "A random common or uncommon", "is scavenged in its place."] },
   { ms: 8000, kicker: "RULE 4", head: "THE PARDON",
