@@ -85,7 +85,7 @@ function hookFor(d) {
   if (b.day >= b.sentence) { tone = "gold"; hooks.push({ hook: "ONE DAY FROM FREEDOM.", sub: "SURVIVE TODAY AND IT WALKS FREE" }); }
   else hooks.push({ hook: "LOSE TWICE AND IT ROTS.", sub: `DAY ${b.day} OF ${b.sentence} ON THE CHOPPING BLOCK` });
   if (show) hooks.push({ hook: `${up(b.name)}.`, sub: "STILL ON THE CHOPPING BLOCK" });
-  else hooks.push({ hook: "hook: THE SHUFFLE HAS CHOSEN.", sub: "BUT WHICH CARD?" });
+  else hooks.push({ hook: "THE SHUFFLE HAS CHOSEN.", sub: "BUT WHICH CARD?" });
   hooks.push(always);
   return { tone, hooks, label, detail, show, image: show ? d.cardImg(b.name) : "" };
 }
