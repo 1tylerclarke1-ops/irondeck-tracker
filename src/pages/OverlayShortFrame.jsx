@@ -73,7 +73,7 @@ async function loadDay() {
 function hookFor(d) {
   const b = d.block;
   const always = { hook: "EVERY LOSS COSTS A CARD.", sub: "CAN THIS DECK STILL REACH MYTHIC?" };
-  if (!b) return { tone: "gold", hooks: [{ hook: "THE WHEEL AWAITS.", sub: "WHICH CARD IS NEXT?" }, always], label: "", detail: "", show: false };
+  if (!b) return { tone: "gold", hooks: [{ hook: "THE DECK AWAITS.", sub: "WHICH CARD IS NEXT?" }, always], label: "", detail: "", show: false };
   const label = `CONDEMNED · DAY ${b.day} OF ${b.sentence}`;
   const lowered = b.pool && b.pool !== "rare";
   const detail = lowered ? "NO RARES LEFT · THE UNCOMMONS STAND TRIAL" : "LOSE TWICE TODAY AND IT ROTS";
