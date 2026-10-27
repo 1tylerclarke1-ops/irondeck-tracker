@@ -79,7 +79,7 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
     const go = (p, ms) => setTimeout(() => setPhase(p), ms);
     let t;
     if (phase === "banner") t = go("wheel", 2800);
-    if (phase === "wheel") t = go("countdown", 1200);
+    if (phase === "wheel") t = go("countdown", 600);
     if (phase === "verdict") t = go("out", 6000);
     if (phase === "block") t = go("out", 7000);
     if (phase === "out") t = setTimeout(() => doneRef.current?.(), 700);
