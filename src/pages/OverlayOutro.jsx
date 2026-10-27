@@ -176,7 +176,7 @@ export default function OverlayOutro() {
   const tomorrow = useMemo(() => {
     if (!b) return ["", ""];
     if (blockDone && story?.lowered) return ["NO RARES LEFT", "THE UNCOMMONS STAND TRIAL TOMORROW"];
-    if (blockDone) return ["TOMORROW", "THE WHEEL SPINS AGAIN"];
+    if (blockDone) return ["TOMORROW", "THE DECK SHUFFLES AGAIN"];
     if (lastDay) return ["TOMORROW", `${b.name.toUpperCase()} IS ONE DAY FROM FREEDOM`];
     return ["TOMORROW", `${b.name.toUpperCase()} IS STILL ON THE BLOCK`];
   }, [b, blockDone, lastDay, story]);
@@ -329,7 +329,7 @@ export default function OverlayOutro() {
             ))}
             <div style={{ position: "absolute", left: 0, right: 0, top: 880, ...purpleText(36), letterSpacing: 2,
               animation: "ooIn .7s ease-out 1.1s both" }}>
-              WHO WILL THE WHEEL PICK TOMORROW? TELL ME IN THE COMMENTS
+              WHAT WILL THE SHUFFLE CONDEMN TOMORROW? TELL ME IN THE COMMENTS
             </div>
             <div style={{ position: "absolute", left: 0, right: 0, top: 985, animation: "ooIn .7s ease-out 1.4s both" }}>
               <div style={{ ...goldText(24), letterSpacing: 2 }}>{OWNERSHIP}</div>
