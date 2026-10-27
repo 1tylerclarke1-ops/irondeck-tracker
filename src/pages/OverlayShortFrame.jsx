@@ -48,16 +48,20 @@ async function loadDay() {
   const today = ukDate();
   const todayLog = [...logs].filter((l) => l.date === today && l.result !== "missed")
     .sort((a, b) => toMs(b.created_date) - toMs(a.created_date))[0] || null;
-  const run = [...runs].sort((a, b) => n(b.attempt_number) - n(a.attempt_number))[0] || null;
+  // The current run, as on the HUD: the one in progress, else the latest attempt.
+  const run = runs.find((r) => r.result === "in_progress") ||
+    [...runs].sort((a, b) => n(b.attempt_number) - n(a.attempt_number))[0] || null;
   const ev = evs && evs[0] && ukDate(evs[0].updated_at || evs[0].created_date) === today ? evs[0] : null;
   const block = blockState(season);
   const byName = (name) => cards.find((c) => up(c.name) === up(name));
   const rotted = cards.reduce((s, c) => (n(c.original_copies) > 0 ? s + Math.max(0, n(c.original_copies) - n(c.copies)) : s), 0);
   const pardonedToday = season.pardoned_at && ukDate(season.pardoned_at) === today;
-  const wins = todayLog ? n(todayLog.wins) : n(run?.round_wins);
-  const losses = todayLog ? n(todayLog.losses) : n(run?.round_losses);
+  // Always the current round's results (they reset to 0-0 when Start Round is pressed),
+  // not an earlier finished round from today's day log.
+  const wins = n(run?.round_wins);
+  const losses = n(run?.round_losses);
   return {
-    season, block, ev, todayLog, wins, losses, rotted,
+    roundKey: `${run?.id || ""}|${run?.round_started_at || ""}`, // changes when a new round starts
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
       day: n(todayLog?.day) || n(logs.length) + 1,
@@ -104,9 +108,11 @@ export default function OverlayShortFrame() {
       const day = await loadDay();
       if (!active || !day) return;
       setD(day);
-      setLocked((h) => h || hookFor(day));
+      // Hooks stay fixed for the whole round (so they never give away the result), and are
+      // picked fresh when a new round starts.
+      setLocked((h) => (h && h.key === day.roundKey ? h : { ...hookFor(day), key: day.roundKey }));
     };
-    const stop = liveReload(["Run", "DayLog"], load);
+    const stop = liveReload(["Run", "DayLog", "Season", "DecayEvent"], load);
     return () => { active = false; stop(); };
   }, []);
 
