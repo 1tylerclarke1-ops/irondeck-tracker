@@ -16,6 +16,16 @@ const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6
 const RANK_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
 const T = { result: 400, block: 4500, climb: 10500, tomorrow: 14000, end: 17500, mythicEnd: 22000 };
 const DAY_MILESTONES = [10, 25, 50, 75, 100, 150, 200, 250, 300, 365];
+// Rank as one number for the chart: 6 steps × 4 tiers per rank, Bronze 4 = 0, Mythic = 120.
+const MYTHIC_SCORE = 120;
+function rankScore(r) {
+  const row = RANK_ROWS.indexOf(r?.rank_class || "");
+  if (row < 0) return null;
+  if (row === 5) return MYTHIC_SCORE;
+  const tier = Math.min(4, Math.max(1, Number(r.tier) || 4));
+  const step = Math.min(6, Math.max(0, Number(r.step) || 0));
+  return row * 24 + (4 - tier) * 6 + step;
+}
 const n = (v) => Number(v) || 0;
 const toMs = (v) => {
   if (!v) return 0;
@@ -123,6 +133,15 @@ async function loadStory() {
     ? { days: n(climb.days_taken) || n(log.day) } : null;
   const lowered = poolFor(cards).pool !== "rare";
   const rank = [...(ranks || [])].sort((a, b) => toMs(b.captured_at || b.created_date) - toMs(a.captured_at || a.created_date))[0];
+  // The rank "stock chart" for this Arena season: every rank snapshot in time order,
+  // plus the moments a card rotted (death days).
+  const ord = rank?.season_ordinal;
+  const chart = [...(ranks || [])]
+    .filter((r) => ord == null || r.season_ordinal === ord)
+    .map((r) => ({ t: toMs(r.captured_at || r.created_date), v: rankScore(r) }))
+    .filter((p) => p.v != null && p.t)
+    .sort((a, b) => a.t - b.t);
+  const deaths = logs.filter((l) => l.result === "died").map((l) => toMs(l.created_date)).filter(Boolean);
   return {
     season: season.season_number,
     day: n(log.day),
@@ -139,6 +158,9 @@ async function loadStory() {
     rotted,
     rank: rankText(rank),
     rankRaw: rank || null,
+    chart,
+    deaths,
+    stepsLeft: rank ? Math.max(0, MYTHIC_SCORE - (rankScore(rank) ?? MYTHIC_SCORE)) : null,
     block,
   };
 }
@@ -172,6 +194,8 @@ export default function OverlayOutro() {
   const b = story?.block;
   const blockDone = b && (b.kind === "rotted" || b.kind === "pardoned" || b.kind === "none");
   const lastDay = b?.kind === "spared" && b.served === b.sentence - 1;
+  // On a death day the rot was already shown on screen, so the outro shows the climb chart instead.
+  const showChart = b?.kind === "rotted" && (story?.chart?.length || 0) >= 2;
 
   const tomorrow = useMemo(() => {
     if (!b) return ["", ""];
@@ -216,8 +240,9 @@ export default function OverlayOutro() {
           </div>
         )}
 
-        {/* 2. The block */}
-        {scene === "block" && (
+        {/* 2. The block (or, on a death day, the rank chart) */}
+        {scene === "block" && showChart && <RankChart chart={story.chart} deaths={story.deaths} rank={story.rank} stepsLeft={story.stepsLeft} />}
+        {scene === "block" && !showChart && (
           <div key="block" style={{ position: "absolute", left: 0, right: 0, top: 210, display: "flex", justifyContent: "center",
             alignItems: "center", gap: 70, animation: "ooIn .6s ease-out both" }}>
             {b.kind === "rotted" && (
@@ -238,7 +263,7 @@ export default function OverlayOutro() {
             )}
           </div>
         )}
-        {scene === "block" && (
+        {scene === "block" && !showChart && (
           <div style={{ position: "absolute", left: 0, right: 0, top: 760, animation: "ooIn .6s ease-out .3s both" }}>
             {b.kind === "rotted" && <>
               <div style={{ ...purpleText(66), letterSpacing: 3 }}>{b.name.toUpperCase()} ROTTED</div>
@@ -365,6 +390,62 @@ function CardImg({ src, anim }) {
   return (
     <div style={{ width: 360, height: 502, borderRadius: 18, overflow: "hidden", animation: anim, background: "#120a20" }}>
       {src && <img src={src} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />}
+    </div>
+  );
+}
+
+
+// The climb as a stock chart: green when the rank goes up, red when it drops, a skull where a
+// card rotted, and the Mythic line at the top. Draws itself left to right.
+function RankChart({ chart, deaths, rank, stepsLeft }) {
+  const W = 1400, H = 520, PADL = 170, PADR = 30, PADT = 30, PADB = 30;
+  const lo = Math.max(0, Math.floor((Math.min(...chart.map((p) => p.v)) - 4) / 24) * 24);
+  const hi = MYTHIC_SCORE;
+  const x = (i) => PADL + (chart.length === 1 ? 0 : (i / (chart.length - 1)) * (W - PADL - PADR));
+  const y = (v) => PADT + (1 - (v - lo) / (hi - lo)) * (H - PADT - PADB);
+  const bands = [];
+  for (let v = lo; v < hi; v += 24) bands.push(v);
+  const skullAt = (deaths || []).map((d) => {
+    let idx = -1;
+    chart.forEach((p, i) => { if (p.t <= d) idx = i; });
+    return idx;
+  }).filter((i) => i >= 0);
+  return (
+    <div key="chart" style={{ position: "absolute", left: 0, right: 0, top: 150, animation: "ooIn .6s ease-out both" }}>
+      <style>{`@keyframes ooReveal { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }`}</style>
+      <div style={{ ...goldText(64), letterSpacing: 6 }}>THE CLIMB TO MYTHIC</div>
+      <div style={{ position: "relative", width: W, height: H, margin: "24px auto 0" }}>
+        <svg width={W} height={H} style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+          {bands.map((v) => (
+            <g key={v}>
+              <line x1={PADL} x2={W - PADR} y1={y(v)} y2={y(v)} stroke="rgba(201,168,255,.18)" strokeWidth="2" />
+              <text x={PADL - 18} y={(y(v) + y(v + 24)) / 2 + 10} textAnchor="end" fill="#c9a8ff" fontSize="30"
+                fontFamily="'Barlow Condensed', sans-serif" fontWeight="700" letterSpacing="2">{RANK_ROWS[v / 24].toUpperCase()}</text>
+            </g>
+          ))}
+          <line x1={PADL} x2={W - PADR} y1={y(hi)} y2={y(hi)} stroke="#FFD38A" strokeWidth="3" strokeDasharray="14 10" />
+          <text x={PADL - 18} y={y(hi) + 10} textAnchor="end" fill="#FFD38A" fontSize="32"
+            fontFamily="'Barlow Condensed', sans-serif" fontWeight="800" letterSpacing="2">MYTHIC</text>
+        </svg>
+        <svg width={W} height={H} style={{ position: "absolute", inset: 0, overflow: "visible", animation: "ooReveal 2.6s ease-in-out .4s both" }}>
+          {chart.slice(1).map((p, i) => {
+            const a = chart[i];
+            const col = p.v > a.v ? "#4ade80" : p.v < a.v ? "#f87171" : "#c9c4d6";
+            return <line key={i} x1={x(i)} y1={y(a.v)} x2={x(i + 1)} y2={y(p.v)} stroke={col} strokeWidth="6" strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 8px ${col})` }} />;
+          })}
+          {skullAt.map((i, k) => (
+            <text key={k} x={x(i)} y={y(chart[i].v) - 22} textAnchor="middle" fontSize="40" fill="#c9a8ff"
+              style={{ filter: "drop-shadow(0 0 8px rgba(150,80,255,1))" }}>☠</text>
+          ))}
+          <circle cx={x(chart.length - 1)} cy={y(chart[chart.length - 1].v)} r="11" fill="#FFD38A"
+            style={{ filter: "drop-shadow(0 0 12px rgba(255,190,90,1))" }} />
+        </svg>
+      </div>
+      <div style={{ ...steelText(46), marginTop: 22 }}>
+        {rank}{stepsLeft != null && stepsLeft > 0 ? ` · ${stepsLeft} STEPS TO MYTHIC` : ""}
+      </div>
+      <div style={{ ...purpleText(30), marginTop: 8, letterSpacing: 3 }}>☠ = A CARD ROTTED</div>
     </div>
   );
 }
