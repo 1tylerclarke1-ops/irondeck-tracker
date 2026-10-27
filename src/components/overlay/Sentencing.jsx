@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import DeathWheel from "@/components/overlay/DeathWheel";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { base44 } from "@/api/base44Client";
 import { captureTitle, poolFor } from "@/lib/condemned";
@@ -94,11 +93,6 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
     return () => clearTimeout(t);
   }, [phase, count]);
 
-  useEffect(() => {
-    if (phase === "spinning" && wheelRef.current && locked.current)
-      wheelRef.current.spinTo({ name: locked.current.condemned_card });
-  }, [phase]);
-
   const s = locked.current || season;
   const name = s?.condemned_card || "";
   const card = wheelCards.find((c) => c.name === name);
@@ -125,7 +119,7 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
         @keyframes snGlow { 0%,100% { box-shadow: 0 0 40px 8px rgba(150,80,255,.55) } 50% { box-shadow: 0 0 70px 18px rgba(150,80,255,.9) } }
       `}</style>
 
-      {active && phase === "wait" && <div style={{ ...steelText(40), letterSpacing: 6, opacity: 0.8 }}>THE WHEEL AWAITS…</div>}
+      {active && phase === "wait" && <div style={{ ...steelText(40), letterSpacing: 6, opacity: 0.8 }}>THE DECK AWAITS…</div>}
 
       {phase === "banner" && (
         <div style={{ textAlign: "center", animation: "snSlam 0.7s ease-out both" }}>
@@ -146,13 +140,12 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
       {showWheel && (
         <>
           <div style={{ ...goldText(54), letterSpacing: 4, marginBottom: 24 }}>TODAY'S CONDEMNED CARD</div>
-          <div style={{ width: WHEEL_PX, height: WHEEL_PX, animation: "snIn 0.6s cubic-bezier(0.22,1,0.36,1) both" }}>
-            <div style={{ width: 288, height: 288, transform: `scale(${WHEEL_PX / 288})`, transformOrigin: "top left" }}>
-              <DeathWheel ref={wheelRef} cards={wheelCards} art={artMap} onLand={() => setTimeout(() => setPhase("verdict"), 1500)} />
-            </div>
+          <div style={{ animation: "snIn 0.6s cubic-bezier(0.22,1,0.36,1) both" }}>
+            <ShuffleDeck cards={wheelCards} pick={locked.current?.condemned_card || name}
+              play={phase === "spinning"} onLand={() => setPhase("verdict")} />
           </div>
           <div style={{ ...goldText(40), marginTop: 24, minHeight: 48 }}>
-            {phase === "countdown" ? (count > 0 ? `SPIN IN ${count}` : "SPIN!") : ""}
+            {phase === "countdown" ? (count > 0 ? `SHUFFLE IN ${count}` : "SHUFFLE!") : ""}
           </div>
         </>
       )}
@@ -180,6 +173,93 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
             <div style={{ ...steelText(30), marginTop: 10, opacity: 0.85 }}>
               SURVIVE {sentence} {sentence === 1 ? "DAY" : "DAYS"} TO WALK FREE
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ---------- The shuffle (replaces the wheel) ----------
+// A face-down deck riffles three times, then the top card flips and the pool's cards
+// flick through it (slowing down, like the death scavenge) until it lands on the condemned card.
+const SH_W = 250;
+const SH_H = 349;
+const SH_BACKS = 8;
+const SH_RIFFLE_MS = 2600; // three riffles
+const SH_GAPS = [70, 70, 70, 75, 80, 90, 100, 115, 135, 160, 190, 230, 280, 340];
+
+function CardBack({ style }) {
+  return (
+    <div style={{ position: "absolute", left: 0, top: 0, width: SH_W, height: SH_H, borderRadius: 14, border: "3px solid #b98a3c",
+      background: "radial-gradient(circle at 50% 45%, #4a2380, #160a2a 72%)", boxShadow: "0 6px 18px rgba(0,0,0,.65)", ...style }}>
+      <div style={{ position: "absolute", inset: 14, borderRadius: 9, border: "2px solid rgba(201,168,255,.5)",
+        display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ ...goldText(46), letterSpacing: 4 }}>ID</div>
+      </div>
+    </div>
+  );
+}
+
+export function ShuffleDeck({ cards, pick, play, onLand }) {
+  const [step, setStep] = useState("stack"); // stack, shuffle, flick, landed
+  const [face, setFace] = useState("");
+  const landRef = useRef(onLand);
+  landRef.current = onLand;
+  const faces = useMemo(() => (cards || []).map((c) => scry(c.scryfall_id, "normal")).filter(Boolean), [cards]);
+  const pickImg = scry((cards || []).find((c) => c.name === pick)?.scryfall_id, "normal");
+
+  // Load every face up front, so nothing flashes blank during the flick.
+  useEffect(() => { faces.forEach((u) => { const i = new Image(); i.src = u; }); }, [faces]);
+
+  useEffect(() => {
+    if (!play) return undefined;
+    const timers = [];
+    const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const pool = faces.filter((u) => u !== pickImg).sort(() => Math.random() - 0.5);
+    setStep("shuffle");
+    let t = SH_RIFFLE_MS;
+    at(t, () => setStep("flick"));
+    SH_GAPS.forEach((gap, i) => {
+      const u = pool.length ? pool[i % pool.length] : pickImg;
+      at(t, () => setFace(u));
+      t += gap;
+    });
+    at(t, () => { setFace(pickImg); setStep("landed"); });
+    at(t + 1500, () => landRef.current?.());
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [play]);
+
+  const showFace = step === "flick" || step === "landed";
+  return (
+    <div style={{ position: "relative", width: 640, height: 420, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{`
+        @keyframes shRiffleL { 0%, 100% { transform: translate(0, 0) rotate(0deg) } 30%, 55% { transform: translate(-160px, 14px) rotate(-11deg) } }
+        @keyframes shRiffleR { 0%, 100% { transform: translate(0, 0) rotate(0deg) } 30%, 55% { transform: translate(160px, 14px) rotate(11deg) } }
+        @keyframes shFlip { from { transform: rotateY(90deg) scale(.9) } to { transform: rotateY(0deg) scale(1) } }
+        @keyframes shLand { 0% { transform: scale(1) } 35% { transform: scale(1.12) } 100% { transform: scale(1) } }
+        @keyframes shBurst { 0% { opacity: 0; transform: scale(.6) } 15% { opacity: 1 } 100% { opacity: 0; transform: scale(1.9) } }
+        @keyframes shGlow { 0%, 100% { box-shadow: 0 0 30px 6px rgba(150,80,255,.55) } 50% { box-shadow: 0 0 60px 16px rgba(170,100,255,.95) } }
+      `}</style>
+      <div style={{ position: "relative", width: SH_W, height: SH_H, opacity: showFace ? 0.25 : 1, transition: "opacity .4s ease" }}>
+        {Array.from({ length: SH_BACKS }, (_, i) => (
+          <CardBack key={i} style={{ marginLeft: -i * 1.5, marginTop: -i * 2,
+            animation: step === "shuffle" ? `${i % 2 ? "shRiffleR" : "shRiffleL"} ${SH_RIFFLE_MS / 3}ms ease-in-out ${i * 30}ms 3` : "none" }} />
+        ))}
+      </div>
+      {showFace && face && (
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: SH_W, height: SH_H, marginLeft: -SH_W / 2, marginTop: -SH_H / 2 - 12,
+          perspective: 900 }}>
+          {step === "landed" && (
+            <div style={{ position: "absolute", inset: -60, borderRadius: "50%", pointerEvents: "none", mixBlendMode: "screen",
+              background: "radial-gradient(closest-side, rgba(235,215,255,.95), rgba(150,80,255,.5) 45%, transparent 75%)",
+              animation: "shBurst .9s ease-out both" }} />
+          )}
+          <div style={{ width: "100%", height: "100%", borderRadius: 14, overflow: "hidden", background: "#120a20",
+            animation: step === "landed" ? "shLand .5s ease-out both, shGlow 2.4s ease-in-out .5s infinite" : "shFlip .25s ease-out both" }}>
+            <img src={face} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
           </div>
         </div>
       )}
