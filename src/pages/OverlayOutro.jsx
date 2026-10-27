@@ -33,7 +33,7 @@ const toMs = (v) => {
   return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + "Z") || 0;
 };
 const scry = (id) => (id ? `https://api.scryfall.com/cards/${id}?format=image&version=normal` : "");
-const OWNERSHIP = "IRONDECK © TYLER DEE CLARKE & TDC GAMING. ALL RIGHTS RESERVED.";
+const OWNERSHIP = "IRONDECK · SOFTWARE AND CONCEPT CREATED AND OWNED BY TYLER DEE CLARKE · FOR THE SOLE USE OF TDC GAMING · © 2026 TYLER DEE CLARKE. ALL RIGHTS RESERVED.";
 const FAN_CONTENT =
   "IronDeck is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.";
 
