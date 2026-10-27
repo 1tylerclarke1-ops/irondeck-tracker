@@ -1,0 +1,1 @@
+IronDeck. Copyright © 2026 Tyler Dee Clarke. All rights reserved. This software, its design, artwork and the IronDeck concept were created by and are owned by Tyler Dee Clarke, for the sole use of TDC Gaming. No part of it may be copied, modified, distributed or used by anyone else without written permission from Tyler Dee Clarke.
