@@ -57,7 +57,7 @@ function Shell({ closing, children }) {
 
 // ---- Rules card: every rule on one screen (pause-and-read) ----
 const RULES = [
-  ["ONE ROUND A DAY", "Ranked best-of-one. 7 wins survives the day. 2 losses is a Death Run."],
+  ["ONE ROUND A DAY", "Ranked best-of-one, no mulligans. 7 wins survives the day. 2 losses is a Death Run."],
   ["THE CONDEMNED", "Each day the deck is shuffled and a rare or mythic goes on the chopping block."],
   ["THE ROT", "Die, and the condemned card rots: a random common or uncommon replaces it."],
   ["THE PARDON", "Survive the sentence (3 days) and the card walks free."],
