@@ -176,7 +176,24 @@ export default function OverlayOutro() {
     html.style.background = "#08060e";
     document.body.style.background = "#08060e";
     // No finished round to report (or a load error)? Go straight to the thank-you end card.
-    loadStory().then((s) => setStory(s || { empty: true })).catch(() => setStory({ empty: true }));
+    // Reload and replay from the start every time OBS switches to the outro scene (OBS keeps
+    // browser sources running in the background, so otherwise it shows old data or the end card).
+    let active = true;
+    const play = () => {
+      setStory(null);
+      setT(-1);
+      loadStory().then((s) => active && setStory(s || { empty: true })).catch(() => active && setStory({ empty: true }));
+    };
+    play();
+    const onObs = (e) => { if (e?.detail?.active) play(); };
+    const onShow = () => { if (!document.hidden) play(); };
+    window.addEventListener("obsSourceActiveChanged", onObs);
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      active = false;
+      window.removeEventListener("obsSourceActiveChanged", onObs);
+      document.removeEventListener("visibilitychange", onShow);
+    };
   }, []);
 
   // One clock for the whole sequence, started once the data is in.
