@@ -15,7 +15,7 @@ const STUMP_IMG = MEDIA + "1299fe5b1_stump-normal.png";
 const STUMP_ROT_IMG = MEDIA + "006920b1a_stump-rotted.png";
 const AXE_IMG = MEDIA + "4a043ee21_axe.png";
 const TRAIL_IMG = MEDIA + "043115ed5_slash-trail.png";
-const SFX_WRENCH = "https://media.base44.com/files/public/6ac605d777721f9149c6b225/a84f11495_execution-horror-x2.mp3"; // axe wrenching itself out of the stump (knocks at 0.50s and 0.68s)
+const SFX_WRENCH = "https://media.base44.com/files/public/6ac605d777721f9149c6b225/cbbc4c4e8_irondeck-execution-no-rot.mp3"; // axe wrenching itself out of the stump (no rot layer)
 // Loaded as soon as the overlay opens, so it plays instantly (no download delay).
 const wrenchSound = typeof Audio !== "undefined" ? new Audio(SFX_WRENCH) : null;
 if (wrenchSound) { wrenchSound.preload = "auto"; wrenchSound.volume = 0.9; }
