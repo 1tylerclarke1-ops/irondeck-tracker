@@ -1,59 +1,45 @@
 import React, { useEffect, useRef, useState } from "react";
 
-// Like / Follow / Subscribe reminder in the sidebar: grows in (6 frames), holds,
-// shrinks away. Random timing: first after 4-7 min, then every 8-14 min.
-// Gold normally; rotting purple when the round is on the edge (a loss already).
-// Never shown during the death execution (waits a minute and tries again).
+// Like / Subscribe / bell reminder: a keyed video (click, click, ding) in the sidebar.
+// Random timing: first after 4-7 min, then every 8-14 min. Never during the death
+// execution or the outro (waits a minute and tries again).
 // Testing: add ?cta=now to the overlay URL to see it after 5s, then every 20s.
-const SHEET = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/05ae97149_cta-sheet.webp";
-const FW = 338, FH = 624, FRAMES = 6;
-const GROW_MS = 110, HOLD_MS = 8000, SHRINK_MS = 90, FADE_MS = 400;
+const CTA_VIDEO = "PASTE_LIKE_SUBSCRIBE_URL";
 const MIN = 60000;
 const rand = (a, b) => a + Math.random() * (b - a);
 
-export default function CtaPopup({ tone = "gold", blocked = false }) {
-  const [frame, setFrame] = useState(-1); // -1 = hidden
-  const [fading, setFading] = useState(false);
-  const [shownTone, setShownTone] = useState(tone);
-  const toneRef = useRef(tone);
+export default function CtaPopup({ blocked = false }) {
+  const [show, setShow] = useState(false);
   const blockedRef = useRef(blocked);
-  toneRef.current = tone;
   blockedRef.current = blocked;
+  const vidRef = useRef(null);
+  const nextRef = useRef(null);
 
   useEffect(() => {
-    new Image().src = SHEET; // preload, so the first frame isn't blank
-    const timers = [];
-    const later = (fn, ms) => timers.push(setTimeout(fn, ms));
     const test = new URLSearchParams(window.location.search).get("cta") === "now";
+    let t;
+    const schedule = (ms) => { clearTimeout(t); t = setTimeout(play, ms); };
     const play = () => {
-      if (blockedRef.current) { later(play, MIN); return; }
-      setShownTone(toneRef.current);
-      setFading(false);
-      for (let i = 0; i < FRAMES; i++) later(() => setFrame(i), i * GROW_MS);
-      const shrinkAt = FRAMES * GROW_MS + HOLD_MS;
-      for (let i = FRAMES - 2; i >= 0; i--) later(() => setFrame(i), shrinkAt + (FRAMES - 2 - i) * SHRINK_MS);
-      const endAt = shrinkAt + FRAMES * SHRINK_MS;
-      later(() => setFading(true), endAt);
-      later(() => {
-        setFrame(-1);
-        setFading(false);
-        later(play, test ? 20000 : rand(8 * MIN, 14 * MIN));
-      }, endAt + FADE_MS);
+      if (blockedRef.current) { schedule(MIN); return; }
+      setShow(true);
     };
-    later(play, test ? 5000 : rand(4 * MIN, 7 * MIN));
-    return () => timers.forEach(clearTimeout);
+    nextRef.current = () => { setShow(false); schedule(test ? 20000 : rand(8 * MIN, 14 * MIN)); };
+    schedule(test ? 5000 : rand(4 * MIN, 7 * MIN));
+    return () => clearTimeout(t);
   }, []);
 
-  if (frame < 0) return null;
-  const row = shownTone === "rot" ? 1 : 0;
-  const full = frame === FRAMES - 1;
+  useEffect(() => {
+    if (!show || !vidRef.current) return;
+    const v = vidRef.current;
+    v.currentTime = 0;
+    v.play().catch(() => nextRef.current?.());
+  }, [show]);
+
   return (
-    <div style={{ position: "absolute", left: "50%", bottom: 0, width: FW, height: FH, marginLeft: -FW / 2,
-      zIndex: 50, pointerEvents: "none", opacity: fading ? 0 : 1, transition: `opacity ${FADE_MS}ms ease` }}>
-      <style>{`@keyframes ctaPulse { 0%,100% { filter: brightness(1) } 50% { filter: brightness(1.3) } }`}</style>
-      <div style={{ width: "100%", height: "100%", backgroundImage: `url(${SHEET})`,
-        backgroundSize: `${FW * FRAMES}px ${FH * 2}px`, backgroundPosition: `${-frame * FW}px ${-row * FH}px`,
-        animation: full ? "ctaPulse 1.6s ease-in-out infinite" : "none" }} />
+    <div style={{ position: "absolute", left: "50%", bottom: 30, width: 440, marginLeft: -220, zIndex: 50,
+      pointerEvents: "none", opacity: show ? 1 : 0, transition: "opacity .2s ease" }}>
+      <video ref={vidRef} src={CTA_VIDEO} preload="auto" playsInline
+        onEnded={() => nextRef.current?.()} style={{ width: "100%", display: "block" }} />
     </div>
   );
 }
