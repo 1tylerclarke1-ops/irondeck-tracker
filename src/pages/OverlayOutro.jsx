@@ -211,8 +211,8 @@ export default function OverlayOutro() {
   const b = story?.block;
   const blockDone = b && (b.kind === "rotted" || b.kind === "pardoned" || b.kind === "none");
   const lastDay = b?.kind === "spared" && b.served === b.sentence - 1;
-  // On a death day the rot was already shown on screen, so the outro shows the climb chart instead.
-  const showChart = b?.kind === "rotted" && (story?.chart?.length || 0) >= 2;
+  // The climb chart starts in Season 2; Season 1 death days show the rotted → scavenged cards.
+  const showChart = (story?.season || 0) >= 2 && b?.kind === "rotted" && (story?.chart?.length || 0) >= 2;
 
   const tomorrow = useMemo(() => {
     if (!b) return ["", ""];
