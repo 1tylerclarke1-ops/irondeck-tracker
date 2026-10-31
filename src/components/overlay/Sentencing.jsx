@@ -119,8 +119,6 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
         @keyframes snGlow { 0%,100% { box-shadow: 0 0 40px 8px rgba(150,80,255,.55) } 50% { box-shadow: 0 0 70px 18px rgba(150,80,255,.9) } }
       `}</style>
 
-      {active && phase === "wait" && <div style={{ ...steelText(40), letterSpacing: 6, opacity: 0.8 }}>THE DECK AWAITS…</div>}
-
       {phase === "banner" && (
         <div style={{ textAlign: "center", animation: "snSlam 0.7s ease-out both" }}>
           <div style={{ ...purpleText(96), letterSpacing: 6 }}>
