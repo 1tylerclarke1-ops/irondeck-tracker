@@ -5,7 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 // Random timing: first after 4-7 min, then every 8-14 min. Never during the death
 // execution or the outro (waits a minute and tries again).
 // Testing: add ?cta=now to the overlay URL to see it after 5s, then every 20s.
-const CTA_VIDEO = "https://media.base44.com/videos/public/6ac605d777721f9149c6b225/c64b7dabb_irondeck-like-subscribe-nobell.webm";
+const CTA_VIDEO = "https://media.base44.com/videos/public/6ac605d777721f9149c6b225/a6e8e4cbf_irondeck-like-subscribe.webm";
 const MIN = 60000;
 const rand = (a, b) => a + Math.random() * (b - a);
 // In the 1920×1080 Layout (game window: x 480, y 270, 1440×810). "fixed" lets it leave the sidebar.
