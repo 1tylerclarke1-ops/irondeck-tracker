@@ -42,7 +42,7 @@ export default function CtaPopup({ blocked = false }) {
     <div style={{ position: "fixed", ...CTA_POS, zIndex: 60, pointerEvents: "none",
       opacity: show ? 1 : 0, transition: "opacity .2s ease",
       filter: "drop-shadow(0 4px 12px rgba(0,0,0,.7))" }}>
-      <video ref={vidRef} src={CTA_VIDEO} preload="auto" playsInline
+      <video ref={vidRef} src={CTA_VIDEO} preload="auto" playsInline muted
         onEnded={() => nextRef.current?.()} style={{ width: "100%", display: "block" }} />
     </div>
   );
