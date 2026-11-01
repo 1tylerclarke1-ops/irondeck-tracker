@@ -34,6 +34,8 @@ export default function CtaPopup({ blocked = false }) {
   useEffect(() => {
     if (!show || !vidRef.current) return;
     const v = vidRef.current;
+    v.muted = true;  // silent: no clicks, no bell (the "muted" attribute alone isn't reliable in OBS)
+    v.volume = 0;
     v.currentTime = 0;
     v.play().catch(() => nextRef.current?.());
   }, [show]);
