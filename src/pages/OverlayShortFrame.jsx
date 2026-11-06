@@ -204,7 +204,7 @@ export default function OverlayShortFrame() {
     const t = setTimeout(() => setRelease(true), 4500);
     return () => clearTimeout(t);
   }, [free]);
-  const cardName = d?.block?.name || (free ? d.pardonedName : "");
+  const cardName = d?.block?.name || (free && d ? d.pardonedName : "");
   const cur = survive
     ? (free ? { hook: "PARDONED.", sub: `${d?.wins || 0}–${d?.losses || 0} · ${up(cardName)} WALKS FREE` }
       : { hook: "DAY SURVIVED.", sub: `${d?.wins || 0}–${d?.losses || 0} · THE DECK LIVES ANOTHER DAY` })
