@@ -215,7 +215,8 @@ export default function OverlayShortFrame() {
                   background: front ? "#120a20" : "repeating-linear-gradient(45deg, #1a0d2e 0 14px, #140a24 14px 28px)",
                   border: front ? "none" : "4px solid " + (rot ? "#9b5cff" : "#FFCF7A"), display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {front
-                    ? <img src={img} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
+                    ? <img src={img} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block",
+                        filter: slotRot ? "grayscale(.9) brightness(.5) sepia(.4) hue-rotate(215deg) saturate(2.2)" : "none", transition: "filter 4s ease" }} />
                     : <div style={{ ...(rot ? purpleText(220) : goldText(220)), lineHeight: 1 }}>?</div>}
                 </div>
               );
@@ -266,6 +267,9 @@ export default function OverlayShortFrame() {
       {survive && d && (
         <SurviveCelebration box={{ left: WIN.x, top: WIN.y, width: WIN.w, height: WIN.h }} emblemW="55%" />
       )}
+
+      {/* The second loss: the execution plays inside the game window (or ?demo=death to test) */}
+      {death && d && <VerticalExecution ev={ev} tA={tA} />}
     </div>
   );
 }
