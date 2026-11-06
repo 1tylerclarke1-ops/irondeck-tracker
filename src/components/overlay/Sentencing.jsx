@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { base44 } from "@/api/base44Client";
 import { captureTitle, poolFor } from "@/lib/condemned";
+import { SurviveCelebration } from "@/pages/Overlay";
 
 // The Sentencing: plays after the "previously on" recap in the Overlay Intro.
 // - A newly condemned card (not yet shown): wheel spins to it, then the verdict.
 // - A card still serving its sentence: "STILL ON THE BLOCK · DAY x/y"
-import { SurviveCelebration } from "@/pages/Overlay";
 //   (or "ONE DAY FROM FREEDOM" on its last day).
 // Add ?sentence=replay to the intro URL to force the wheel again (testing).
 
