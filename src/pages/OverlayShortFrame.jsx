@@ -5,6 +5,7 @@ import { blockState } from "@/lib/condemned";
 import { ukDate } from "@/lib/ukDay";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { liveReload } from "@/lib/liveReload";
+import Sentencing from "@/components/overlay/Sentencing";
 
 // Shorts frame (1080×1920): a spoiler-free hook at the top, the game window, the stakes below.
 // Built for a vertical recording canvas (Aitum Vertical): put the Arena capture in the window.
@@ -65,7 +66,7 @@ async function loadDay() {
   const wins = n(run?.round_wins);
   const losses = n(run?.round_losses);
   return {
-    season, block, ev, todayLog, wins, losses, rotted,
+    season, cards, block, ev, todayLog, wins, losses, rotted,
     roundKey: `${run?.id || ""}|${run?.round_started_at || ""}`, // changes when a new round starts
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
@@ -104,6 +105,7 @@ export default function OverlayShortFrame() {
   const [locked, setLocked] = useState(null); // the hook, fixed at the first load
   const q = new URLSearchParams(window.location.search);
   const clear = q.get("window") === "clear";
+  const [shuffle, setShuffle] = useState(q.get("shuffle") === "now" ? Date.now() : 0); // when the shuffle started
 
   useEffect(() => {
     document.documentElement.style.background = "transparent";
@@ -119,6 +121,17 @@ export default function OverlayShortFrame() {
     };
     const stop = liveReload(["Run", "DayLog", "Season", "DecayEvent", "ArenaRank"], load);
     return () => { active = false; stop(); };
+  }, []);
+
+  
+  // The landscape intro tells us when its shuffle starts, so it plays here at the same time.
+  useEffect(() => {
+    const play = (m) => { if (m && m.type === "sentencing" && Date.now() - m.at < 15000) setShuffle(m.at); };
+    let ch = null;
+    try { ch = new BroadcastChannel("irondeck"); ch.onmessage = (e) => play(e.data); } catch { /* not supported */ }
+    const onStore = (e) => { if (e.key === "irondeck-sentencing" && e.newValue) { try { play(JSON.parse(e.newValue)); } catch { /* bad value */ } } };
+    window.addEventListener("storage", onStore);
+    return () => { try { ch?.close(); } catch { /* closed */ } window.removeEventListener("storage", onStore); };
   }, []);
 
   const h = locked || { tone: "gold", hooks: [{ hook: "IRONDECK", sub: "CAN A ROTTING DECK REACH MYTHIC?" }], label: "", detail: "", show: false };
@@ -215,6 +228,11 @@ export default function OverlayShortFrame() {
 
       {/* Bottom 330px is covered by YouTube's title and buttons: keep it to the logo only */}
       <img src={SHIELD} alt="" style={{ position: "absolute", left: 540 - 60, top: 1640, height: 140, width: "auto", maxWidth: "none", opacity: 0.35 }} />
+    
+      {/* The shuffle, in time with the landscape intro (or ?shuffle=now to test) */}
+      {shuffle > 0 && d && (
+        <Sentencing key={shuffle} season={d.season} cards={d.cards} active vertical onDone={() => setShuffle(0)} />
+      )}
     </div>
   );
 }
