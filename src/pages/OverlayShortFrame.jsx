@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { loadDayLogs } from "@/lib/roundDay";
 import { blockState } from "@/lib/condemned";
