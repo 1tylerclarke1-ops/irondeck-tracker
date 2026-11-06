@@ -70,6 +70,7 @@ async function loadDay() {
     roundKey: `${run?.id || ""}|${run?.round_started_at || ""}`, // changes when a new round starts
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
+      runStatus: run?.round_status || "", runUpdated: run?.updated_date || "",
       day: n(todayLog?.day) || n(logs.length) + 1,
       total: (n(todayLog?.day) || n(logs.length) + 1) + n(logs.priorDays), // challenge day
     rank: ranks && ranks[0],
@@ -106,6 +107,7 @@ export default function OverlayShortFrame() {
   const q = new URLSearchParams(window.location.search);
   const clear = q.get("window") === "clear";
   const [shuffle, setShuffle] = useState(q.get("shuffle") === "now" ? Date.now() : 0); // when the shuffle started
+  const [survive, setSurvive] = useState(q.get("survive") === "now"); // the vertical SURVIVED screen
 
   useEffect(() => {
     document.documentElement.style.background = "transparent";
@@ -124,6 +126,17 @@ export default function OverlayShortFrame() {
   }, []);
 
   
+  // The 7th win: SURVIVED plays if the win has only just happened (not when OBS reloads later),
+  // and holds until the next round starts.
+  const celebrated = useRef("");
+  useEffect(() => {
+    if (!d) return;
+    if (d.runStatus !== "survived") { if (q.get("survive") !== "now") setSurvive(false); return; }
+    if (celebrated.current === d.roundKey) return;
+    celebrated.current = d.roundKey;
+    if (Date.now() - toMs(d.runUpdated) < 60000) setSurvive(true);
+  }, [d]);
+
   // The landscape intro tells us when its shuffle starts, so it plays here at the same time.
   useEffect(() => {
     const play = (m) => { if (m && m.type === "sentencing" && Date.now() - m.at < 15000) setShuffle(m.at); };
@@ -232,6 +245,13 @@ export default function OverlayShortFrame() {
       {/* The shuffle, in time with the landscape intro (or ?shuffle=now to test) */}
       {shuffle > 0 && d && (
         <Sentencing key={shuffle} season={d.season} cards={d.cards} active vertical onDone={() => setShuffle(0)} />
+      )}
+      
+      {/* The 7th win: SURVIVED, with today's score above and the spared card below (or ?survive=now to test) */}
+      {survive && d && (
+        <SurviveCelebration box={{ left: 0, top: 0, width: 1080, height: 1920 }}>
+          <SurviveExtras d={d} />
+        </SurviveCelebration>
       )}
     </div>
   );
