@@ -349,6 +349,7 @@ function RankRow({ rank }) {
       </div>
     </div>
   );
+} 
 
 // ---------- The vertical execution (plays inside the game window) ----------
 // Timed from the moment the axe lifts, exactly like the sidebar's chopping block, so the
@@ -473,5 +474,4 @@ function VerticalExecution({ ev, tA }) {
       )}
     </div>
   );
-}
 }
