@@ -111,7 +111,8 @@ export default function OverlayShortFrame() {
   const q = new URLSearchParams(window.location.search);
   const clear = q.get("window") === "clear";
   const [shuffle, setShuffle] = useState(q.get("shuffle") === "now" ? Date.now() : 0); // when the shuffle started
-  const [survive, setSurvive] = useState(q.get("survive") === "now"); // the vertical SURVIVED screen
+  const demoPardon = q.get("demo") === "pardon"; // test the release with today's card
+  const [survive, setSurvive] = useState(q.get("survive") === "now" || demoPardon); // the vertical SURVIVED screen
 
   useEffect(() => {
     document.documentElement.style.background = "transparent";
@@ -135,7 +136,7 @@ export default function OverlayShortFrame() {
   const celebrated = useRef("");
   useEffect(() => {
     if (!d) return;
-    if (d.runStatus !== "survived") { if (q.get("survive") !== "now") setSurvive(false); return; }
+    if (d.runStatus !== "survived") { if (q.get("survive") !== "now" && !demoPardon) setSurvive(false); return; }
     if (celebrated.current === d.roundKey) return;
     celebrated.current = d.roundKey;
     if (Date.now() - toMs(d.runUpdated) < 60000) setSurvive(true);
@@ -195,10 +196,18 @@ export default function OverlayShortFrame() {
     return () => clearInterval(id);
   }, []);
   // On the 7th win the frame shows the result: the hook, and the card facing front with its fate.
-  const free = survive && d?.pardonedToday && !d?.block;
+  const free = survive && ((d?.pardonedToday && !d?.block) || demoPardon);
+  // The last day survived: after SURVIVED, the chopping block shows the card walking free in the window.
+  const [release, setRelease] = useState(false);
+  useEffect(() => {
+    if (!free) { setRelease(false); return undefined; }
+    const t = setTimeout(() => setRelease(true), 4500);
+    return () => clearTimeout(t);
+  }, [free]);
   const cardName = d?.block?.name || (free ? d.pardonedName : "");
   const cur = survive
-    ? { hook: "DAY SURVIVED.", sub: `${d?.wins || 0}–${d?.losses || 0} · THE DECK LIVES ANOTHER DAY` }
+    ? (free ? { hook: "PARDONED.", sub: `${d?.wins || 0}–${d?.losses || 0} · ${up(cardName)} WALKS FREE` }
+      : { hook: "DAY SURVIVED.", sub: `${d?.wins || 0}–${d?.losses || 0} · THE DECK LIVES ANOTHER DAY` })
     : death
     ? { hook: "DEATH RUN.", sub: landed ? `${dName} ROTTED · SOMETHING CRAWLED OUT` : `${d?.wins || 0}–${d?.losses || 0} · ${dName || "THE CONDEMNED CARD"} ROTS` }
     : h.hooks[turn % h.hooks.length];
@@ -316,6 +325,11 @@ export default function OverlayShortFrame() {
         <SurviveCelebration box={{ left: WIN.x, top: WIN.y, width: WIN.w, height: WIN.h }} emblemW="55%" />
       )}
 
+      {/* The last day survived: after SURVIVED, the card walks free on the block (or ?demo=pardon to test) */}
+      {survive && release && d && cardName && (
+        <VerticalRelease name={cardName} image={d.cardImg(cardName)} sentence={Number(d.season?.block_sentence) || 3} />
+      )}
+
       {/* The second loss: the execution plays inside the game window (or ?demo=death to test) */}
       {death && d && <VerticalExecution ev={ev} tA={tA} />}
     </div>
@@ -420,6 +434,21 @@ function VerticalExecution({ ev, tA }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// The last day survived: the sidebar's chopping block plays the release in the window (the golden
+// frame grows to the arch and star, the axe pulls out, the stump heals and the card walks free).
+function VerticalRelease({ name, image, sentence }) {
+  return (
+    <div style={{ position: "absolute", left: WIN.x, top: WIN.y, width: WIN.w, height: WIN.h, zIndex: 51, overflow: "hidden", pointerEvents: "none",
+      background: "radial-gradient(circle at 50% 45%, #3a2410, #050302 75%)", animation: "vrIn .8s ease both" }}>
+      <style>{`@keyframes vrIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
+      <div style={{ position: "absolute", left: (WIN.w - CB_W * CB_S) / 2, top: 0, width: CB_W, height: CB_H,
+        transform: `scale(${CB_S})`, transformOrigin: "0 0" }}>
+        <ChoppingBlock mode="free" name={name} image={image} day={sentence} sentence={sentence} />
+      </div>
     </div>
   );
 }
