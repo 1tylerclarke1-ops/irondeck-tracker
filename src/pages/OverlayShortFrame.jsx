@@ -169,7 +169,7 @@ export default function OverlayShortFrame() {
                   background: front ? "#120a20" : "repeating-linear-gradient(45deg, #1a0d2e 0 14px, #140a24 14px 28px)",
                   border: front ? "none" : "4px solid " + (rot ? "#9b5cff" : "#FFCF7A"), display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {front
-                    ? <img src={h.image} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
+                    ? <img src={img} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
                     : <div style={{ ...(rot ? purpleText(220) : goldText(220)), lineHeight: 1 }}>?</div>}
                 </div>
               );
@@ -199,6 +199,7 @@ export default function OverlayShortFrame() {
                 style={{ width: 54, height: 54, maxWidth: "none", display: "block" }} />
             ))}
           </div>
+        {d?.rank && <RankRow rank={d.rank} />}
         </div>
       </div>
 
