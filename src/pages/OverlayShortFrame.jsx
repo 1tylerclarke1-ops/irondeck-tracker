@@ -212,3 +212,38 @@ export default function OverlayShortFrame() {
     </div>
   );
 }
+
+
+// The current Arena rank, compact: emblem, rank + tier, and the 6 step pips
+function RankRow({ rank }) {
+  const cls = rank.rank_class || "";
+  const row = RANK_ROWS.indexOf(cls);
+  const mythic = cls === "Mythic";
+  const tier = Math.min(4, Math.max(1, n(rank.tier) || 4));
+  const steps = Math.max(0, Math.min(6, n(rank.step)));
+  const S = 84;
+  const sub = mythic
+    ? (rank.leaderboard_place ? `#${rank.leaderboard_place}` : rank.percentile ? `${Math.round(n(rank.percentile))}%` : "")
+    : `TIER ${tier}`;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 22 }}>
+      {row >= 0 && (
+        <div style={{ width: S, height: S, flex: "none", backgroundImage: `url(${RANK_SPRITE})`, backgroundSize: `${S * 4}px ${S * 6}px`,
+          backgroundPosition: `${-(mythic ? 0 : 4 - tier) * S}px ${-row * S}px`, backgroundRepeat: "no-repeat",
+          filter: "drop-shadow(0 4px 8px rgba(0,0,0,.8))" }} />
+      )}
+      <div>
+        <div style={{ ...goldText(40), lineHeight: 1 }}>{up(cls) || "—"}{sub ? ` · ${sub}` : ""}</div>
+        {!mythic && (
+          <div style={{ display: "flex", gap: 9, marginTop: 12, paddingLeft: 4 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ width: 16, height: 16, transform: "rotate(45deg)", borderRadius: 3, border: "2px solid #120d08",
+                background: i < steps ? "linear-gradient(135deg,#FFF0CD,#D68C3C)" : "rgba(60,64,72,0.9)",
+                boxShadow: i < steps ? "0 0 8px rgba(255,170,60,.8)" : "none" }} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
