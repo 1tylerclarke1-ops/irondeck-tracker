@@ -63,6 +63,8 @@ function sortDeck(cards) {
 // screen's result has been shown (it takes about 30 seconds).
 const REVEAL_AFTER_AXE_MS = 24000; // sidebar execution (16.8s) + scavenged card in the middle (6.9s), then the deck returns
 const ROT_LEAD_MS = 6500; // the axe lifts 6.5s after the second loss, once the death screen has built (gold, DEATH RUN, rot ring, chevrons)
+const FREE_HOLD_MS = 16000; // the last day survived: the card walks free on the block for this long after the pardon
+const DEMO_PARDON = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo") === "pardon";
 const toMs = (v) => {
   if (!v) return 0;
   const t = String(v);
@@ -230,7 +232,22 @@ export default function OverlayDeck({ outro } = {}) {
     return () => clearTimeout(t);
   }, [rotMode, rotAt]);
   const rotLive = rotMode && Date.now() >= rotAt;
-  const sideMode = rotMode ? "rot" : blockTurn && block ? "block" : "deck";
+  // The last day survived: the card walks free on the block (?demo=pardon to test with today's card).
+  const [demoFreeAt] = useState(() => (DEMO_PARDON ? Date.now() + 3000 : 0));
+  const pardonAt = DEMO_PARDON ? demoFreeAt : run?.round_status === "survived" ? toMs(season?.pardoned_at) : 0;
+  const freeUntil = pardonAt ? pardonAt + FREE_HOLD_MS : 0;
+  const [, setFreeTick] = useState(0);
+  useEffect(() => {
+    const now = Date.now();
+    if (!freeUntil || now >= freeUntil) return undefined;
+    const t = setTimeout(() => setFreeTick((x) => x + 1), (now < pardonAt ? pardonAt : freeUntil) - now + 30);
+    return () => clearTimeout(t);
+  });
+  const freeMode = !rotMode && !isOutro && pardonAt > 0 && Date.now() >= pardonAt && Date.now() < freeUntil;
+  const freeName = DEMO_PARDON ? block?.name || "" : season?.last_pardoned || "";
+  const freeRow = freeName ? [...rawCards, ...rawSideCards].find((c) => sameName(c.name, freeName)) : null;
+  const freeSentence = Number(season?.block_sentence) || 3;
+  const sideMode = rotMode ? "rot" : freeMode ? "free" : blockTurn && block ? "block" : "deck";
   const day = useMemo(
     () =>
       roundDay({
@@ -538,15 +555,15 @@ export default function OverlayDeck({ outro } = {}) {
               </>
             )}
           </div>
-          {(block || rotMode) && (
+          {(block || rotMode || freeMode) && (
             <div style={{ position: "absolute", inset: 0, opacity: sideMode === "deck" ? 0 : 1, transition: "opacity 0.8s ease" }}>
               <ChoppingBlock
-                key={rotMode ? "exec" : "block"}
-                mode={rotMode ? (rotLive ? "rot" : "wait") : "block"}
-                name={rotMode ? deathEv.card_removed : block.name}
-                image={rotMode ? deathEv.card_removed_image : scryNormal(condemnedRow?.scryfall_id)}
-                day={block?.day}
-                sentence={block?.sentence}
+                key={rotMode ? "exec" : freeMode ? "free" : "block"}
+                mode={rotMode ? (rotLive ? "rot" : "wait") : freeMode ? "free" : "block"}
+                name={rotMode ? deathEv.card_removed : freeMode ? freeName : block.name}
+                image={rotMode ? deathEv.card_removed_image : freeMode ? scryNormal(freeRow?.scryfall_id) : scryNormal(condemnedRow?.scryfall_id)}
+                day={freeMode ? freeSentence : block?.day}
+                sentence={freeMode ? freeSentence : block?.sentence}
                 recapture={block?.recapture}
                 newName={rotMode ? deathEv.replacement_card : undefined}
                 newImage={rotMode ? deathEv.replacement_card_image : undefined}
