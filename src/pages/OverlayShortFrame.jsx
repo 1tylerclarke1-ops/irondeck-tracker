@@ -155,10 +155,17 @@ export default function OverlayShortFrame() {
     const id = setInterval(() => setTurn((t) => t + 1), 4000);
     return () => clearInterval(id);
   }, []);
-  const cur = h.hooks[turn % h.hooks.length];
+  // On the 7th win the frame shows the result: the hook, and the card facing front with its fate.
+  const free = survive && d?.pardonedToday && !d?.block;
+  const cardName = d?.block?.name || (free ? d.pardonedName : "");
+  const cur = survive
+    ? { hook: "DAY SURVIVED.", sub: `${d?.wins || 0}–${d?.losses || 0} · THE DECK LIVES ANOTHER DAY` }
+    : h.hooks[turn % h.hooks.length];
+  const label = survive ? (cardName ? (free ? "WALKS FREE" : "SURVIVES ANOTHER DAY") : "") : h.label;
+  const detail = survive ? up(cardName) : h.detail;
   const hook = q.get("hook") || cur.hook;
   const sub = q.get("sub") || cur.sub;
-  const rot = h.tone === "rot";
+  const rot = !survive && h.tone === "rot";
   const glow = rot ? "rgba(150,80,255,.85)" : "rgba(255,180,70,.85)";
   const hookSize = hook.length > 22 ? 82 : hook.length > 11 ? 100 : 128;
 
@@ -198,9 +205,9 @@ export default function OverlayShortFrame() {
       <div style={{ position: "absolute", left: 60, right: 60, top: WIN.y + WIN.h + 100, display: "flex", gap: 44, alignItems: "center" }}>
         {/* The condemned card spins: day 1 a card back both sides ("?"), day 2+ the real art on the front */}
         <div style={{ width: 300, height: 418, flex: "none", perspective: 1200 }}>
-          <div style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d", animation: "sfSpin 6s linear infinite" }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d", animation: survive ? "none" : "sfSpin 6s linear infinite" }}>
             {[0, 180].map((deg) => {
-              const img = d?.block ? d.cardImg(d.block.name) : "";
+              const img = cardName ? d.cardImg(cardName) : "";
               const front = deg === 0 && img;
               return (
                 <div key={deg} style={{ position: "absolute", inset: 0, borderRadius: 16, overflow: "hidden", backfaceVisibility: "hidden",
@@ -216,9 +223,9 @@ export default function OverlayShortFrame() {
           </div>
         </div>
         <div style={{ flex: 1, textAlign: "left" }}>
-          {h.label && <div style={{ ...(rot ? purpleText(46) : goldText(46)), lineHeight: 1.05 }}>{h.label}</div>}
-          {h.detail && <div style={{ ...steelText(34), marginTop: 10, lineHeight: 1.1 }}>{h.detail}</div>}
-          {d?.block && h.label && (
+          {label && <div style={{ ...(rot ? purpleText(46) : goldText(46)), lineHeight: 1.05 }}>{label}</div>}
+          {detail && <div style={{ ...steelText(34), marginTop: 10, lineHeight: 1.1 }}>{detail}</div>}
+          {d?.block && label && (
             <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
               {Array.from({ length: d.block.sentence }).map((_, i) => (
                 <div key={i} style={{ width: 70, height: 20, borderRadius: 10, border: "3px solid #c9a8ff", background: i < d.block.day - 1 ? "#c9a8ff" : "transparent" }} />
@@ -255,11 +262,9 @@ export default function OverlayShortFrame() {
         <Sentencing key={shuffle} season={d.season} cards={d.cards} active vertical onDone={() => setShuffle(0)} />
       )}
       
-      {/* The 7th win: SURVIVED, with today's score above and the spared card below (or ?survive=now to test) */}
+      {/* The 7th win: SURVIVED plays inside the game window; the frame around it updates (or ?survive=now to test) */}
       {survive && d && (
-        <SurviveCelebration box={{ left: 0, top: 0, width: 1080, height: 1920 }}>
-          <SurviveExtras d={d} />
-        </SurviveCelebration>
+        <SurviveCelebration box={{ left: WIN.x, top: WIN.y, width: WIN.w, height: WIN.h }} emblemW="55%" />
       )}
     </div>
   );
@@ -297,33 +302,5 @@ function RankRow({ rank }) {
         )}
       </div>
     </div>
-  );
-}
-
-
-// The vertical's survive details: today's score above the frame, the spared card below it
-function SurviveExtras({ d }) {
-  const free = d.pardonedToday && !d.block;
-  const name = free ? d.pardonedName : d.block?.name || "";
-  const img = name ? d.cardImg(name) : "";
-  const font = { fontFamily: "'Barlow Condensed', sans-serif" };
-  return (
-    <>
-      <style>{`@keyframes svxIn { from { opacity: 0; transform: translateY(30px) } to { opacity: 1; transform: none } }`}</style>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 330, textAlign: "center", ...font, animation: "svxIn .8s ease-out 2.6s both" }}>
-        <div style={{ ...goldText(170), lineHeight: 1 }}>{d.wins}–{d.losses}</div>
-        <div style={{ ...steelText(48), letterSpacing: 6, marginTop: 6 }}>DAY {d.day} SURVIVED</div>
-      </div>
-      {name && (
-        <div style={{ position: "absolute", left: 60, right: 60, top: 1290, display: "flex", alignItems: "center", gap: 36, ...font,
-          animation: "svxIn .8s ease-out 3.2s both" }}>
-          {img && <img src={img} alt="" style={{ width: 200, maxWidth: "none", borderRadius: 12, boxShadow: "0 0 40px 8px rgba(255,180,70,.8)" }} />}
-          <div style={{ textAlign: "left" }}>
-            <div style={{ ...goldText(free ? 64 : 54), lineHeight: 1.05 }}>{up(name)}</div>
-            <div style={{ ...steelText(38), marginTop: 12 }}>{free ? "WALKS FREE" : "SURVIVES ANOTHER DAY"}</div>
-          </div>
-        </div>
-      )}
-    </>
   );
 }
