@@ -218,7 +218,7 @@ export default function Overlay({ embedded = false } = {}) {
   // (not when OBS refreshes later). It holds solid until the next round starts.
   const [celebrate, setCelebrate] = useState(false);
   const celebrated = useRef("");
-  const runId = s?.currentRun?.id || "";
+  const runId = s?.currentRun ? `${s.currentRun.id}|${s.currentRun.round_started_at || ""}` : "";
   const runUpdated = s?.currentRun?.updated_date || "";
   useEffect(() => {
     if (!survived || !runId || celebrated.current === runId) return;
