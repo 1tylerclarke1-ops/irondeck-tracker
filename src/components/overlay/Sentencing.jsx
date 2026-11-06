@@ -17,7 +17,7 @@ const n = (v) => Number(v) || 0;
 const getPlayed = () => { try { return localStorage.getItem(PLAYED_KEY); } catch { return null; } };
 const setPlayed = (v) => { try { localStorage.setItem(PLAYED_KEY, v); } catch {} };
 
-export default function Sentencing({ season, cards, active, fadeIn = false, onDone }) {
+export default function Sentencing({ season, cards, active, fadeIn = false, vertical = false, onDone }) {
   const [phase, setPhase] = useState("wait"); // wait, banner, wheel, countdown, spinning, verdict, block, out
   const [count, setCount] = useState(3);
   const locked = useRef(null); // the season snapshot we play from
@@ -50,7 +50,7 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
   const asked = useRef(false);
   const s0 = picked && season && !season.condemned_card ? { ...season, ...picked } : season;
   useEffect(() => {
-    if (!active || phase !== "wait" || asked.current || !season || season.condemned_card || wheelCards.length === 0) return;
+    if (vertical || !active || phase !== "wait" || asked.current || !season || season.condemned_card || wheelCards.length === 0) return;
     asked.current = true;
     base44.functions
       .invoke("ensureCondemned", {})
@@ -60,6 +60,15 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
       })
       .catch(() => { asked.current = false; });
   }, [active, phase, season, wheelCards.length]);
+
+  
+  // Tell the vertical frame (/overlay/short) the shuffle is starting, so it plays there too.
+  useEffect(() => {
+    if (!active || vertical) return;
+    const msg = { type: "sentencing", at: Date.now() };
+    try { const ch = new BroadcastChannel("irondeck"); ch.postMessage(msg); ch.close(); } catch { /* not supported */ }
+    try { localStorage.setItem("irondeck-sentencing", JSON.stringify(msg)); } catch { /* blocked */ }
+  }, [active, vertical]);
 
   // Wait until a card is condemned, then decide: spin or "still on the block".
   useEffect(() => {
@@ -149,7 +158,7 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
       )}
 
       {(phase === "verdict" || phase === "block" || (phase === "out" && name)) && (
-        <div style={{ display: "flex", alignItems: "center", gap: 70, animation: "snIn 0.6s ease-out both" }}>
+        <div style={{ display: "flex", flexDirection: vertical ? "column" : "row", alignItems: "center", gap: vertical ? 40 : 70, textAlign: vertical ? "center" : "left", animation: "snIn 0.6s ease-out both" }}>
           {card?.scryfall_id && (
             <img src={scry(card.scryfall_id, "normal")} alt={name}
               style={{ width: 420, maxWidth: "none", borderRadius: 20, animation: "snGlow 2.4s ease-in-out infinite" }} />
@@ -162,7 +171,7 @@ export default function Sentencing({ season, cards, active, fadeIn = false, onDo
             <div style={{ ...steelText(46) }}>
               {view === "verdict" ? `LOSE TODAY, AND IT ROTS.` : `DAY ${dayOn} OF ${sentence}. LOSE TODAY, AND IT ROTS.`}
             </div>
-            <div style={{ display: "flex", gap: 14, marginTop: 22 }}>
+            <div style={{ display: "flex", gap: 14, marginTop: 22, justifyContent: vertical ? "center" : "flex-start" }}>
               {Array.from({ length: sentence }).map((_, i) => (
                 <div key={i} style={{ width: 54, height: 18, borderRadius: 9, border: "3px solid #c9a8ff",
                   background: view !== "verdict" && i < dayOn - 1 ? "#c9a8ff" : view !== "verdict" && i === dayOn - 1 ? "rgba(201,168,255,.45)" : "transparent" }} />
