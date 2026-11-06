@@ -8,6 +8,7 @@ import { liveReload } from "@/lib/liveReload";
 import Sentencing from "@/components/overlay/Sentencing";
 import { SurviveCelebration } from "@/pages/Overlay";
 import { demoDeathEvent, isDemoDeath, demoBorn } from "@/lib/demoDeath";
+import ChoppingBlock from "@/components/overlay/ChoppingBlock";
 
 // Shorts frame (1080×1920): a spoiler-free hook at the top, the game window, the stakes below.
 // Built for a vertical recording canvas (Aitum Vertical): put the Arena capture in the window.
@@ -142,10 +143,16 @@ export default function OverlayShortFrame() {
 
     // The second loss: the execution plays inside the game window, timed like the landscape.
   // Holds on the scavenged card until the next round starts. ?demo=death to test (as on the Layout).
-  const [death, setDeath] = useState(isDemoDeath ? { died: demoBorn } : null);
+  const [death, setDeath] = useState(null);
   const deathFor = useRef("");
   const lastBlock = useRef(""); // the condemned card (the block is cleared the moment it rots)
   if (d?.block?.name) lastBlock.current = d.block.name;
+    useEffect(() => {
+    if (!isDemoDeath) return undefined; // the demo "loses" at its start time, like the Layout and Death Screen
+    const t = setTimeout(() => setDeath({ died: demoBorn, name: lastBlock.current }), Math.max(0, demoBorn - Date.now()));
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     if (!d || isDemoDeath) return;
     if (d.runStatus !== "died") { setDeath(null); return; }
@@ -167,7 +174,7 @@ export default function OverlayShortFrame() {
   const axeAt = ev ? Math.max(death.died + ROT_LEAD_MS, evBorn + 500) : 0;
   const tA = axeAt ? clock - axeAt : -1; // ms since the axe lifted (negative: not yet)
   const struck = tA >= T_IMPACT;
-  const landed = tA >= T_LAND;
+  const landed = tA >= T_FLY;
   const dName = up(ev?.card_removed || death?.name || "");
   const rName = up(ev?.replacement_card || "");
 
@@ -193,8 +200,7 @@ export default function OverlayShortFrame() {
   const cur = survive
     ? { hook: "DAY SURVIVED.", sub: `${d?.wins || 0}–${d?.losses || 0} · THE DECK LIVES ANOTHER DAY` }
     : death
-    ? (landed ? { hook: "SOMETHING CRAWLS OUT.", sub: `${rName} JOINS THE DECK` }
-      : { hook: "DEATH RUN.", sub: `${d?.wins || 0}–${d?.losses || 0} · ${dName || "THE CONDEMNED CARD"} ROTS` })
+    ? { hook: "DEATH RUN.", sub: landed ? `${dName} ROTTED · SOMETHING CRAWLED OUT` : `${d?.wins || 0}–${d?.losses || 0} · ${dName || "THE CONDEMNED CARD"} ROTS` }
     : h.hooks[turn % h.hooks.length];
   const label = survive ? (cardName ? (free ? "WALKS FREE" : "SURVIVES ANOTHER DAY") : "")
     : death ? (landed ? "SCAVENGED" : struck ? "ROTTED" : "ON THE BLOCK")
@@ -268,7 +274,7 @@ export default function OverlayShortFrame() {
         <div style={{ flex: 1, textAlign: "left" }}>
           {label && <div style={{ ...(rot ? purpleText(46) : goldText(46)), lineHeight: 1.05 }}>{label}</div>}
           {detail && <div style={{ ...steelText(34), marginTop: 10, lineHeight: 1.1 }}>{detail}</div>}
-          {d?.block && label && (
+          {d?.block && label && !death && (
             <div style={{ display: "flex", gap: 12, marginTop: 18 }}>
               {Array.from({ length: d.block.sentence }).map((_, i) => (
                 <div key={i} style={{ width: 70, height: 20, borderRadius: 10, border: "3px solid #c9a8ff", background: i < d.block.day - 1 ? "#c9a8ff" : "transparent" }} />
