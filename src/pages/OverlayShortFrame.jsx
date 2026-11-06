@@ -6,7 +6,7 @@ import { ukDate } from "@/lib/ukDay";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { liveReload } from "@/lib/liveReload";
 import Sentencing from "@/components/overlay/Sentencing";
-import Sentencing from "@/components/overlay/Sentencing";
+import { SurviveCelebration } from "@/pages/Overlay";
 
 // Shorts frame (1080×1920): a spoiler-free hook at the top, the game window, the stakes below.
 // Built for a vertical recording canvas (Aitum Vertical): put the Arena capture in the window.
