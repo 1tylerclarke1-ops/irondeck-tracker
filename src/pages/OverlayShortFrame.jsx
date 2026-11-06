@@ -352,65 +352,32 @@ function RankRow({ rank }) {
 } 
 
 // ---------- The vertical execution (plays inside the game window) ----------
-// Timed from the moment the axe lifts, exactly like the sidebar's chopping block, so the
-// card is cut, rots, and the scavenged card lands at the same moment as in the landscape.
+// The sidebar's own chopping block plays in the middle of the window (sound off), started when
+// the axe lifts, so it is the same execution at the same moment as the landscape. When the
+// landscape's scavenged card flies into the game, the vertical shows it big in the window.
 const DEATH_RUN_IMG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/aed9fb1b2_irondeck-deathrun-emblem.webp";
 const ROT_BG = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/bddf3495c_irondeck-corrupted-background.webp";
 const ROT_LEAD_MS = 6500; // must match OverlayDeck / OverlayDeath: the axe lifts 6.5s after the second loss
-const T_IMPACT = 3650; // the axe hits
-const T_STAMP = 6200; // ROTTED stamps in
-const T_SCAV = 11000; // the rotted card is gone; something crawls out
-const T_RAR = 11600; // rarity roll
-const T_RND = 14200; // randomiser
-const VX_RAR_GAPS = [90, 90, 90, 100, 110, 130, 160, 200, 250, 320, 420];
+const T_IMPACT = 3650; // the axe hits (ChoppingBlock)
 const VX_RND_GAPS = [70, 70, 70, 75, 80, 90, 100, 115, 135, 160, 190, 230, 280, 340];
-const vxTimes = (start, gaps) => { let t = start; return [start, ...gaps.map((g) => (t += g))]; };
-const RAR_T = vxTimes(T_RAR, VX_RAR_GAPS);
-const RND_T = vxTimes(T_RND, VX_RND_GAPS);
-const T_LAND = RND_T[RND_T.length - 1]; // the scavenged card lands
-const VX_W = 316;
-const VX_H = 440;
-const CUT_TOP = "polygon(0 0, 100% 0, 100% 36%, 0 64%)";
-const CUT_BOTTOM = "polygon(0 64%, 100% 36%, 100% 100%, 0 100%)";
-const RARITY = { common: { label: "COMMON", color: "#d9dde3" }, uncommon: { label: "UNCOMMON", color: "#9fd3ee" } };
+const T_LAND = VX_RND_GAPS.reduce((t, g) => t + g, 14200); // the scavenged card lands on the block (ChoppingBlock)
+const T_FLY = T_LAND + 600; // ...and flies into the game (OverlayDeath FLY_AFTER_AXE_MS)
+const CB_W = 432; // the chopping block's size in the sidebar
+const CB_H = 758;
+const CB_S = WIN.h / CB_H; // scaled to the window's height
 if (typeof Image !== "undefined") { new Image().src = DEATH_RUN_IMG; new Image().src = ROT_BG; }
 
 function VerticalExecution({ ev, tA }) {
   const waiting = !ev || tA < 0; // DEATH RUN while the axe hasn't lifted yet
-  const struck = tA >= T_IMPACT;
-  const stage = !waiting && tA < T_SCAV; // the condemned card
-  const crawl = !waiting && tA >= T_SCAV;
-  const landed = tA >= T_LAND;
-  const count = (ts) => ts.filter((t) => tA >= t).length;
-  const rarIdx = count(RAR_T);
-  const finalRar = RARITY[ev?.rarity_roll] || RARITY.common;
-  const rar = rarIdx >= RAR_T.length ? finalRar : rarIdx % 2 ? RARITY.uncommon : RARITY.common;
-  const rolls = (ev?.roll_cards || []).map((c) => c.image_url).filter(Boolean);
-  const rndIdx = count(RND_T);
-  const face = landed ? ev?.replacement_card_image : rndIdx > 0 && rolls.length ? rolls[(rndIdx - 1) % rolls.length] : "";
-  const img = ev?.card_removed_image || "";
-  const half = (clip, out) => (
-    <div style={{ position: "absolute", inset: 0, clipPath: clip, borderRadius: 16, overflow: "hidden",
-      transform: struck ? out : "none", transition: "transform .5s cubic-bezier(.2,.8,.3,1)" }}>
-      {img && <img src={img} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block",
-        filter: struck ? "grayscale(.9) brightness(.5) sepia(.4) hue-rotate(215deg) saturate(2.2)" : "none", transition: "filter 4s ease" }} />}
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 50%, rgba(120,40,220,.75), rgba(40,10,70,.6) 70%)",
-        clipPath: struck ? "circle(80% at 50% 50%)" : "circle(0% at 50% 50%)", transition: "clip-path 5s ease-out", mixBlendMode: "multiply" }} />
-    </div>
-  );
+  const landed = tA >= T_FLY;
   return (
     <div style={{ position: "absolute", left: WIN.x, top: WIN.y, width: WIN.w, height: WIN.h, zIndex: 50, overflow: "hidden", pointerEvents: "none",
       background: `#08040f url(${ROT_BG}) center / cover`, animation: "vxIn .6s ease both" }}>
       <style>{`
         @keyframes vxIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes vxGrow { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.2) } 70% { opacity: 1; transform: translate(-50%,-50%) scale(1.05) } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1) } }
-        @keyframes vxRise { from { opacity: 0; transform: translateY(60px) scale(.9) } to { opacity: 1; transform: none } }
-        @keyframes vxGlow { 0%,100% { box-shadow: 0 0 30px 6px rgba(150,80,255,.6) } 50% { box-shadow: 0 0 60px 16px rgba(170,100,255,.95) } }
-        @keyframes vxSlash { 0% { opacity: 0; transform: translate(-50%,-50%) rotate(-28deg) scaleX(.1) } 30% { opacity: 1; transform: translate(-50%,-50%) rotate(-28deg) scaleX(1) } 100% { opacity: 0; transform: translate(-50%,-50%) rotate(-28deg) scaleX(1.1) } }
-        @keyframes vxShake { 0%,100% { transform: translate(0,0) } 15% { transform: translate(-14px,8px) } 35% { transform: translate(12px,-8px) } 55% { transform: translate(-7px,4px) } 75% { transform: translate(4px,-2px) } }
-        @keyframes vxStamp { 0% { opacity: 0; transform: translate(-50%,-50%) scale(2.4) rotate(-8deg) } 65% { opacity: 1; transform: translate(-50%,-50%) scale(.95) rotate(-8deg) } 100% { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(-8deg) } }
         @keyframes vxBurst { 0% { opacity: 0; transform: scale(.6) } 15% { opacity: 1 } 100% { opacity: 0; transform: scale(1.9) } }
-        @keyframes vxLand { 0% { transform: scale(1) } 35% { transform: scale(1.12) } 100% { transform: scale(1) } }
+        @keyframes vxLand { 0% { opacity: 0; transform: scale(.55) } 60% { opacity: 1; transform: scale(1.08) } 100% { opacity: 1; transform: scale(1) } }
         @keyframes vxGold { 0%,100% { box-shadow: 0 0 30px 6px rgba(255,180,70,.6) } 50% { box-shadow: 0 0 60px 16px rgba(255,190,90,.95) } }
       `}</style>
 
@@ -420,56 +387,31 @@ function VerticalExecution({ ev, tA }) {
           animation: "vxGrow 1s cubic-bezier(.2,.8,.3,1) .3s both", filter: "drop-shadow(0 0 30px rgba(150,80,255,.9))" }} />
       </div>
 
-      {/* The condemned card: the axe cuts it in two, then the rot takes it */}
-      {stage && (
-        <div style={{ position: "absolute", left: (WIN.w - VX_W) / 2, top: (WIN.h - VX_H) / 2, width: VX_W, height: VX_H,
-          opacity: tA > T_SCAV - 700 ? 0 : 1, transition: "opacity .7s ease", animation: "vxRise .7s cubic-bezier(.2,.8,.3,1) both" }}>
-          <div key={struck ? "hit" : "wait"} style={{ position: "absolute", inset: 0, borderRadius: 16,
-            animation: struck ? "vxShake .5s linear both" : "vxGlow 2.4s ease-in-out infinite" }}>
-            {half(CUT_TOP, "translate(18px, -16px) rotate(3deg)")}
-            {half(CUT_BOTTOM, "translate(-10px, 10px) rotate(-2deg)")}
-          </div>
+      {/* The sidebar's chopping block: the axe, the rot, the rarity roll and the scavenge */}
+      {!waiting && !landed && (
+        <div style={{ position: "absolute", left: (WIN.w - CB_W * CB_S) / 2, top: 0, width: CB_W, height: CB_H,
+          transform: `scale(${CB_S})`, transformOrigin: "0 0", animation: "vxIn .5s ease both",
+          background: "rgba(8,9,13,.72)", borderRadius: 14, boxShadow: "0 0 30px rgba(150,80,255,.5)" }}>
+          <ChoppingBlock mode="rot" name={ev.card_removed} image={ev.card_removed_image}
+            newName={ev.replacement_card} newImage={ev.replacement_card_image}
+            rarity={ev.rarity_roll} rollCards={ev.roll_cards} playSound={false} />
         </div>
       )}
-      {stage && struck && tA < T_IMPACT + 700 && (
-        <div style={{ position: "absolute", left: "50%", top: "50%", width: 900, height: 18, borderRadius: 9,
-          background: "linear-gradient(90deg, transparent, #fff 30%, #e4d2ff 60%, transparent)", boxShadow: "0 0 30px 10px rgba(190,140,255,.9)",
-          animation: "vxSlash .5s ease-out both" }} />
-      )}
-      {stage && tA >= T_STAMP && (
-        <div style={{ position: "absolute", left: "50%", top: "50%", whiteSpace: "nowrap", ...purpleText(150), letterSpacing: 8,
-          animation: "vxStamp .45s cubic-bezier(.55,0,.9,.4) both", filter: "drop-shadow(0 6px 0 #000)" }}>ROTTED</div>
-      )}
 
-      {/* Something crawls out: the rarity roll, then the randomiser lands on the scavenged card */}
-      {crawl && (
+      {/* The scavenged card, big in the window, until the next round */}
+      {landed && ev?.replacement_card_image && (
         <>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 22, whiteSpace: "nowrap", animation: "vxIn .6s ease both",
-            ...(landed ? goldText(52) : purpleText(52)), letterSpacing: 4 }}>
-            {landed ? "SCAVENGED · JOINS THE DECK" : "SOMETHING CRAWLS OUT…"}
-          </div>
-          <div style={{ position: "absolute", left: (WIN.w - VX_W * 0.86) / 2, top: 92, width: VX_W * 0.86, height: VX_H * 0.86 }}>
-            {landed && (
-              <div style={{ position: "absolute", inset: -80, borderRadius: "50%", mixBlendMode: "screen", pointerEvents: "none",
-                background: "radial-gradient(closest-side, rgba(255,235,190,.95), rgba(255,170,60,.5) 45%, transparent 75%)", animation: "vxBurst .9s ease-out both" }} />
-            )}
-            <div style={{ position: "absolute", inset: 0, borderRadius: 14, overflow: "hidden", border: face ? "none" : "4px solid #9b5cff",
-              background: "radial-gradient(circle at 50% 45%, #4a2380, #160a2a 72%)", display: "flex", alignItems: "center", justifyContent: "center",
-              animation: landed ? "vxLand .5s ease-out both, vxGold 2.4s ease-in-out .5s infinite" : "vxGlow 2.4s ease-in-out infinite" }}>
-              {face
-                ? <img src={face} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
-                : <div style={{ ...purpleText(170), lineHeight: 1 }}>?</div>}
+          <div style={{ position: "absolute", left: (WIN.w - 344) / 2, top: 28, width: 344, height: 480 }}>
+            <div style={{ position: "absolute", inset: -90, borderRadius: "50%", mixBlendMode: "screen", pointerEvents: "none",
+              background: "radial-gradient(closest-side, rgba(255,235,190,.95), rgba(255,170,60,.5) 45%, transparent 75%)", animation: "vxBurst .9s ease-out both" }} />
+            <div style={{ position: "absolute", inset: 0, borderRadius: 16, overflow: "hidden",
+              animation: "vxLand .6s cubic-bezier(.2,.8,.3,1) both, vxGold 2.4s ease-in-out .6s infinite" }}>
+              <img src={ev.replacement_card_image} alt="" style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />
             </div>
           </div>
-          {!landed && rarIdx > 0 && (
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 14, fontSize: 50, fontWeight: 800, letterSpacing: 8,
-              color: rar.color, textShadow: "0 3px 0 #000, 0 0 18px rgba(0,0,0,.9)" }}>{rar.label}</div>
-          )}
-          {landed && (
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 10, whiteSpace: "nowrap", ...goldText(50), animation: "vxIn .5s ease both" }}>
-              {up(ev?.replacement_card || "")}
-            </div>
-          )}
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: 12, whiteSpace: "nowrap", ...goldText(50), animation: "vxIn .5s ease .3s both" }}>
+            {up(ev.replacement_card || "")} · JOINS THE DECK
+          </div>
         </>
       )}
     </div>
