@@ -18,8 +18,8 @@ const TRAIL_IMG = MEDIA + "043115ed5_slash-trail.png";
 // Hope: a golden frame grows behind the condemned card for each day it survives (11 frames, 400×560 each);
 // on its last day survived it plays to the end (the arch and star) and the card walks free.
 // Paste the two uploaded links between the quotes.
-const HOPE_IMG = "";
-const STUMP_FREE_IMG = ""; // the healthy stump, the axe pulled out
+const HOPE_IMG = "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/0f1eb2dd1_irondeck-hope-frames.webp";
+const STUMP_FREE_IMG = "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/265478986_irondeck-stump-cured.webp"; // the healthy stump, the axe pulled out
 const HOPE_N = 11;
 const HOPE_W = 608; // 400 × 1.52
 const HOPE_H = 851; // 560 × 1.52
