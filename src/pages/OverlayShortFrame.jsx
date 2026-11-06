@@ -7,6 +7,7 @@ import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { liveReload } from "@/lib/liveReload";
 import Sentencing from "@/components/overlay/Sentencing";
 import { SurviveCelebration } from "@/pages/Overlay";
+import { demoDeathEvent, isDemoDeath, demoBorn } from "@/lib/demoDeath";
 
 // Shorts frame (1080×1920): a spoiler-free hook at the top, the game window, the stakes below.
 // Built for a vertical recording canvas (Aitum Vertical): put the Arena capture in the window.
@@ -72,7 +73,7 @@ async function loadDay() {
     roundKey: `${run?.id || ""}|${run?.round_started_at || ""}`, // changes when a new round starts
     pardonedToday, pardonedName: season.last_pardoned,
     runWins: n(run?.total_wins),
-      runStatus: run?.round_status || "", runUpdated: run?.updated_date || "",
+      runStatus: run?.round_status || "", runUpdated: run?.updated_date || "", runId: run?.id || "",
       day: n(todayLog?.day) || n(logs.length) + 1,
       total: (n(todayLog?.day) || n(logs.length) + 1) + n(logs.priorDays), // challenge day
     rank: ranks && ranks[0],
@@ -139,6 +140,37 @@ export default function OverlayShortFrame() {
     if (Date.now() - toMs(d.runUpdated) < 60000) setSurvive(true);
   }, [d]);
 
+    // The second loss: the execution plays inside the game window, timed like the landscape.
+  // Holds on the scavenged card until the next round starts. ?demo=death to test (as on the Layout).
+  const [death, setDeath] = useState(isDemoDeath ? { died: demoBorn } : null);
+  const deathFor = useRef("");
+  const lastBlock = useRef(""); // the condemned card (the block is cleared the moment it rots)
+  if (d?.block?.name) lastBlock.current = d.block.name;
+  useEffect(() => {
+    if (!d || isDemoDeath) return;
+    if (d.runStatus !== "died") { setDeath(null); return; }
+    if (deathFor.current === d.roundKey) return;
+    deathFor.current = d.roundKey;
+    const died = toMs(d.runUpdated);
+    if (Date.now() - died < 120000) setDeath({ died, name: lastBlock.current });
+  }, [d]);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => {
+    if (!death) return undefined;
+    const t = setInterval(() => setClock(Date.now()), 50);
+    return () => clearInterval(t);
+  }, [death]);
+  const ev = !death || !d ? null
+    : isDemoDeath ? demoDeathEvent(d.season, d.cards)
+    : d.ev && d.ev.run_id === d.runId ? d.ev : null;
+  const evBorn = ev ? toMs(ev.updated_at) || toMs(ev.created_date) : 0;
+  const axeAt = ev ? Math.max(death.died + ROT_LEAD_MS, evBorn + 500) : 0;
+  const tA = axeAt ? clock - axeAt : -1; // ms since the axe lifted (negative: not yet)
+  const struck = tA >= T_IMPACT;
+  const landed = tA >= T_LAND;
+  const dName = up(ev?.card_removed || death?.name || "");
+  const rName = up(ev?.replacement_card || "");
+
   // The landscape intro tells us when its shuffle starts, so it plays here at the same time.
   useEffect(() => {
     const play = (m) => { if (m && m.type === "sentencing" && Date.now() - m.at < 15000) setShuffle(m.at); };
@@ -160,12 +192,22 @@ export default function OverlayShortFrame() {
   const cardName = d?.block?.name || (free ? d.pardonedName : "");
   const cur = survive
     ? { hook: "DAY SURVIVED.", sub: `${d?.wins || 0}–${d?.losses || 0} · THE DECK LIVES ANOTHER DAY` }
+    : death
+    ? (landed ? { hook: "SOMETHING CRAWLS OUT.", sub: `${rName} JOINS THE DECK` }
+      : { hook: "DEATH RUN.", sub: `${d?.wins || 0}–${d?.losses || 0} · ${dName || "THE CONDEMNED CARD"} ROTS` })
     : h.hooks[turn % h.hooks.length];
-  const label = survive ? (cardName ? (free ? "WALKS FREE" : "SURVIVES ANOTHER DAY") : "") : h.label;
-  const detail = survive ? up(cardName) : h.detail;
+  const label = survive ? (cardName ? (free ? "WALKS FREE" : "SURVIVES ANOTHER DAY") : "")
+    : death ? (landed ? "SCAVENGED" : struck ? "ROTTED" : "ON THE BLOCK")
+    : h.label;
+  const detail = survive ? up(cardName) : death ? (landed ? rName : dName) : h.detail;
+  // The card under the window: the condemned card, rotting, then the scavenged card
+  const slotImg = death
+    ? (landed ? ev?.replacement_card_image : ev?.card_removed_image || (death.name && d ? d.cardImg(death.name) : "")) || ""
+    : cardName ? d.cardImg(cardName) : "";
+  const slotRot = Boolean(death) && struck && !landed;
   const hook = q.get("hook") || cur.hook;
   const sub = q.get("sub") || cur.sub;
-  const rot = !survive && h.tone === "rot";
+  const rot = !survive && (death ? !landed : h.tone === "rot");
   const glow = rot ? "rgba(150,80,255,.85)" : "rgba(255,180,70,.85)";
   const hookSize = hook.length > 22 ? 82 : hook.length > 11 ? 100 : 128;
 
@@ -205,9 +247,9 @@ export default function OverlayShortFrame() {
       <div style={{ position: "absolute", left: 60, right: 60, top: WIN.y + WIN.h + 100, display: "flex", gap: 44, alignItems: "center" }}>
         {/* The condemned card spins: day 1 a card back both sides ("?"), day 2+ the real art on the front */}
         <div style={{ width: 300, height: 418, flex: "none", perspective: 1200 }}>
-          <div style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d", animation: survive ? "none" : "sfSpin 6s linear infinite" }}>
+          <div style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d", animation: survive || death ? "none" : "sfSpin 6s linear infinite" }}>
             {[0, 180].map((deg) => {
-              const img = cardName ? d.cardImg(cardName) : "";
+              const img = slotImg;
               const front = deg === 0 && img;
               return (
                 <div key={deg} style={{ position: "absolute", inset: 0, borderRadius: 16, overflow: "hidden", backfaceVisibility: "hidden",
