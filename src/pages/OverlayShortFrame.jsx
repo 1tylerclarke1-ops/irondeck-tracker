@@ -34,6 +34,10 @@ const toMs = (v) => {
 const scry = (id) => (id ? `https://api.scryfall.com/cards/${id}?format=image&version=normal` : "");
 const up = (s) => (s || "").toUpperCase();
 
+// Arena rank emblems: the same sheet as the HUD (4 columns: Tier 4 → 1 · 6 rows: Bronze → Mythic)
+const RANK_SPRITE = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/78b084191_rank-emblems.png";
+const RANK_ROWS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Mythic"];
+
 async function loadDay() {
   const seasons = await base44.entities.Season.filter({ status: "active" });
   const season = seasons && seasons[0];
@@ -89,8 +93,8 @@ function hookFor(d) {
   else if (b.capture === 2 && b.day === 1) hooks.push({ hook: "THE EXECUTIONER REMEMBERS.", sub: `CAUGHT AGAIN · ${b.sentence} DAYS TO SURVIVE` });
   if (b.day >= b.sentence) { tone = "gold"; hooks.push({ hook: "ONE DAY FROM FREEDOM.", sub: "SURVIVE TODAY AND IT WALKS FREE" }); }
   else hooks.push({ hook: "LOSE TWICE AND IT ROTS.", sub: `DAY ${b.day} OF ${b.sentence} ON THE CHOPPING BLOCK` });
-  if (show) hooks.push({ hook: `${up(b.name)}.`, sub: "STILL ON THE CHOPPING BLOCK" });
-  else hooks.push({ hook: "THE SHUFFLE HAS CHOSEN.", sub: "BUT WHICH CARD?" });
+  if (b.day >= 2) hooks.push({ hook: `${up(b.name)}.`, sub: "STILL ON THE CHOPPING BLOCK" });
+  else hooks.push({ hook: "THE SHUFFLE HAS CHOSEN.", sub: `${up(b.name)} IS ON THE BLOCK` });
   hooks.push(always);
   return { tone, hooks, label, detail, show, image: show ? d.cardImg(b.name) : "" };
 }
@@ -113,7 +117,7 @@ export default function OverlayShortFrame() {
       // picked fresh when a new round starts.
       setLocked((h) => (h && h.key === day.roundKey ? h : { ...hookFor(day), key: day.roundKey }));
     };
-    const stop = liveReload(["Run", "DayLog", "Season", "DecayEvent"], load);
+    const stop = liveReload(["Run", "DayLog", "Season", "DecayEvent", "ArenaRank"], load);
     return () => { active = false; stop(); };
   }, []);
 
@@ -162,7 +166,8 @@ export default function OverlayShortFrame() {
         <div style={{ width: 300, height: 418, flex: "none", perspective: 1200 }}>
           <div style={{ position: "relative", width: "100%", height: "100%", transformStyle: "preserve-3d", animation: "sfSpin 6s linear infinite" }}>
             {[0, 180].map((deg) => {
-              const front = deg === 0 && h.show && h.image;
+              const img = d?.block ? d.cardImg(d.block.name) : "";
+              const front = deg === 0 && img;
               return (
                 <div key={deg} style={{ position: "absolute", inset: 0, borderRadius: 16, overflow: "hidden", backfaceVisibility: "hidden",
                   transform: "rotateY(" + deg + "deg)", animation: "sfGlow 2.4s ease-in-out infinite",
