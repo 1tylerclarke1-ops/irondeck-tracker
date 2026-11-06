@@ -271,3 +271,31 @@ function RankRow({ rank }) {
     </div>
   );
 }
+
+
+// The vertical's survive details: today's score above the frame, the spared card below it
+function SurviveExtras({ d }) {
+  const free = d.pardonedToday && !d.block;
+  const name = free ? d.pardonedName : d.block?.name || "";
+  const img = name ? d.cardImg(name) : "";
+  const font = { fontFamily: "'Barlow Condensed', sans-serif" };
+  return (
+    <>
+      <style>{`@keyframes svxIn { from { opacity: 0; transform: translateY(30px) } to { opacity: 1; transform: none } }`}</style>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 330, textAlign: "center", ...font, animation: "svxIn .8s ease-out 2.6s both" }}>
+        <div style={{ ...goldText(170), lineHeight: 1 }}>{d.wins}–{d.losses}</div>
+        <div style={{ ...steelText(48), letterSpacing: 6, marginTop: 6 }}>DAY {d.day} SURVIVED</div>
+      </div>
+      {name && (
+        <div style={{ position: "absolute", left: 60, right: 60, top: 1290, display: "flex", alignItems: "center", gap: 36, ...font,
+          animation: "svxIn .8s ease-out 3.2s both" }}>
+          {img && <img src={img} alt="" style={{ width: 200, maxWidth: "none", borderRadius: 12, boxShadow: "0 0 40px 8px rgba(255,180,70,.8)" }} />}
+          <div style={{ textAlign: "left" }}>
+            <div style={{ ...goldText(free ? 64 : 54), lineHeight: 1.05 }}>{up(name)}</div>
+            <div style={{ ...steelText(38), marginTop: 12 }}>{free ? "WALKS FREE" : "SURVIVES ANOTHER DAY"}</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
