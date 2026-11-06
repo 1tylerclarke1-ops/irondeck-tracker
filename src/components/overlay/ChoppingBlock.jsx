@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 
 // The chopping block panel for the deck sidebar (fills the 456×786 deck panel).
@@ -15,6 +15,15 @@ const STUMP_IMG = MEDIA + "1299fe5b1_stump-normal.png";
 const STUMP_ROT_IMG = MEDIA + "006920b1a_stump-rotted.png";
 const AXE_IMG = MEDIA + "4a043ee21_axe.png";
 const TRAIL_IMG = MEDIA + "043115ed5_slash-trail.png";
+// Hope: a golden frame grows behind the condemned card for each day it survives (11 frames, 400×560 each);
+// on its last day survived it plays to the end (the arch and star) and the card walks free.
+// Paste the two uploaded links between the quotes.
+const HOPE_IMG = "";
+const STUMP_FREE_IMG = ""; // the healthy stump, the axe pulled out
+const HOPE_N = 11;
+const HOPE_W = 608; // 400 × 1.52
+const HOPE_H = 851; // 560 × 1.52
+const FREE_RISE = 28; // the card lifts off the block
 const SFX_WRENCH = "https://media.base44.com/files/public/6ac605d777721f9149c6b225/cbbc4c4e8_irondeck-execution-no-rot.mp3"; // axe wrenching itself out of the stump (no rot layer)
 // Loaded as soon as the overlay opens, so it plays instantly (no download delay).
 const wrenchSound = typeof Audio !== "undefined" ? new Audio(SFX_WRENCH) : null;
@@ -214,6 +223,23 @@ function Half({ image, clip, seed, anim, clock }) {
 
 export default function ChoppingBlock({ mode, name, image, day, sentence, recapture, newName, newImage, rarity, rollCards, playSound }) {
   const rot = mode === "rot";
+    const free = mode === "free"; // the last day survived: the card walks free
+  // Hope: how far the golden frame has grown (one step per day survived); on release it plays to the end.
+  const sent = Number(sentence) || 3;
+  const served = rot ? 0 : free ? sent - 1 : Math.max(0, (Number(day) || 1) - 1);
+  const hopeAt = Math.min(7, Math.floor((served / sent) * 10));
+  const [hopeIdx, setHopeIdx] = useState(hopeAt);
+  const [freeStep, setFreeStep] = useState(0); // 1: the stump heals, 2: the card lifts off and walks free
+  useEffect(() => {
+    if (!free) { setHopeIdx(hopeAt); setFreeStep(0); return undefined; }
+    let i = hopeAt;
+    setHopeIdx(i);
+    const id = setInterval(() => { i += 1; if (i >= HOPE_N) { clearInterval(id); return; } setHopeIdx(i); }, 380);
+    const t1 = setTimeout(() => setFreeStep(1), 600);
+    const t2 = setTimeout(() => setFreeStep(2), 2400);
+    return () => { clearInterval(id); clearTimeout(t1); clearTimeout(t2); };
+  }, [free, hopeAt]);
+  const lifted = free && freeStep >= 2;
   // Sound: the axe wrenching loose, timed to the start of the execution (skipped after an OBS refresh mid-way).
   useEffect(() => {
     if (!rot || !playSound || !wrenchSound) return;
@@ -241,6 +267,11 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
   const shakeShakes = [...Array(8)].map((_, i) => pc(2750 + i * 110) + " { transform: translate(" + (i % 2 ? 3 : -3) + "px, " + (i % 2 ? -1 : 1) + "px) }").join(" ");
   const styleContent = [
     "@keyframes cbGlow { 0%,100% { box-shadow: 0 0 26px 4px rgba(150,80,255,.5) } 50% { box-shadow: 0 0 46px 12px rgba(150,80,255,.85) } }",
+    "@keyframes cbHopeIn { from { opacity: 0; transform: scale(.88) } to { opacity: 1; transform: scale(1) } }",
+    "@keyframes cbHopeBreathe { 0%,100% { filter: brightness(1) } 50% { filter: brightness(1.22) } }",
+    "@keyframes cbFlash { 0% { opacity: 0; transform: scale(.5) } 20% { opacity: 1 } 100% { opacity: 0; transform: scale(1.6) } }",
+    "@keyframes cbRays { from { opacity: 0 } to { opacity: 1 } }",
+    "@keyframes cbSpin { from { rotate: 0deg } to { rotate: 360deg } }",
     "@keyframes cbBlockOut { 0% { opacity: 1 } " + pc(100) + ",100% { opacity: 0 } }",
     "@keyframes cbStumpIn { 0% { opacity: 0 } " + pc(100) + ",100% { opacity: 1 } }",
     "@keyframes cbAxe { " + AXE_KEYS + " }",
@@ -277,7 +308,30 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
       )}
 
       {/* The block with the axe in it. In a Death Run the axe leaves (bare stump), then the stump rots. */}
-      <img src={BLOCK_IMG} alt="" style={{ ...blockImg, animation: rot ? "cbBlockOut " + ROT_MS + "ms linear both" : "none" }} />
+      <img src={BLOCK_IMG} alt="" style={{ ...blockImg, animation: rot ? "cbBlockOut " + ROT_MS + "ms linear both" : "none",
+        opacity: free && freeStep >= 1 ? 0 : 1, transition: "opacity 1s ease" }} />
+      {/* Freed: the axe pulls out and the stump heals, with a flash of gold */}
+      {free && STUMP_FREE_IMG && <img src={STUMP_FREE_IMG} alt="" style={{ ...blockImg, opacity: freeStep >= 1 ? 1 : 0, transition: "opacity 1s ease" }} />}
+      {free && freeStep >= 1 && (
+        <div style={{ position: "absolute", left: "50%", bottom: CARD_BOTTOM - 60, width: 520, height: 520, marginLeft: -260, borderRadius: "50%",
+          pointerEvents: "none", mixBlendMode: "screen", background: "radial-gradient(closest-side, rgba(255,236,200,.9), rgba(255,160,60,.45) 45%, transparent 75%)",
+          animation: "cbFlash 1.2s ease-out both" }} />
+      )}
+
+      {/* Hope: the golden frame behind the card, one stage further for each day survived */}
+      {HOPE_IMG && !rot && (free || served > 0) && (
+        <div style={{ position: "absolute", left: "50%", bottom: CARD_BOTTOM + CARD_H / 2 - HOPE_H / 2 + (lifted ? FREE_RISE : 0), width: HOPE_W, height: HOPE_H,
+          marginLeft: -HOPE_W / 2, pointerEvents: "none", backgroundImage: "url(" + HOPE_IMG + ")", backgroundRepeat: "no-repeat",
+          backgroundSize: HOPE_W * HOPE_N + "px " + HOPE_H + "px", backgroundPosition: -hopeIdx * HOPE_W + "px 0",
+          transition: "bottom 1.4s cubic-bezier(.2,.8,.3,1)", animation: "cbHopeIn 1s ease-out both, cbHopeBreathe 3s ease-in-out 1s infinite" }} />
+      )}
+      {/* Freed: light rays behind the card */}
+      {lifted && (
+        <div style={{ position: "absolute", left: "50%", bottom: CARD_BOTTOM + FREE_RISE + CARD_H / 2 - 300, width: 600, height: 600, marginLeft: -300, borderRadius: "50%",
+          pointerEvents: "none", background: "repeating-conic-gradient(from 0deg, rgba(255,214,140,.28) 0deg 8deg, transparent 8deg 22deg)",
+          WebkitMaskImage: "radial-gradient(closest-side, #000 40%, transparent)", maskImage: "radial-gradient(closest-side, #000 40%, transparent)",
+          animation: "cbRays 1.2s ease-out both, cbSpin 30s linear infinite" }} />
+      )}
       {rot && <img src={STUMP_IMG} alt="" style={{ ...blockImg, animation: "cbStumpIn " + ROT_MS + "ms linear both" }} />}
       {rot && (
         <div style={{ position: "absolute", left: 0, bottom: 0, width: STUMP_W, height: STUMP_H }}>
@@ -288,7 +342,7 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
 
       {/* Heading, name and sentence */}
       <div style={{ position: "absolute", left: 0, right: 0, top: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 3,
-        animation: rot && newName ? "cbHdrOut " + ROT_MS + "ms linear both" : "none" }}>
+        animation: rot && newName ? "cbHdrOut " + ROT_MS + "ms linear both" : "none", opacity: lifted ? 0 : 1, transition: "opacity .6s ease" }}>
         <div style={{ ...(rot || wait ? purpleText(32) : goldText(32)), letterSpacing: 3, whiteSpace: "nowrap" }}>
           {rot ? "THE BLADE FALLS" : wait ? "DEATH RUN" : "ON THE CHOPPING BLOCK"}
         </div>
@@ -334,10 +388,11 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
       )}
 
       {/* The condemned card, standing on the block */}
-      <div style={{ position: "absolute", left: "50%", bottom: CARD_BOTTOM, width: CARD_W, height: CARD_H, marginLeft: -CARD_W / 2,
-        animation: rot ? "cbShake " + ROT_MS + "ms linear both" : "none" }}>
+      <div style={{ position: "absolute", left: "50%", bottom: CARD_BOTTOM + (lifted ? FREE_RISE : 0), width: CARD_W, height: CARD_H, marginLeft: -CARD_W / 2,
+        animation: rot ? "cbShake " + ROT_MS + "ms linear both" : "none", transition: "bottom 1.4s cubic-bezier(.2,.8,.3,1)" }}>
         {!rot && (
-          <div style={{ position: "absolute", inset: 0, borderRadius: 13, overflow: "hidden", animation: "cbGlow 2.4s ease-in-out infinite" }}>
+          <div style={{ position: "absolute", inset: 0, borderRadius: 13, overflow: "hidden",
+            animation: lifted ? "cbGold 2.4s ease-in-out infinite" : "cbGlow 2.4s ease-in-out infinite" }}>
             {image && <img src={image} alt={name} style={{ width: "100%", height: "100%", maxWidth: "none", display: "block" }} />}
           </div>
         )}
@@ -414,7 +469,17 @@ export default function ChoppingBlock({ mode, name, image, day, sentence, recapt
         <img key={src} src={src} alt="" style={{ position: "absolute", width: 1, height: 1, opacity: 0 }} />
       ))}
 
-      {!rot && !wait && (
+      {/* Freed: the new heading */}
+      {lifted && (
+        <div style={{ position: "absolute", left: 0, right: 0, top: 14, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 3,
+          animation: "cbRays .8s ease-out both" }}>
+          <div style={{ ...goldText(40), letterSpacing: 4, whiteSpace: "nowrap" }}>PARDONED</div>
+          <div style={{ ...goldText(30), lineHeight: 1, maxWidth: 420, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{(name || "").toUpperCase()}</div>
+          <div style={{ ...steelText(24) }}>WALKS FREE</div>
+        </div>
+      )}
+
+      {!rot && !wait && !free && (
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 14, ...steelText(24), textShadow: "0 0 3px #000, 0 2px 6px #000, 0 0 14px #000" }}>
           LOSE TODAY, AND IT ROTS.
         </div>
