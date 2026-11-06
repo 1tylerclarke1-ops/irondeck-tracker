@@ -678,7 +678,7 @@ const SV_GEMS = [
   { x: 50, y: 82, d: 1.4, s: 8 },
 ];
 const SV_ORBS = [ { x: 35, y: 8 }, { x: 64, y: 6 }, { x: 7, y: 62 }, { x: 93, y: 62 } ];
-export function SurviveCelebration({ embedded, box: boxProp, children }) {
+export function SurviveCelebration({ embedded, box: boxProp, emblemW = "40%", children }) {
   const box = boxProp || (embedded
     ? { left: 480, top: 270, width: 1440, height: 810 }
     : { left: 0, top: 0, width: "100vw", height: "100vh" });
@@ -742,9 +742,9 @@ export function SurviveCelebration({ embedded, box: boxProp, children }) {
       <div style={{ position: "absolute", inset: 0, mixBlendMode: "screen", pointerEvents: "none",
         background: "radial-gradient(circle at 50% 50%, rgba(255,235,180,.95), rgba(255,170,60,.35) 35%, transparent 65%)",
         animation: "sv-flash .7s ease-out 1.95s both" }} />
-      <div style={{ position: "absolute", left: "50%", top: "50%", width: "40%", aspectRatio: "1", borderRadius: "50%",
+      <div style={{ position: "absolute", left: "50%", top: "50%", width: emblemW, aspectRatio: "1", borderRadius: "50%",
         border: "6px solid rgba(255,200,110,.9)", boxShadow: "0 0 40px rgba(255,170,60,.9)", animation: "sv-shock .8s ease-out 1.95s both" }} />
-      <img src={SV_EMBLEM} alt="DAY SURVIVED" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", width: "40%", maxWidth: "none",
+      <img src={SV_EMBLEM} alt="DAY SURVIVED" draggable={false} style={{ position: "absolute", left: "50%", top: "50%", width: emblemW, maxWidth: "none",
         animation: "sv-slam .55s cubic-bezier(.55, 0, .9, .4) 1.6s both, sv-glowin 1.5s ease-in 2.3s both, sv-breathe 3s ease-in-out 3.8s infinite" }} />
       {children}
     </div>
