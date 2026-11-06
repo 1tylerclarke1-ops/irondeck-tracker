@@ -20,6 +20,7 @@ import { SurviveCelebration } from "@/pages/Overlay";
 
 const SHIELD = "https://media.base44.com/images/public/6ac605d777721f9149c6b225/5c1ebc3bb_tdc-shield.png";
 const WIN = { x: 0, y: 390, w: 1080, h: 608 }; // the clip window (16:9)
+const FRAME_BG = "radial-gradient(circle at 50% 30%, #2a1450, #0d0816 70%)";
 // The HUD's own win medallions (numbered 1-7) and loss icons.
 const DPRE = "https://base44.app/api/apps/6ac605d777721f9149c6b225/files/mp/public/6ac605d777721f9149c6b225/";
 const WON = ["d00d35fc6", "4a1fe34b6", "894562e97", "8e4c0cdf4", "f6c98f779", "c22df9ff5", "6b3cea327", "2aa7c4fa9"].map((h, i) => `${DPRE}${h}_win-won-${i}.png`);
@@ -163,12 +164,18 @@ export default function OverlayShortFrame() {
 
   return (
     <div style={{ position: "relative", width: 1080, height: 1920, overflow: "hidden",
-      background: "radial-gradient(circle at 50% 30%, #2a1450, #0d0816 70%)", fontFamily: "'Barlow Condensed', sans-serif", textAlign: "center" }}>
+      background: clear ? "transparent" : FRAME_BG, fontFamily: "'Barlow Condensed', sans-serif", textAlign: "center" }}>
       <style>{`
         @keyframes sfSlam { 0% { opacity: 0; transform: scale(1.6) } 60% { opacity: 1; transform: scale(.96) } 100% { transform: scale(1) } }
         @keyframes sfSpin { from { transform: rotateY(0deg) } to { transform: rotateY(360deg) } }
         @keyframes sfGlow { 0%,100% { box-shadow: 0 0 30px 6px ${glow} } 50% { box-shadow: 0 0 60px 16px ${glow} } }
       `}</style>
+
+      {/* ?window=clear: the background is drawn above and below the window only, so the game shows through */}
+      {clear && [[0, WIN.y], [WIN.y + WIN.h, 1920 - WIN.y - WIN.h]].map(([top, h]) => (
+        <div key={top} style={{ position: "absolute", left: 0, top, width: 1080, height: h,
+          background: FRAME_BG, backgroundSize: "1080px 1920px", backgroundPosition: `0 ${-top}px` }} />
+      ))}
 
       {/* Hook */}
       <div key={hook} style={{ position: "absolute", left: 40, right: 40, top: 30, height: WIN.y - 50, display: "flex", flexDirection: "column",
