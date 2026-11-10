@@ -549,16 +549,25 @@ export default function DeckIntroRecap({ season, onDone, onBadge }) {
           : earlier[0];
         const ids = (found.decay_ids || []).filter(Boolean);
         let list = [];
-        if ((found.result === "died" || found.result === "missed") && ids.length) {
+        if (found.result === "died" || found.result === "missed") {
           const ds = await base44.entities.Decay.filter({
             season_id: season.id,
           });
           if (!active) return;
-          const byId = {};
-          ds.forEach((d) => {
-            byId[d.id] = d;
-          });
-          list = ids.map((id) => byId[id]).filter(Boolean);
+          if (ids.length) {
+            const byId = {};
+            ds.forEach((d) => {
+              byId[d.id] = d;
+            });
+            list = ids.map((id) => byId[id]).filter(Boolean);
+          } else {
+            // The round's log was reset but its rot was kept: show that rot.
+            const used = new Set(earlier.flatMap((l) => l.decay_ids || []));
+            list = ds
+              .filter((d) => !used.has(d.id) && (d.date || "") >= (found.date || ""))
+              .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+              .slice(-2);
+          }
         }
         setDecays(list);
         setLog(found);
