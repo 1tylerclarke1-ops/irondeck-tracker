@@ -9,6 +9,7 @@ import Sentencing from "@/components/overlay/Sentencing";
 import { SurviveCelebration } from "@/pages/Overlay";
 import { demoDeathEvent, isDemoDeath, demoBorn } from "@/lib/demoDeath";
 import ChoppingBlock from "@/components/overlay/ChoppingBlock";
+import CtaPopup from "@/components/overlay/CtaPopup";
 
 // Shorts frame (1080×1920): a spoiler-free hook at the top, the game window, the stakes below.
 // Built for a vertical recording canvas (Aitum Vertical): put the Arena capture in the window.
