@@ -332,6 +332,11 @@ export default function OverlayShortFrame() {
 
       {/* The second loss: the execution plays inside the game window (or ?demo=death to test) */}
       {death && d && <VerticalExecution ev={ev} tA={tA} />}
+      
+      {/* Like / Subscribe after every game, bottom-right of the game window (never over a big moment) */}
+      <CtaPopup pos={{ left: 770, top: WIN.y + WIN.h - 150, width: 290 }}
+        blocked={survive || Boolean(death) || shuffle > 0 || release || !d || d.runStatus !== "playing"}
+        wins={d?.wins || 0} losses={d?.losses || 0} />
     </div>
   );
 }
