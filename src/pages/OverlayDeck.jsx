@@ -458,7 +458,8 @@ export default function OverlayDeck({ outro } = {}) {
         boxSizing: "border-box",
       }}
     >
-<CtaPopup tone={Number(run?.round_losses) >= 1 ? "rot" : "gold"} blocked={rotMode || isOutro} />
+<CtaPopup tone={Number(run?.round_losses) >= 1 ? "rot" : "gold"} blocked={rotMode || isOutro || (run && run.round_status !== "playing")}
+  wins={Number(run?.round_wins) || 0} losses={Number(run?.round_losses) || 0} />
       <style>{`
         @keyframes ovd-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
         @keyframes ovd-slidein { from { transform: translateX(-24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
