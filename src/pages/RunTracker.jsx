@@ -170,7 +170,7 @@ export default function RunTracker() {
     for (const date of missed) {
       fresh = await base44.entities.Card.filter({ season_id: season.id });
       if (!s.condemned_card || !fresh.some((c) => c.name === s.condemned_card && num(c.copies) > 0)) {
-        s = await ensureCondemned({ season: { ...s, condemned_card: "" }, cards: fresh });
+        s = await ensureCondemned({ season: { ...s, condemned_card: "" }, cards: fresh, day: dayNo + 1 });
       }
       const res = await performDecay({
         season: s, cards: fresh, run: runForDecay, condemned: s.condemned_card, step: "missed",
@@ -196,7 +196,7 @@ export default function RunTracker() {
     try {
       const m = await handleMissedDays();
       if (!m.ok) return;
-      await ensureCondemned({ season: m.season, cards: m.cards });
+      await ensureCondemned({ season: m.season, cards: m.cards, day });
       if (inProgress) {
         const prev = snapshot(inProgress);
          await base44.entities.Run.update(inProgress.id, {

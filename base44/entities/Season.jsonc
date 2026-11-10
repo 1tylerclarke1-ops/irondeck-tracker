@@ -67,6 +67,15 @@
       "type": "string",
       "format": "date-time",
       "description": "When the current card was most recently pardoned"
+    },
+    "deferred_card": {
+      "type": "string",
+      "description": "Card held back from the condemned-card draw until deferred_day"
+    },
+    "deferred_day": {
+      "type": "integer",
+      "default": 0,
+      "description": "Day the deferred card is condemned on (0 = no deferral)"
     }
   },
   "required": [

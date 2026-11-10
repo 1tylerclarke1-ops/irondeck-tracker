@@ -34,11 +34,18 @@ export default async function(req: Request): Promise<Response> {
     }
     if (names.length === 0) return Response.json({ ok: false, reason: "No cards left in the deck" });
 
-    const name = names[Math.floor(Math.random() * names.length)];
+    // A deferred card is held out of the draw until its day, then condemned on it.
+    const logs = await db.DayLog.filter({ season_id: season.id }).catch(() => []);
+    const day = (logs ? logs.length : 0) + 1;
+    const deferred = season.deferred_card && names.includes(season.deferred_card) ? season.deferred_card : "";
+    const due = Boolean(deferred) && n(season.deferred_day) > 0 && day >= n(season.deferred_day);
+    const others = names.filter((x: string) => x !== deferred);
+    const from = due ? [deferred] : others.length ? others : names;
+    const name = from[Math.floor(Math.random() * from.length)];
     let pardons: Record<string, number> = {};
     try { pardons = JSON.parse(season.pardon_counts || "{}") || {}; } catch { pardons = {}; }
     const capture = n(pardons[name]) + 1;
-    const update = {
+    const update: Record<string, any> = {
       condemned_card: name,
       condemned_since: new Date().toISOString(),
       block_days: 0,
@@ -46,6 +53,10 @@ export default async function(req: Request): Promise<Response> {
       block_capture: capture,
       block_pool: pool,
     };
+    if (due) {
+      update.deferred_card = "";
+      update.deferred_day = 0;
+    }
     await db.Season.update(season.id, update);
     return Response.json({ ok: true, kept: false, ...update });
   } catch (error) {

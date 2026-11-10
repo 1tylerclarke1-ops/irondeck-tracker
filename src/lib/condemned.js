@@ -70,10 +70,16 @@ export function blockState(season) {
 }
 
 // Pick a condemned card now (the wheel's result) and save it.
-export async function condemnNew({ season, cards }) {
+// A deferred card (season.deferred_card) is held out of the draw until its
+// season.deferred_day, then condemned on it.
+export async function condemnNew({ season, cards, day }) {
   const { pool, names } = poolFor(cards);
   if (names.length === 0) return season;
-  const name = names[Math.floor(Math.random() * names.length)];
+  const deferred = season?.deferred_card && names.includes(season.deferred_card) ? season.deferred_card : "";
+  const due = Boolean(deferred) && num(season.deferred_day) > 0 && num(day) >= num(season.deferred_day);
+  const others = names.filter((n) => n !== deferred);
+  const from = due ? [deferred] : others.length ? others : names;
+  const name = from[Math.floor(Math.random() * from.length)];
   const capture = num(readPardons(season)[name]) + 1;
   const update = {
     condemned_card: name,
@@ -83,18 +89,19 @@ export async function condemnNew({ season, cards }) {
     block_capture: capture,
     block_pool: pool,
   };
+  if (due) Object.assign(update, { deferred_card: "", deferred_day: 0 });
   await base44.entities.Season.update(season.id, update);
   return { ...season, ...update };
 }
 
 // Start of day: keep the current condemned card if it's still in the deck,
 // otherwise pick a new one. Returns the (possibly updated) season.
-export async function ensureCondemned({ season, cards }) {
+export async function ensureCondemned({ season, cards, day }) {
   const { names } = poolFor(cards);
   const still = (cards || []).some((c) => c.name === season.condemned_card && num(c.copies) > 0);
   if (season.condemned_card && still) return season;
   if (names.length === 0) return season;
-  return condemnNew({ season, cards });
+  return condemnNew({ season, cards, day });
 }
 
 // Day survived: serve one day; pardon when the sentence is done.
