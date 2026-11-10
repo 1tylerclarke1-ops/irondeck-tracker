@@ -13,7 +13,7 @@ const AFTER_RESULT_MS = 4000; // after the helper reports the result
 // In the 1920×1080 Layout (game window: x 480, y 270, 1440×810). "fixed" lets it leave the sidebar.
 const CTA_POS = { left: 1365, top: 905, width: 340 };
 
-export default function CtaPopup({ blocked = false, wins = 0, losses = 0 }) {
+export default function CtaPopup({ blocked = false, wins = 0, losses = 0, pos = CTA_POS }) {
   const [show, setShow] = useState(false);
   const blockedRef = useRef(blocked);
   blockedRef.current = blocked;
@@ -56,7 +56,7 @@ export default function CtaPopup({ blocked = false, wins = 0, losses = 0 }) {
   }, [show]);
 
   return (
-    <div style={{ position: "fixed", ...CTA_POS, zIndex: 60, pointerEvents: "none",
+    <div style={{ position: "fixed", ...pos, zIndex: 60, pointerEvents: "none",
       opacity: show ? 1 : 0, transition: "opacity .2s ease",
       filter: "drop-shadow(0 4px 12px rgba(0,0,0,.7))" }}>
       <video ref={vidRef} src={CTA_VIDEO} preload="auto" playsInline muted
