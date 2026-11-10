@@ -1,34 +1,49 @@
 import React, { useEffect, useRef, useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { liveReload } from "@/lib/liveReload";
 
-// Like / Subscribe / bell reminder: a keyed video (click, click, ding) over the game,
-// bottom-right between the hand and Arena's turn button (clear of cards).
-// Random timing: first after 4-7 min, then every 8-14 min. Never during the death
-// execution or the outro (waits a minute and tries again).
-// Testing: add ?cta=now to the overlay URL to see it after 5s, then every 20s.
+// Like / Subscribe reminder: a keyed video over the game, bottom-right between the hand
+// and Arena's turn button (clear of cards).
+// Plays at the end of every game: the Arena helper (the batch file) reports each finished
+// match, and once Arena's VICTORY / DEFEAT screen has shown, the reminder plays.
+// Never after the game that ends the day (the execution or SURVIVED plays instead), or in the outro.
+// Testing: add ?cta=now to the overlay URL to see it after 5s.
 const CTA_VIDEO = "https://media.base44.com/videos/public/6ac605d777721f9149c6b225/a6e8e4cbf_irondeck-like-subscribe.webm";
-const MIN = 60000;
-const rand = (a, b) => a + Math.random() * (b - a);
+const AFTER_RESULT_MS = 4000; // after the helper reports the result
 // In the 1920×1080 Layout (game window: x 480, y 270, 1440×810). "fixed" lets it leave the sidebar.
 const CTA_POS = { left: 1365, top: 905, width: 340 };
 
-export default function CtaPopup({ blocked = false }) {
+export default function CtaPopup({ blocked = false, wins = 0, losses = 0 }) {
   const [show, setShow] = useState(false);
   const blockedRef = useRef(blocked);
   blockedRef.current = blocked;
+  const scoreRef = useRef({ wins, losses });
+  scoreRef.current = { wins, losses };
   const vidRef = useRef(null);
   const nextRef = useRef(null);
 
   useEffect(() => {
     const test = new URLSearchParams(window.location.search).get("cta") === "now";
     let t;
-    const schedule = (ms) => { clearTimeout(t); t = setTimeout(play, ms); };
-    const play = () => {
-      if (blockedRef.current) { schedule(MIN); return; }
-      setShow(true);
+    let lastId; // the newest match already seen (undefined until the first load)
+    const play = () => { if (!blockedRef.current) setShow(true); };
+    nextRef.current = () => setShow(false);
+    const load = async () => {
+      const list = await base44.entities.ArenaMatch.list("-created_date", 1).catch(() => []);
+      const m = (list && list[0]) || null;
+      if (lastId === undefined) { lastId = m ? m.id : ""; return; } // first load: never replay an old game
+      if (!m || m.id === lastId) return;
+      lastId = m.id;
+      // The game that ends the day: the execution or SURVIVED plays instead
+      const { wins: w, losses: l } = scoreRef.current;
+      const ends = m.applied ? false : m.result === "loss" ? l + 1 >= 2 : w + 1 >= 7;
+      if (ends) return;
+      clearTimeout(t);
+      t = setTimeout(play, AFTER_RESULT_MS);
     };
-    nextRef.current = () => { setShow(false); schedule(test ? 20000 : rand(8 * MIN, 14 * MIN)); };
-    schedule(test ? 5000 : rand(4 * MIN, 7 * MIN));
-    return () => clearTimeout(t);
+    const stop = liveReload(["ArenaMatch"], load);
+    if (test) t = setTimeout(play, 5000);
+    return () => { clearTimeout(t); stop(); };
   }, []);
 
   useEffect(() => {
