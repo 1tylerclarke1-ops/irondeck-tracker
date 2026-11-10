@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
-import CtaPopup from "@/components/overlay/CtaPopup";
 
 // The chopping block panel for the deck sidebar (fills the 456×786 deck panel).
 // mode "block": the condemned card stands on the block, with its sentence pips.
