@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { goldText, steelText, purpleText } from "@/lib/overlayText";
 import { base44 } from "@/api/base44Client";
-import { captureTitle, poolFor } from "@/lib/condemned";
+import { captureTitle, poolFor, blockBanned } from "@/lib/condemned";
 import { SurviveCelebration } from "@/pages/Overlay";
 
 // The Sentencing: plays after the "previously on" recap in the Overlay Intro.
@@ -18,7 +18,7 @@ const n = (v) => Number(v) || 0;
 const getPlayed = () => { try { return localStorage.getItem(PLAYED_KEY); } catch { return null; } };
 const setPlayed = (v) => { try { localStorage.setItem(PLAYED_KEY, v); } catch {} };
 
-export default function Sentencing({ season, cards, active, fadeIn = false, vertical = false, onDone }) {
+export default function Sentencing({ season, cards, day, active, fadeIn = false, vertical = false, onDone }) {
   const [phase, setPhase] = useState("wait"); // wait, banner, wheel, countdown, spinning, verdict, block, out
   const [count, setCount] = useState(3);
   const locked = useRef(null); // the season snapshot we play from
@@ -31,14 +31,14 @@ export default function Sentencing({ season, cards, active, fadeIn = false, vert
   // commons, if none are left), always including the condemned card.
   const condemnedName = season?.condemned_card || "";
   const wheelCards = useMemo(() => {
-    const { names } = poolFor(cards);
+    const { names } = poolFor(cards, blockBanned(season, day));
     const seen = new Map();
     for (const c of cards || []) {
       if (n(c.copies) > 0 && (names.includes(c.name) || c.name === condemnedName) && !seen.has(c.name))
         seen.set(c.name, { name: c.name, scryfall_id: c.scryfall_id || "" });
     }
     return [...seen.values()];
-  }, [cards, condemnedName]);
+  }, [cards, condemnedName, season, day]);
   const artMap = useMemo(() => {
     const m = {};
     wheelCards.forEach((c) => { if (c.scryfall_id) m[c.scryfall_id] = { artCrop: scry(c.scryfall_id, "art_crop") }; });

@@ -174,6 +174,7 @@ export default function RunTracker() {
       }
       const res = await performDecay({
         season: s, cards: fresh, run: runForDecay, condemned: s.condemned_card, step: "missed",
+        day: dayNo + 1,
       });
       await clearCondemned(s);
       s = { ...s, condemned_card: "", block_days: 0 };
@@ -287,7 +288,7 @@ export default function RunTracker() {
         setDecayApplying(true);
         let decayId = null;
         try {
-          const decayResult = await performDecay({ season, cards, run: inProgress, condemned: season.condemned_card });
+          const decayResult = await performDecay({ season, cards, run: inProgress, condemned: season.condemned_card, day });
           decayId = decayResult?.decayId || null;
           await clearCondemned(season);
           loadSeason();

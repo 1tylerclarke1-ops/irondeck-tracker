@@ -28,6 +28,23 @@ const readPardons = (season) => {
   try { return JSON.parse(season?.pardon_counts || "{}") || {}; } catch { return {}; }
 };
 
+// Cards that may not go on the rotting block. Season 1 holds them off the block
+// until the given day; from that day on they can be condemned as usual.
+const BLOCK_BAN = [
+  { name: "North Wind Avatar", season: 1, untilDay: 27 },
+  { name: "Terror of the Peaks", season: 1, untilDay: 27 },
+];
+
+// Names that are off the block right now, for the season and day given.
+// An unknown day counts as "before" the release day, so the card stays off.
+export function blockBanned(season, day) {
+  const seasonNo = Number(season?.season_number);
+  const d = Number(day) || 0;
+  return new Set(
+    BLOCK_BAN.filter((b) => b.season === seasonNo && d < b.untilDay).map((b) => b.name)
+  );
+}
+
 const POOLS = [
   { pool: "rare", match: (r) => r === "rare" || r === "mythic" },
   { pool: "uncommon", match: (r) => r === "uncommon" },
@@ -36,11 +53,14 @@ const POOLS = [
 
 // The wheel's pool: unique names still in the deck (main or sideboard) of the
 // highest rarity group that has any. { pool: "rare" | "uncommon" | "common", names }
-export function poolFor(cards) {
+// Pass the names off the block (see blockBanned) to leave them out of the draw.
+export function poolFor(cards, banned) {
   for (const p of POOLS) {
     const names = new Set();
     for (const c of cards || []) {
-      if (num(c.copies) > 0 && p.match(c.rarity)) names.add(c.name);
+      if (num(c.copies) > 0 && p.match(c.rarity) && !(banned && banned.has(c.name))) {
+        names.add(c.name);
+      }
     }
     if (names.size) return { pool: p.pool, names: [...names] };
   }
@@ -48,8 +68,8 @@ export function poolFor(cards) {
 }
 
 // Kept for older callers: the names the wheel can pick from.
-export function eligibleNames(cards) {
-  return poolFor(cards).names;
+export function eligibleNames(cards, banned) {
+  return poolFor(cards, banned).names;
 }
 
 // Current block state for overlays: null when nothing is condemned.
@@ -73,7 +93,7 @@ export function blockState(season) {
 // A deferred card (season.deferred_card) is held out of the draw until its
 // season.deferred_day, then condemned on it.
 export async function condemnNew({ season, cards, day }) {
-  const { pool, names } = poolFor(cards);
+  const { pool, names } = poolFor(cards, blockBanned(season, day));
   if (names.length === 0) return season;
   const deferred = season?.deferred_card && names.includes(season.deferred_card) ? season.deferred_card : "";
   const due = Boolean(deferred) && num(season.deferred_day) > 0 && num(day) >= num(season.deferred_day);
@@ -97,8 +117,11 @@ export async function condemnNew({ season, cards, day }) {
 // Start of day: keep the current condemned card if it's still in the deck,
 // otherwise pick a new one. Returns the (possibly updated) season.
 export async function ensureCondemned({ season, cards, day }) {
-  const { names } = poolFor(cards);
-  const still = (cards || []).some((c) => c.name === season.condemned_card && num(c.copies) > 0);
+  const banned = blockBanned(season, day);
+  const { names } = poolFor(cards, banned);
+  const still =
+    !banned.has(season.condemned_card) &&
+    (cards || []).some((c) => c.name === season.condemned_card && num(c.copies) > 0);
   if (season.condemned_card && still) return season;
   if (names.length === 0) return season;
   return condemnNew({ season, cards, day });

@@ -8,6 +8,20 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.53';
 const SENTENCES = [3, 2, 1];
 const n = (v: unknown) => Number(v) || 0;
 
+// Cards that may not go on the rotting block (same rule as src/lib/condemned.js):
+// Season 1 holds them off the block until the given day.
+const BLOCK_BAN = [
+  { name: "North Wind Avatar", season: 1, untilDay: 27 },
+  { name: "Terror of the Peaks", season: 1, untilDay: 27 },
+];
+
+function bannedFor(season: any, day: number): Set<string> {
+  const seasonNo = n(season?.season_number);
+  return new Set(
+    BLOCK_BAN.filter((b) => b.season === seasonNo && day < b.untilDay).map((b) => b.name)
+  );
+}
+
 export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
@@ -17,6 +31,9 @@ export default async function(req: Request): Promise<Response> {
     if (!season) return Response.json({ error: "No active season" }, { status: 404 });
 
     const cards = await db.Card.filter({ season_id: season.id });
+    const logs = await db.DayLog.filter({ season_id: season.id }).catch(() => []);
+    const day = (logs ? logs.length : 0) + 1;
+    const banned = bannedFor(season, day);
     const POOLS: [string, (r: string) => boolean][] = [
       ["rare", (r) => r === "rare" || r === "mythic"],
       ["uncommon", (r) => r === "uncommon"],
@@ -25,18 +42,17 @@ export default async function(req: Request): Promise<Response> {
     let pool = "rare";
     let names: string[] = [];
     for (const [p, match] of POOLS) {
-      names = [...new Set((cards || []).filter((c: any) => n(c.copies) > 0 && match(c.rarity)).map((c: any) => c.name as string))];
+      names = [...new Set((cards || []).filter((c: any) => n(c.copies) > 0 && match(c.rarity) && !banned.has(c.name)).map((c: any) => c.name as string))];
       if (names.length) { pool = p; break; }
     }
-    const still = (cards || []).some((c: any) => c.name === season.condemned_card && n(c.copies) > 0);
+    const still = !banned.has(season.condemned_card) &&
+      (cards || []).some((c: any) => c.name === season.condemned_card && n(c.copies) > 0);
     if (season.condemned_card && still) {
       return Response.json({ ok: true, kept: true, ...pick(season) });
     }
     if (names.length === 0) return Response.json({ ok: false, reason: "No cards left in the deck" });
 
     // A deferred card is held out of the draw until its day, then condemned on it.
-    const logs = await db.DayLog.filter({ season_id: season.id }).catch(() => []);
-    const day = (logs ? logs.length : 0) + 1;
     const deferred = season.deferred_card && names.includes(season.deferred_card) ? season.deferred_card : "";
     const due = Boolean(deferred) && n(season.deferred_day) > 0 && day >= n(season.deferred_day);
     const others = names.filter((x: string) => x !== deferred);

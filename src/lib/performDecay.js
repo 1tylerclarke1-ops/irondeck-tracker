@@ -1,7 +1,7 @@
 import { base44 } from "@/api/base44Client";
 import { fetchRollCards } from "@/lib/decayRoll";
 import { num } from "@/components/run/runHelpers";
-import { poolFor } from "@/lib/condemned";
+import { poolFor, blockBanned } from "@/lib/condemned";
 
 // Direct Scryfall image links (redirect to the image); no lookup needed.
 const scryImage = (id, version) =>
@@ -11,12 +11,13 @@ const scryImage = (id, version) =>
 // - condemned: the card on the block (rots first); any rarity.
 // - step: "death" for a Death Run (plays the death screen), "missed" for a
 //   missed day (shown in the next intro instead).
-export async function performDecay({ season, cards, run, condemned, step = "death" }) {
+export async function performDecay({ season, cards, run, condemned, step = "death", day }) {
   if (!season || !run) throw new Error("Missing season or run");
 
   // 1. The condemned card rots. Without one, pick a random card from the wheel's
-  //    pool (rares/mythics, or uncommons, then commons, if none are left).
-  const { names: poolNames } = poolFor(cards);
+  //    pool (rares/mythics, or uncommons, then commons, if none are left) —
+  //    never a card that's still off the block.
+  const { names: poolNames } = poolFor(cards, blockBanned(season, day));
   const eligible = cards.filter((c) => num(c.copies) > 0 && poolNames.includes(c.name));
   const seen = new Set();
   const uniqueCards = [];

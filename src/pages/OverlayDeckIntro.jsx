@@ -218,7 +218,7 @@ export default function OverlayDeckIntro() {
             image={pCard?.scryfall_id ? `https://api.scryfall.com/cards/${pCard.scryfall_id}?format=image&version=normal` : ""} onDone={done} />;
         }
         if (key === "wheel")
-          el = <Sentencing season={season} cards={allCards} active={active} fadeIn={stages[i - 1] === "deck"} onDone={done} />;
+          el = <Sentencing season={season} cards={allCards} day={day} active={active} fadeIn={stages[i - 1] === "deck"} onDone={done} />;
         return (
           <div key={`${i}-${key}`} style={{ position: "fixed", inset: 0, zIndex: active ? 62 : 61, pointerEvents: "none" }}>
             {el}

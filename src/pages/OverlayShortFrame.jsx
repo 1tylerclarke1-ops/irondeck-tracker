@@ -318,7 +318,7 @@ export default function OverlayShortFrame() {
     
       {/* The shuffle, in time with the landscape intro (or ?shuffle=now to test) */}
       {shuffle > 0 && d && (
-        <Sentencing key={shuffle} season={d.season} cards={d.cards} active vertical onDone={() => setShuffle(0)} />
+        <Sentencing key={shuffle} season={d.season} cards={d.cards} day={d.day} active vertical onDone={() => setShuffle(0)} />
       )}
       
       {/* The 7th win: SURVIVED plays inside the game window; the frame around it updates (or ?survive=now to test) */}
