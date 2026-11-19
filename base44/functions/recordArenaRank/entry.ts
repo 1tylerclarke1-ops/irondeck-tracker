@@ -31,6 +31,20 @@ export default async function (req: Request): Promise<Response> {
     };
     const ranks = base44.asServiceRole.entities.ArenaRank;
     const last = (await ranks.list("-created_date", 1))[0];
+        // Arena protects you for a few matches after you rank up into a new tier, but its log can
+    // still report the tier below after a loss. If we've only just ranked up, keep the new tier.
+    if (last && row.tier != null && last.rank_class === row.rank_class && row.level > last.level) {
+      const recent = await ranks.list("-created_date", 20);
+      const played = (r) => (r.matches_won || 0) + (r.matches_lost || 0);
+      const upIdx = recent.findIndex(
+        (r, i) => recent[i + 1] && r.rank_class === recent[i + 1].rank_class && r.level === last.level && r.level < recent[i + 1].level
+      );
+      if (upIdx >= 0 && played(row) - played(recent[upIdx]) <= 3) {
+        row.level = last.level;
+        row.tier = last.tier;
+        row.step = 0;
+      }
+    }
     const unchanged =
       last &&
       last.season_ordinal === row.season_ordinal &&
