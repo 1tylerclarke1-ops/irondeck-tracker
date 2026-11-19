@@ -447,7 +447,7 @@ export default function OverlayDeck({ outro } = {}) {
   const totalItems = totalRows + sectionsCount + subsCount;
   const headingsH = sectionsCount * SECTION_H + subsCount * SUB_H;
   const gaps = totalItems > 1 ? (totalItems - 1) * ROW_GAP : 0;
-  const rowH =
+    const rowFit =
     totalRows > 0
       ? Math.max(
           MIN_ROW,
