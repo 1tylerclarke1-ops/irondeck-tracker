@@ -22,7 +22,7 @@ const ROW_W = PANEL_W - 28; // each row fills the panel width
 const TOTAL_HEIGHT = PANEL_H + 16;
 const ROW_GAP = 2;
 const MAX_ROW = 30;
-const MIN_ROW = 14;
+const MIN_ROW = 8;
 const FRAME_W = 482;
 
 // Different printings of the same card (e.g. two Settle the Wreckage arts)
@@ -232,6 +232,20 @@ export default function OverlayDeck({ outro } = {}) {
     return () => clearTimeout(t);
   }, [rotMode, rotAt]);
   const rotLive = rotMode && Date.now() >= rotAt;
+
+  // After the execution, keep the executed card on the block while it fades out,
+  // so the next condemned card never flashes up before the deck comes back.
+  const fadeUntil = holdUntil ? holdUntil + 1000 : 0;
+  const rotFading = Boolean(!holding && deathEv && deathEv.step === "death" && !isOutro && Date.now() < fadeUntil);
+  const showRot = rotMode || rotFading;
+  const [, setFadeTick] = useState(0);
+  useEffect(() => {
+    if (!rotFading) return undefined;
+    setBlockTurn(false);
+    const t = setTimeout(() => setFadeTick((x) => x + 1), fadeUntil - Date.now() + 30);
+    return () => clearTimeout(t);
+  }, [rotFading, fadeUntil]);
+
   // The last day survived: the card walks free on the block (?demo=pardon to test with today's card).
   const [demoFreeAt] = useState(() => (DEMO_PARDON ? Date.now() + 3000 : 0));
   const pardonAt = DEMO_PARDON ? demoFreeAt : run?.round_status === "survived" ? toMs(season?.pardoned_at) : 0;
@@ -247,7 +261,7 @@ export default function OverlayDeck({ outro } = {}) {
   const freeName = DEMO_PARDON ? block?.name || "" : season?.last_pardoned || "";
   const freeRow = freeName ? [...rawCards, ...rawSideCards].find((c) => sameName(c.name, freeName)) : null;
   const freeSentence = Number(season?.block_sentence) || 3;
-  const sideMode = rotMode ? "rot" : freeMode ? "free" : blockTurn && block ? "block" : "deck";
+  const sideMode = rotMode ? "rot" : rotFading ? "deck" : freeMode ? "free" : blockTurn && block ? "block" : "deck";
   const day = useMemo(
     () =>
       roundDay({
@@ -441,6 +455,18 @@ export default function OverlayDeck({ outro } = {}) {
         )
       : MAX_ROW;
 
+        // Safety net: measure the real list and shrink rows until it fits the panel
+  const listRef = useRef(null);
+  const [trim, setTrim] = useState(0);
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !totalRows) return;
+    const over = el.scrollHeight - (PANEL_H - 28 - outroReserve);
+    if (over > 1) setTrim((t) => t + over / totalRows);
+    else if (over < -12 && trim > 0) setTrim((t) => Math.max(0, t + over / totalRows));
+  });
+  const rowH = Math.max(6, rowFit - trim);
+
   const hasSide = sideMain.length > 0;
   const hasRustedMain = rustedMainCards.length > 0;
   const hasRustedSide = rustedSideCards.length > 0;
@@ -479,9 +505,10 @@ export default function OverlayDeck({ outro } = {}) {
             borderRadius: 14,
             padding: "14px 12px",
             boxSizing: "border-box",
+            overflow: "hidden",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, opacity: sideMode === "deck" ? 1 : 0, transition: "opacity 0.8s ease" }}>
+          <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, opacity: sideMode === "deck" ? 1 : 0, transition: "opacity 0.8s ease" }}>
             <SectionTitle title="MAIN DECK" count={mainCount} />
             {mainCards.map((c) => (
               <DeckRow
