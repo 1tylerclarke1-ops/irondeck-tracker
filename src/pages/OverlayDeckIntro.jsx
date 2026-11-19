@@ -25,6 +25,7 @@ export default function OverlayDeckIntro() {
   const [climbs, setClimbs] = useState([]);
   const [climb, setClimb] = useState(null);
   const [dayLogs, setDayLogs] = useState([]);
+  const [decays, setDecays] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [plan, setPlan] = useState(null); // which opening plays (decided once, from the data)
   const [idx, setIdx] = useState(0); // current stage
@@ -68,13 +69,15 @@ export default function OverlayDeckIntro() {
           setRuns([]);
           setClimbs([]);
           setClimb(null);
+          setDecays([]);
           return;
         }
-        const [list, climbList, runList, logs] = await Promise.all([
+        const [list, climbList, runList, logs, decayList] = await Promise.all([
           base44.entities.Card.filter({ season_id: s.id }),
           base44.entities.Climb.list(),
           base44.entities.Run.filter({ season_id: s.id }),
           loadDayLogs(s.id),
+          base44.entities.Decay.filter({ season_id: s.id }),
         ]);
         if (!active) return;
         const sortedClimbs = [...climbList].sort(
@@ -85,6 +88,7 @@ export default function OverlayDeckIntro() {
         setClimb(sortedClimbs[0] || null);
         setRuns(runList);
         setDayLogs(logs);
+        setDecays(decayList || []);
         setAllCards(list);
         setCards(sortDeck(list.filter((c) => (c.zone || "main") === "main" && (Number(c.copies) || 0) > 0)));
         setLoaded(true);
@@ -147,17 +151,27 @@ export default function OverlayDeckIntro() {
   const best = runs.reduce((m, r) => Math.max(m, num(r.total_wins)), 0);
   const completed = climbs.filter((c) => c.status === "complete" && c.days_taken != null);
   const record = completed.length ? Math.min(...completed.map((c) => c.days_taken)) : null;
-  const rottedCount = allCards.reduce((sum, c) => {
-    const o = num(c.original_copies);
-    return o > 0 ? sum + Math.max(0, o - num(c.copies)) : sum;
-  }, 0);
+  // Rotted cards are taken from the Decay log, so the ROTTED list matches the
+  // Decay Log page: one entry per card that rotted, newest decay first.
+  const rottedCards = useMemo(() => {
+    const byName = new Map();
+    [...decays]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .forEach((d) => {
+        const name = d.card_removed;
+        if (!name) return;
+        const hit = byName.get(name);
+        if (hit) hit.rotted += 1;
+        else byName.set(name, { name, rotted: 1 });
+      });
+    return [...byName.values()]
+      .map((e) => ({ card: allCards.find((c) => c.name === e.name), rotted: e.rotted }))
+      .filter((r) => r.card);
+  }, [decays, allCards]);
+  const rottedCount = decays.length;
   const sideCards = sortDeck(
-    allCards.filter((c) => c.zone === "sideboard" && num(c.copies) > 0)
+    allCards.filter((c) => c.zone === "sideboard" && Number(c.copies) > 0)
   );
-  const rottedCards = allCards
-    .map((c) => ({ card: c, rotted: Math.max(0, num(c.original_copies) - num(c.copies)) }))
-    .filter((r) => num(r.card.original_copies) > 0 && r.rotted > 0)
-    .sort((a, b) => b.rotted - a.rotted);
   const zoneCount = (zone) =>
     allCards.filter((c) => (c.zone || "main") === zone).reduce((sum, c) => sum + num(c.copies), 0);
 
