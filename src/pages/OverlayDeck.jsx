@@ -556,20 +556,20 @@ export default function OverlayDeck({ outro } = {}) {
               </>
             )}
           </div>
-          {(block || rotMode || freeMode) && (
+          {(block || showRot || freeMode) && (
             <div style={{ position: "absolute", inset: 0, opacity: sideMode === "deck" ? 0 : 1, transition: "opacity 0.8s ease" }}>
               <ChoppingBlock
-                key={rotMode ? "exec" : freeMode ? "free" : "block"}
-                mode={rotMode ? (rotLive ? "rot" : "wait") : freeMode ? "free" : "block"}
-                name={rotMode ? deathEv.card_removed : freeMode ? freeName : block.name}
-                image={rotMode ? deathEv.card_removed_image : freeMode ? scryNormal(freeRow?.scryfall_id) : scryNormal(condemnedRow?.scryfall_id)}
+                key={showRot ? "exec" : freeMode ? "free" : "block"}
+                mode={showRot ? (rotLive || rotFading ? "rot" : "wait") : freeMode ? "free" : "block"}
+                name={showRot ? deathEv.card_removed : freeMode ? freeName : block.name}
+                image={showRot ? deathEv.card_removed_image : freeMode ? scryNormal(freeRow?.scryfall_id) : scryNormal(condemnedRow?.scryfall_id)}
                 day={freeMode ? freeSentence : block?.day}
                 sentence={freeMode ? freeSentence : block?.sentence}
                 recapture={block?.recapture}
-                newName={rotMode ? deathEv.replacement_card : undefined}
-                newImage={rotMode ? deathEv.replacement_card_image : undefined}
-                rarity={rotMode ? deathEv.rarity_roll : undefined}
-                rollCards={rotMode ? deathEv.roll_cards : undefined}
+                newName={showRot ? deathEv.replacement_card : undefined}
+                newImage={showRot ? deathEv.replacement_card_image : undefined}
+                rarity={showRot ? deathEv.rarity_roll : undefined}
+                rollCards={showRot ? deathEv.roll_cards : undefined}
                 playSound={rotLive && Date.now() - rotAt < 1500}
               />
             </div>
