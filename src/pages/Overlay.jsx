@@ -471,7 +471,8 @@ function RankBlock({ rank, anim }) {
   const cls = rank.rank_class || "";
   const row = RANK_ROWS.indexOf(cls);
   const isMythic = cls === "Mythic";
-  const tier = Math.min(4, Math.max(1, Number(rank.tier) || 4));
+  const hasTier = Number(rank.tier) > 0; // never invent a tier Arena hasn't reported
+  const tier = hasTier ? Math.min(4, Math.max(1, Number(rank.tier))) : 4;
   const col = isMythic ? 0 : 4 - tier; // sheet columns left → right: Tier 4, 3, 2, 1
   const size = 96;
   const steps = Math.max(0, Math.min(6, Number(rank.step) || 0));
@@ -481,7 +482,9 @@ function RankBlock({ rank, anim }) {
       : rank.percentile
       ? `${Math.round(Number(rank.percentile))}%`
       : ""
-    : `TIER ${tier}`;
+    : hasTier
+    ? `TIER ${tier}`
+    : "";
   const up = anim?.kind === "up";
   const down = anim?.kind === "down";
   const stepUp = anim?.kind === "step";

@@ -348,12 +348,13 @@ function RankRow({ rank }) {
   const cls = rank.rank_class || "";
   const row = RANK_ROWS.indexOf(cls);
   const mythic = cls === "Mythic";
-  const tier = Math.min(4, Math.max(1, n(rank.tier) || 4));
+  const hasTier = n(rank.tier) > 0; // never invent a tier Arena hasn't reported
+  const tier = hasTier ? Math.min(4, Math.max(1, n(rank.tier))) : 4;
   const steps = Math.max(0, Math.min(6, n(rank.step)));
   const S = 84;
   const sub = mythic
     ? (rank.leaderboard_place ? `#${rank.leaderboard_place}` : rank.percentile ? `${Math.round(n(rank.percentile))}%` : "")
-    : `TIER ${tier}`;
+    : hasTier ? `TIER ${tier}` : "";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 22 }}>
       {row >= 0 && (
