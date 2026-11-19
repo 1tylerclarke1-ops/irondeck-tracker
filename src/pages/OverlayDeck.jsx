@@ -22,7 +22,7 @@ const ROW_W = PANEL_W - 28; // each row fills the panel width
 const TOTAL_HEIGHT = PANEL_H + 16;
 const ROW_GAP = 2;
 const MAX_ROW = 30;
-const MIN_ROW = 8;
+const MIN_ROW = 18;
 const FRAME_W = 482;
 
 // Different printings of the same card (e.g. two Settle the Wreckage arts)
@@ -212,7 +212,11 @@ export default function OverlayDeck({ outro } = {}) {
   const condemnedRow = block
     ? [...rawCards, ...rawSideCards].find((c) => sameName(c.name, block.name))
     : null;
-  const [blockTurn, setBlockTurn] = useState(false);
+    // Long deck lists scroll down and back up before the block comes round
+  const listRef = useRef(null);
+  const [scrollPx, setScrollPx] = useState(0);
+  const scrollMs = (scrollPx / 30) * 1000; // 30px per second
+  const deckMs = scrollPx > 0 ? Math.max(20000, 3000 + scrollMs + 3000 + scrollMs + 2000) : 20000;
   useEffect(() => {
     // After the 7th win, keep the main deck on screen: the condemned card has already moved
     // on to the next day, so the block would show tomorrow's count at the end of today's video.
@@ -220,9 +224,9 @@ export default function OverlayDeck({ outro } = {}) {
       setBlockTurn(false);
       return undefined;
     }
-    const t = setTimeout(() => setBlockTurn((b) => !b), blockTurn ? 8000 : 20000);
+    const t = setTimeout(() => setBlockTurn((b) => !b), blockTurn ? 8000 : deckMs);
     return () => clearTimeout(t);
-  }, [blockTurn, !!block, isOutro, run?.round_status]);
+  }, [blockTurn, !!block, isOutro, run?.round_status, deckMs]);
   const rotMode = Boolean(holding && deathEv && !isOutro);
   // While the death screen shows the card over the game, the block waits empty.
   const [, setLeadTick] = useState(0);
@@ -455,17 +459,20 @@ export default function OverlayDeck({ outro } = {}) {
         )
       : MAX_ROW;
 
-        // Safety net: measure the real list and shrink rows until it fits the panel
-  const listRef = useRef(null);
-  const [trim, setTrim] = useState(0);
+  const rowH = rowFit;
+  // Measure how far the list runs past the bottom of the panel
   useEffect(() => {
     const el = listRef.current;
-    if (!el || !totalRows) return;
-    const over = el.scrollHeight - (PANEL_H - 28 - outroReserve);
-    if (over > 1) setTrim((t) => t + over / totalRows);
-    else if (over < -12 && trim > 0) setTrim((t) => Math.max(0, t + over / totalRows));
+    if (!el) return;
+    const over = Math.max(0, Math.round(el.scrollHeight - (PANEL_H - 28 - outroReserve)));
+    if (Math.abs(over - scrollPx) > 2) setScrollPx(over);
   });
-  const rowH = Math.max(6, rowFit - trim);
+  const deckScroll = scrollPx > 0 && sideMode === "deck";
+  const a1 = (3000 / deckMs) * 100;
+  const a2 = a1 + (scrollMs / deckMs) * 100;
+  const a3 = a2 + (3000 / deckMs) * 100;
+  const a4 = a3 + (scrollMs / deckMs) * 100;
+  const scrollCss = `@keyframes ovd-scroll-${scrollPx} { 0%, ${a1}% { transform: translateY(0) } ${a2}%, ${a3}% { transform: translateY(-${scrollPx}px) } ${a4}%, 100% { transform: translateY(0) } }`;
 
   const hasSide = sideMain.length > 0;
   const hasRustedMain = rustedMainCards.length > 0;
@@ -508,7 +515,8 @@ export default function OverlayDeck({ outro } = {}) {
             overflow: "hidden",
           }}
         >
-          <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, opacity: sideMode === "deck" ? 1 : 0, transition: "opacity 0.8s ease" }}>
+          {scrollPx > 0 && <style>{scrollCss}</style>}
+          <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: ROW_GAP, opacity: sideMode === "deck" ? 1 : 0, transition: "opacity 0.8s ease", animation: deckScroll ? `ovd-scroll-${scrollPx} ${deckMs}ms ease-in-out infinite` : "none" }}>
             <SectionTitle title="MAIN DECK" count={mainCount} />
             {mainCards.map((c) => (
               <DeckRow
