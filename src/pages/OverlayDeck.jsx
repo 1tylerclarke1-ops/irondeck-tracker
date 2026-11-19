@@ -217,6 +217,8 @@ export default function OverlayDeck({ outro } = {}) {
   const [scrollPx, setScrollPx] = useState(0);
   const scrollMs = (scrollPx / 30) * 1000; // 30px per second
   const deckMs = scrollPx > 0 ? Math.max(20000, 3000 + scrollMs + 3000 + scrollMs + 2000) : 20000;
+  const [blockTurn, setBlockTurn] = useState(false);
+
   useEffect(() => {
     // After the 7th win, keep the main deck on screen: the condemned card has already moved
     // on to the next day, so the block would show tomorrow's count at the end of today's video.
