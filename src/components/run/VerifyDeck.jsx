@@ -45,18 +45,15 @@ export default function VerifyDeck({ deathEvent, cards, onVerified }) {
 
   if (!deathEvent || deathEvent.step !== "death") return null;
 
-  // A rotted sideboard is gone: the app holds no sideboard copies, so sideboard
-  // cards in the export are ignored (even when this death didn't rot it itself).
-  const appSideEmpty = !cards.some(
-    (c) => (c.zone || "main") === "sideboard" && (Number(c.copies) || 0) > 0
-  );
-  const sideIgnored = Boolean(deathEvent.sideboard_rotted) || appSideEmpty;
-
   const handleVerify = async () => {
     setBusy(true);
     try {
       const entries = parseArenaText(text);
-      const { match, diffs } = compareDeck(entries, cards, sideIgnored);
+      const { match, diffs } = compareDeck(
+        entries,
+        cards,
+        deathEvent.sideboard_rotted
+      );
       if (match) {
         await base44.entities.DecayEvent.update(deathEvent.id, {
           step: "verified",
@@ -84,10 +81,9 @@ export default function VerifyDeck({ deathEvent, cards, onVerified }) {
           A run died. Paste your Arena deck export, then click Verify to confirm
           your deck matches before starting the next round.
         </p>
-        {sideIgnored && (
+        {deathEvent.sideboard_rotted && (
           <p className="text-sm font-medium text-purple-700">
-            The sideboard has rotted: remove all sideboard cards in Arena. Sideboard
-            cards in the export are ignored here.
+            The sideboard rotted: remove all sideboard cards before verifying.
           </p>
         )}
         <Textarea
